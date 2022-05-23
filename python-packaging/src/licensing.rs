@@ -302,6 +302,17 @@ impl LicensedComponent {
             }
         }
     }
+
+    /// Whether all licenses are copyleft.
+    pub fn is_copyleft(&self) -> bool {
+        let licenses = self.all_spdx_licenses();
+
+        if licenses.is_empty() {
+            false
+        } else {
+            licenses.into_iter().all(|(id, _)| id.is_copyleft())
+        }
+    }
 }
 
 /// A collection of licensed components.
@@ -392,6 +403,55 @@ impl LicensedComponents {
             .values()
             .flat_map(|component| component.all_spdx_licenses())
             .collect::<BTreeSet<_>>()
+    }
+
+    /// Obtain all SPDX license names referenced by registered components.
+    pub fn all_spdx_license_names(&self) -> Vec<&'static str> {
+        self.all_spdx_licenses()
+            .into_iter()
+            .map(|(id, _)| id.name)
+            .collect::<Vec<_>>()
+    }
+
+    /// Obtain all components with valid SPDX license expressions.
+    pub fn license_spdx_components(&self) -> impl Iterator<Item = &LicensedComponent> {
+        self.components
+            .values()
+            .filter(|c| matches!(c.license(), &LicenseFlavor::Spdx(_)))
+    }
+
+    /// Obtain components that are missing license annotations.
+    pub fn license_missing_components(&self) -> impl Iterator<Item = &LicensedComponent> {
+        self.components
+            .values()
+            .filter(|c| c.license() == &LicenseFlavor::None)
+    }
+
+    /// Obtain components that are licensed to the public domain.
+    pub fn license_public_domain_components(&self) -> impl Iterator<Item = &LicensedComponent> {
+        self.components
+            .values()
+            .filter(|c| c.license() == &LicenseFlavor::PublicDomain)
+    }
+
+    /// Obtain components that have unknown licensing.
+    ///
+    /// There is a value for the license but that license is not recognized by us.
+    pub fn license_unknown_components(&self) -> impl Iterator<Item = &LicensedComponent> {
+        self.components.values().filter(|c| {
+            matches!(
+                c.license(),
+                &LicenseFlavor::Unknown(_) | &LicenseFlavor::OtherExpression(_)
+            )
+        })
+    }
+
+    /// Components that have copyleft licenses.
+    ///
+    /// There may be false negatives if the component doesn't have fully SPDX parsed
+    /// licenses.
+    pub fn license_copyleft_components(&self) -> impl Iterator<Item = &LicensedComponent> {
+        self.components.values().filter(|c| c.is_copyleft())
     }
 }
 

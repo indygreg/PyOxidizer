@@ -868,38 +868,33 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             warn!("See https://github.com/indygreg/PyOxidizer/issues/69 for more");
         }
 
-        let license_report = self.resources_collector.generate_license_report()?;
+        let licenses = self.resources_collector.normalized_licensed_components();
 
-        warn!(
-            "{} components lack software licenses",
-            license_report.no_license.len()
-        );
-        for component in license_report.no_license {
-            warn!("* {}", component.flavor());
+        for component in licenses.license_spdx_components() {
+            warn!(
+                "{} uses SPDX licenses {}",
+                component.flavor(),
+                component
+                    .spdx_expression()
+                    .expect("should have SPDX expression")
+            );
         }
 
         warn!(
-            "{} components lack SPDX annotated licenses",
-            license_report.non_spdx.len()
+            "All SPDX licenses: {}",
+            licenses.all_spdx_license_names().join(", ")
         );
-        for component in license_report.non_spdx {
-            warn!("* {}", component.flavor());
+        for component in licenses.license_missing_components() {
+            warn!("{} lacks a known software license", component.flavor());
         }
-
-        warn!(
-            "{} components in the public domain",
-            license_report.public_domain.len()
-        );
-        for component in license_report.public_domain {
-            warn!("* {}", component.flavor());
+        for component in licenses.license_public_domain_components() {
+            warn!("{} is in the public domain", component.flavor());
         }
-
-        warn!("{} SPDX licenses encountered", license_report.spdx.len());
-        for (license, components) in license_report.spdx {
-            warn!("License {}", license);
-            for component in components {
-                warn!("* {}", component.flavor());
-            }
+        for component in licenses.license_unknown_components() {
+            warn!("{} has an unknown software license", component.flavor());
+        }
+        for component in licenses.license_copyleft_components() {
+            warn!("Component has copyleft license: {}", component.flavor());
         }
 
         let compiled_resources = {

@@ -10,7 +10,7 @@ use {
             compute_bytecode_header, BytecodeHeaderMode, CompileMode, PythonBytecodeCompiler,
         },
         libpython::LibPythonBuildContext,
-        licensing::{LicenseFlavor, LicensedComponent, LicensedComponents},
+        licensing::{LicensedComponent, LicensedComponents},
         location::{AbstractResourceLocation, ConcreteResourceLocation},
         module_util::{packages_from_module_name, resolve_path_for_module},
         python_source::has_dunder_file,
@@ -627,24 +627,6 @@ impl ToString for AddResourceAction {
     }
 }
 
-/// Describes the state of licensing for resources in a given resources collection.
-#[derive(Clone, Debug, Default)]
-pub struct ResourcesLicenseReport {
-    /// Components missing license annotation.
-    pub no_license: BTreeSet<LicensedComponent>,
-
-    /// Components having an SPDX license.
-    ///
-    /// Maps license name to components.
-    pub spdx: BTreeMap<String, BTreeSet<LicensedComponent>>,
-
-    /// Components not having an SPDX license.
-    pub non_spdx: BTreeSet<LicensedComponent>,
-
-    /// Components in the public domain.
-    pub public_domain: BTreeSet<LicensedComponent>,
-}
-
 /// Represents a finalized collection of Python resources.
 ///
 /// Instances are produced from a `PythonResourceCollector` and a
@@ -819,54 +801,25 @@ impl PythonResourceCollector {
         Box::new(self.resources.iter())
     }
 
-    /// Generate a summary of licensing information for resources in the collection.
-    pub fn generate_license_report(&self) -> Result<ResourcesLicenseReport> {
+    /// Register a licensed software component to this collection.
+    pub fn add_licensed_component(&mut self, component: LicensedComponent) -> Result<()> {
+        self.licensed_components.add_component(component);
+
+        Ok(())
+    }
+
+    /// Obtain a finalized collection of licensed components.
+    ///
+    /// The collection has entries for components that lack licenses and has additional
+    /// normalization performed.
+    pub fn normalized_licensed_components(&self) -> LicensedComponents {
         let mut components = self.licensed_components.clone();
         components.add_missing_python_modules(
             self.all_top_level_module_names().iter().map(|x| x.as_str()),
         );
         components.normalize_python_modules();
 
-        let mut report = ResourcesLicenseReport::default();
-
-        // Process registered licensed components.
-        for component in components.iter_components() {
-            // This is a component relevant to this resources collection.
-            match component.license() {
-                LicenseFlavor::None => {
-                    report.no_license.insert(component.clone());
-                }
-                LicenseFlavor::Spdx(expr) | LicenseFlavor::OtherExpression(expr) => {
-                    for req in expr.requirements() {
-                        if let Some(id) = &req.req.license.id() {
-                            report
-                                .spdx
-                                .entry(id.name.to_string())
-                                .or_insert_with(BTreeSet::new)
-                                .insert(component.clone());
-                        } else {
-                            report.non_spdx.insert(component.clone());
-                        }
-                    }
-                }
-
-                LicenseFlavor::PublicDomain => {
-                    report.public_domain.insert(component.clone());
-                }
-                LicenseFlavor::Unknown(_) => {
-                    report.non_spdx.insert(component.clone());
-                }
-            }
-        }
-
-        Ok(report)
-    }
-
-    /// Register a licensed software component to this collection.
-    pub fn add_licensed_component(&mut self, component: LicensedComponent) -> Result<()> {
-        self.licensed_components.add_component(component);
-
-        Ok(())
+        components
     }
 
     /// Add Python module source with a specific location.
