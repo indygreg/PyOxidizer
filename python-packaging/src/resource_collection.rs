@@ -10,7 +10,7 @@ use {
             compute_bytecode_header, BytecodeHeaderMode, CompileMode, PythonBytecodeCompiler,
         },
         libpython::LibPythonBuildContext,
-        licensing::{ComponentFlavor, LicenseFlavor, LicensedComponent, LicensedComponents},
+        licensing::{LicenseFlavor, LicensedComponent, LicensedComponents},
         location::{AbstractResourceLocation, ConcreteResourceLocation},
         module_util::{packages_from_module_name, resolve_path_for_module},
         python_source::has_dunder_file,
@@ -821,40 +821,16 @@ impl PythonResourceCollector {
 
     /// Generate a summary of licensing information for resources in the collection.
     pub fn generate_license_report(&self) -> Result<ResourcesLicenseReport> {
+        let mut components = self.licensed_components.clone();
+        components.add_missing_python_modules(
+            self.all_top_level_module_names().iter().map(|x| x.as_str()),
+        );
+        components.normalize_python_modules();
+
         let mut report = ResourcesLicenseReport::default();
 
-        let distribution = self
-            .licensed_components
-            .iter_components()
-            .find(|c| c.flavor() == &ComponentFlavor::PythonDistribution);
-
         // Process registered licensed components.
-        for component in self.licensed_components.iter_components() {
-            let python_name = match component.flavor() {
-                ComponentFlavor::PythonStandardLibraryModule(name) => Some(name),
-                ComponentFlavor::PythonStandardLibraryExtensionModule(name) => Some(name),
-                ComponentFlavor::PythonModule(name) => Some(name),
-                ComponentFlavor::PythonExtensionModule(name) => Some(name),
-                ComponentFlavor::PythonDistribution => None,
-                ComponentFlavor::Library(_) => None,
-                ComponentFlavor::RustCrate(_) => None,
-            };
-
-            if let Some(name) = python_name {
-                // We ignore standard library components whose license matches the Python
-                // distribution's. This cuts out a lot of redundancy from the report.
-                if let Some(distribution) = distribution {
-                    if distribution.license() == component.license() {
-                        continue;
-                    }
-                }
-
-                // Only care about top-level packages.
-                if name.contains('.') {
-                    continue;
-                }
-            }
-
+        for component in components.iter_components() {
             // This is a component relevant to this resources collection.
             match component.license() {
                 LicenseFlavor::None => {
@@ -880,16 +856,6 @@ impl PythonResourceCollector {
                 LicenseFlavor::Unknown(_) => {
                     report.non_spdx.insert(component.clone());
                 }
-            }
-        }
-
-        // Find packages without licensed components and insert missing license entries.
-        for package in self.all_top_level_module_names() {
-            if !self.licensed_components.has_python_module(&package) {
-                report.no_license.insert(LicensedComponent::new(
-                    ComponentFlavor::PythonModule(package),
-                    LicenseFlavor::None,
-                ));
             }
         }
 

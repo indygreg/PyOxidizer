@@ -116,15 +116,28 @@ impl Ord for ComponentFlavor {
 }
 
 impl ComponentFlavor {
+    /// Whether this component is part of the Python standard library.
+    pub fn is_python_standard_library(&self) -> bool {
+        match self {
+            Self::PythonDistribution => false,
+            Self::PythonStandardLibraryModule(_) => true,
+            Self::PythonStandardLibraryExtensionModule(_) => true,
+            Self::PythonExtensionModule(_) => true,
+            Self::PythonModule(_) => false,
+            Self::Library(_) => false,
+            Self::RustCrate(_) => false,
+        }
+    }
+
     pub fn python_module_name(&self) -> Option<&str> {
         match self {
-            ComponentFlavor::PythonDistribution => None,
-            ComponentFlavor::PythonStandardLibraryModule(name) => Some(name.as_str()),
-            ComponentFlavor::PythonStandardLibraryExtensionModule(name) => Some(name.as_str()),
-            ComponentFlavor::PythonExtensionModule(name) => Some(name.as_str()),
-            ComponentFlavor::PythonModule(name) => Some(name.as_str()),
-            ComponentFlavor::Library(_) => None,
-            ComponentFlavor::RustCrate(_) => None,
+            Self::PythonDistribution => None,
+            Self::PythonStandardLibraryModule(name) => Some(name.as_str()),
+            Self::PythonStandardLibraryExtensionModule(name) => Some(name.as_str()),
+            Self::PythonExtensionModule(name) => Some(name.as_str()),
+            Self::PythonModule(name) => Some(name.as_str()),
+            Self::Library(_) => None,
+            Self::RustCrate(_) => None,
         }
     }
 
@@ -325,6 +338,52 @@ impl LicensedComponents {
         // even if the enum variant is different.
         self.components
             .contains_key(&ComponentFlavor::PythonModule(name.into()))
+    }
+
+    /// Ensure all Python modules in the specified iterable are present.
+    pub fn add_missing_python_modules<'a>(&mut self, modules: impl Iterator<Item = &'a str>) {
+        for name in modules {
+            if !self.has_python_module(name) {
+                self.add_component(LicensedComponent::new(
+                    ComponentFlavor::PythonModule(name.to_string()),
+                    LicenseFlavor::None,
+                ));
+            }
+        }
+    }
+
+    /// Adjusts Python modules in the components set.
+    ///
+    /// Standard library modules that have identical licensing to the Python
+    /// distribution are removed.
+    ///
+    /// Modules that aren't top-level packages are removed.
+    pub fn normalize_python_modules(&mut self) {
+        let distribution = self
+            .components
+            .values()
+            .find(|c| c.flavor() == &ComponentFlavor::PythonDistribution);
+
+        self.components =
+            BTreeMap::from_iter(self.components.clone().into_iter().filter(|(k, v)| {
+                // Remove standard library modules with licensing identical to the distribution.
+                if k.is_python_standard_library() {
+                    if let Some(distribution) = distribution {
+                        if v.license() == distribution.license() {
+                            return false;
+                        }
+                    }
+                }
+
+                // Remove Python modules that aren't top-level packages.
+                if let Some(name) = k.python_module_name() {
+                    if name.contains('.') {
+                        return false;
+                    }
+                }
+
+                true
+            }));
     }
 
     /// Obtain all SPDX license identifiers referenced by registered components.
