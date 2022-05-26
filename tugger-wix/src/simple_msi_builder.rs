@@ -567,7 +567,7 @@ impl WiXSimpleMsiBuilder {
             &Uuid::NAMESPACE_DNS,
             format!("tugger.path_component.{}", self.product_name).as_bytes(),
         )
-        .to_hyphenated()
+        .as_hyphenated()
         .encode_upper(&mut Uuid::encode_buffer())
         .to_string()
     }

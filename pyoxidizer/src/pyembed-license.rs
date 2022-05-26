@@ -316,7 +316,7 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<python_packaging::licensing::Lic
         python_packaging::licensing::ComponentFlavor::RustCrate(
             "python-packed-resources".to_string(),
         ),
-        "MPL-2.0",
+        "Apache-2.0 OR MIT",
     )?);
 
     res.push(python_packaging::licensing::LicensedComponent::new_spdx(
@@ -456,7 +456,7 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<python_packaging::licensing::Lic
 
     res.push(python_packaging::licensing::LicensedComponent::new_spdx(
         python_packaging::licensing::ComponentFlavor::RustCrate("tugger-file-manifest".to_string()),
-        "MPL-2.0",
+        "Apache-2.0 OR MIT",
     )?);
 
     res.push(python_packaging::licensing::LicensedComponent::new_spdx(

@@ -50,7 +50,7 @@ pub fn component_guid(prefix: &str, path: &Path) -> String {
         &Uuid::NAMESPACE_URL,
         format!("{}/{}/component/{}", GUID_NAMESPACE, prefix, path.display()).as_bytes(),
     )
-    .to_hyphenated()
+    .as_hyphenated()
     .encode_upper(&mut Uuid::encode_buffer())
     .to_string()
 }
@@ -76,7 +76,7 @@ pub fn file_guid(prefix: &str, path: &Path) -> String {
         )
         .as_bytes(),
     )
-    .to_hyphenated()
+    .as_hyphenated()
     .encode_upper(&mut Uuid::encode_buffer())
     .to_string()
 }

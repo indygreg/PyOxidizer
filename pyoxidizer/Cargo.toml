@@ -57,7 +57,7 @@ starlark = "0.3.1"
 tar = "0.4"
 tempfile = "3.2"
 url = "2.2"
-uuid = { version = "0.8", features = ["v4", "v5"] }
+uuid = { version = "1.1", features = ["v4", "v5"] }
 version-compare = "0.1"
 walkdir = "2"
 which = "4"

@@ -153,7 +153,7 @@ dependencies = [
  "tugger-apple",
  "tugger-file-manifest",
  "tungstenite",
- "uuid 0.8.2",
+ "uuid 1.1.0",
  "which",
  "x509",
  "x509-certificate",
@@ -1005,7 +1005,7 @@ checksum = "25f6cc832d96f9961bfe67da666f1fb96387305d385db5222cbb7bce21121016"
 dependencies = [
  "byteorder",
  "fnv",
- "uuid 1.0.0",
+ "uuid 1.1.0",
 ]
 
 [[package]]
@@ -3480,7 +3480,7 @@ dependencies = [
  "byteorder",
  "cfb 0.7.0",
  "encoding",
- "uuid 1.0.0",
+ "uuid 1.1.0",
 ]
 
 [[package]]
@@ -4543,7 +4543,7 @@ dependencies = [
  "tugger-windows",
  "tugger-wix",
  "url",
- "uuid 0.8.2",
+ "uuid 1.1.0",
  "version-compare",
  "walkdir",
  "which",
@@ -6604,7 +6604,7 @@ dependencies = [
  "tugger-windows",
  "tugger-windows-codesign",
  "url",
- "uuid 0.8.2",
+ "uuid 1.1.0",
  "xml-rs",
 ]
 
@@ -6770,14 +6770,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc5cf98d8186244414c848017f0e2676b3fcb46807f6668a97dfe67359a3c4b7"
 dependencies = [
  "getrandom 0.2.6",
- "sha1 0.6.1",
 ]
 
 [[package]]
 name = "uuid"
-version = "1.0.0"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8cfcd319456c4d6ea10087ed423473267e1a071f3bc0aa89f80d60997843c6f0"
+checksum = "93bbc61e655a4833cf400d0d15bf3649313422fa7572886ad6dab16d79886365"
+dependencies = [
+ "getrandom 0.2.6",
+ "sha1_smol",
+]
 
 [[package]]
 name = "valuable"
