@@ -72,6 +72,7 @@ Other Relevant Changes
   work similarly to how our custom logic was working before. But there may be
   subtle changes in behavior. If you see new build errors related to Apple SDKs
   in this release, don't hesitate to create an issue.
+* The jemalloc allocator in built binaries has been upgraded to version 5.3.
 
 .. _version_0_20_0:
 
