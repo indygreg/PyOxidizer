@@ -14,6 +14,7 @@ use {
         starlark::eval::{EvaluationContext, EvaluationContextBuilder},
     },
     anyhow::{anyhow, Context, Result},
+    apple_sdk::AppleSdk,
     duct::cmd,
     log::warn,
     starlark_dialect_build_targets::ResolvedTarget,
@@ -154,7 +155,7 @@ impl BuildEnvironment {
             });
 
             // SDKROOT will instruct rustc and potentially other tools to use exactly this SDK.
-            envs.insert("SDKROOT".to_string(), sdk.path.display().to_string());
+            envs.insert("SDKROOT".to_string(), sdk.path().display().to_string());
 
             // This (e.g. MACOSX_DEPLOYMENT_TARGET) will instruct compilers to target a specific
             // minimum version of the target platform. We respect an explicit value if one

@@ -67,6 +67,11 @@ Other Relevant Changes
   to refer to :ref:`pyembed_interpreter_config`. The latter is automatically
   derived from the canonical Rust source code. So the change effectively results
   in a single, consistent set of documentation for interpreter configuration.
+* The mechanism for locating the Apple SDK now uses the
+  `apple-sdk <https://crates.io/crates/apple-sdk>`_ Rust crate. The new crate
+  work similarly to how our custom logic was working before. But there may be
+  subtle changes in behavior. If you see new build errors related to Apple SDKs
+  in this release, don't hesitate to create an issue.
 
 .. _version_0_20_0:
 

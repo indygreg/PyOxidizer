@@ -27,6 +27,7 @@ git2 = { version = "0.14", default-features = false }
 
 [dependencies]
 anyhow = "1.0"
+apple-sdk = "0.1"
 cargo-lock = "7.0"
 cc = "1.0"
 clap = "3.1"
@@ -73,10 +74,6 @@ path = "../python-packed-resources"
 [dependencies.starlark-dialect-build-targets]
 version = "0.7.0-pre"
 path = "../starlark-dialect-build-targets"
-
-[dependencies.tugger-apple]
-version = "0.7.0-pre"
-path = "../tugger-apple"
 
 [dependencies.tugger-binary-analysis]
 version = "0.6.0-pre"

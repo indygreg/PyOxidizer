@@ -12,6 +12,7 @@ use {
         py_packaging::{distribution::AppleSdkInfo, embedding::LinkingAnnotation},
     },
     anyhow::{anyhow, Context, Result},
+    apple_sdk::AppleSdk,
     log::warn,
     python_packaging::libpython::LibPythonBuildContext,
     std::{fs, fs::create_dir_all, path::PathBuf},
@@ -131,7 +132,7 @@ pub fn link_libpython(
             .context("resolving Apple SDK to use")?;
 
         build.flag("-isysroot");
-        build.flag(&format!("{}", sdk.path.display()));
+        build.flag(&format!("{}", sdk.path().display()));
     }
 
     build

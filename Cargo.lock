@@ -188,6 +188,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "apple-sdk"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "533cf89d89fba96977c893cf035af9493c6a93b58b3f7dc1da0af57369cd5a7b"
+dependencies = [
+ "plist",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "apple-xar"
 version = "0.6.0-pre"
 dependencies = [
@@ -4508,6 +4519,7 @@ name = "pyoxidizer"
 version = "0.21.0-pre"
 dependencies = [
  "anyhow",
+ "apple-sdk",
  "assert_cmd",
  "assert_fs",
  "cargo-lock",
@@ -4545,7 +4557,6 @@ dependencies = [
  "tar",
  "tempfile",
  "tugger",
- "tugger-apple",
  "tugger-binary-analysis",
  "tugger-code-signing",
  "tugger-common",

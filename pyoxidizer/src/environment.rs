@@ -7,16 +7,15 @@
 use {
     crate::{project_layout::PyembedLocation, py_packaging::distribution::AppleSdkInfo},
     anyhow::{anyhow, Context, Result},
+    apple_sdk::{AppleSdk, ParsedSdk, SdkSearch, SdkSorting},
     log::{info, warn},
     once_cell::sync::Lazy,
-    semver::Version,
     std::{
         env,
         ops::Deref,
         path::{Path, PathBuf},
         sync::{Arc, RwLock},
     },
-    tugger_apple::{find_command_line_tools_sdks, find_default_developer_sdks, AppleSdk},
     tugger_rust_toolchain::install_rust_toolchain,
 };
 
@@ -423,75 +422,52 @@ impl Environment {
     }
 
     /// Attempt to resolve an appropriate Apple SDK to use given settings.
-    pub fn resolve_apple_sdk(&self, sdk_info: &AppleSdkInfo) -> Result<AppleSdk> {
+    pub fn resolve_apple_sdk(&self, sdk_info: &AppleSdkInfo) -> Result<ParsedSdk> {
         let platform = &sdk_info.platform;
         let minimum_version = &sdk_info.version;
         let deployment_target = &sdk_info.deployment_target;
 
-        let sdk = if let Ok(sdk_root) = std::env::var("SDKROOT") {
-            warn!("SDKROOT defined; using Apple SDK at {}", &sdk_root);
+        warn!(
+            "locating Apple SDK {}{}+ supporting {}{}",
+            platform, minimum_version, platform, deployment_target
+        );
 
-            let sdk = AppleSdk::from_directory(&PathBuf::from(&sdk_root)).with_context(|| {
-                format!("resolving Apple SDK at {} as defined by SDKROOT", sdk_root)
-            })?;
+        let sdks = SdkSearch::default()
+            .progress_callback(|event| {
+                info!("{}", event);
+            })
+            .platform(platform.as_str().try_into()?)
+            .minimum_version(minimum_version)
+            .deployment_target(platform, deployment_target)
+            .sorting(SdkSorting::VersionDescending)
+            .search::<ParsedSdk>()?;
 
-            // The environment variable may force the use of an SDK that otherwise
-            // wouldn't be allowed by our platform, minimum version, or deployment
-            // target criteria.
-            //
-            // This is a hard failure when the platform or deployment target isn't
-            // compatible because this would just lead to compile errors.
-            //
-            // Failure to meet minimum version requirements is a soft warning because
-            // sometimes things will work. e.g. you may get lucky being able to compile
-            // with a 11.2 SDK even if an 11.3 SDK is wanted.
+        if sdks.is_empty() {
+            return Err(anyhow!(
+                "unable to find suitable Apple SDK supporting {}{} or newer",
+                platform,
+                minimum_version
+            ));
+        }
 
-            if let Some(support_targets) = sdk.supported_targets.get(platform) {
-                if !support_targets
-                    .valid_deployment_targets
-                    .contains(deployment_target)
-                {
-                    return Err(anyhow!(
-                        "SDKROOT defined SDK does not support deployment target {} (supported: {}); refusing to proceed. (Try setting SDKROOT to an older or newer SDK depending on the failure or unset to use automatic SDK discovery.)",
-                        deployment_target,
-                        support_targets.valid_deployment_targets.join(", ")
-                    ));
-                }
-            } else {
-                return Err(anyhow!(
-                    "SDKROOT defined SDK does not support target platform {}; refusing to proceed. (Set SDKROOT to the appropriate Apple platform SDK or unset to use automatic SDK discovery.)",
-                    platform
-                ));
-            }
+        // SDKROOT may skip filtering. Make noise if that's the case.
+        let sdk = sdks.into_iter().next().unwrap();
 
-            let minimum_semver = Version::parse(&format!("{}.0", minimum_version))?;
-
-            if sdk
-                .version_as_semver()
-                .context("resolving Apple SDK version")?
-                < minimum_semver
-            {
-                warn!(
-                    "WARNING: SDKROOT defined Apple SDK does not meet minimum version requirement of {}; build errors or unexpected behavior may occur",
+        if sdk
+            .version()
+            .expect("ParsedSDK should always have version")
+            .clone()
+            < minimum_version.as_str().into()
+        {
+            warn!(
+                    "WARNING: SDK does not meet minimum version requirement of {}; build errors or unexpected behavior may occur",
                     minimum_version
                 );
-            }
-
-            sdk
-        } else {
-            warn!(
-                "locating Apple SDK {}{}+ supporting {}{}",
-                platform, minimum_version, platform, deployment_target
-            );
-
-            resolve_apple_sdk(platform, minimum_version, deployment_target)
-                .context("resolving Apple SDK")?
-        };
+        }
 
         warn!(
-            "using SDK {} ({} targeting {}{})",
-            sdk.path.display(),
-            sdk.name,
+            "using {} targeting {}{}",
+            sdk.as_sdk_path(),
             platform,
             deployment_target
         );
@@ -511,107 +487,4 @@ pub struct RustEnvironment {
 
     /// Describes rustc version info.
     pub rust_version: rustc_version::VersionMeta,
-}
-
-/// Resolve an appropriate Apple SDK to use.
-///
-/// Given an Apple `platform`, locate an Apple SDK that is of least
-/// `minimum_version` and supports targeting `deployment_target`, which is likely
-/// an OS version string.
-pub fn resolve_apple_sdk(
-    platform: &str,
-    minimum_version: &str,
-    deployment_target: &str,
-) -> Result<AppleSdk> {
-    if minimum_version.split('.').count() != 2 {
-        return Err(anyhow!(
-            "expected X.Y minimum Apple SDK version; got {}",
-            minimum_version
-        ));
-    }
-
-    let minimum_semver = Version::parse(&format!("{}.0", minimum_version))?;
-
-    let mut sdks = find_default_developer_sdks()
-        .context("discovering Apple SDKs (default developer directory)")?;
-    if let Some(extra_sdks) =
-        find_command_line_tools_sdks().context("discovering Apple SDKs (command line tools)")?
-    {
-        sdks.extend(extra_sdks);
-    }
-
-    let target_sdks = sdks
-        .iter()
-        .filter(|sdk| !sdk.is_symlink && sdk.supported_targets.contains_key(platform))
-        .collect::<Vec<_>>();
-
-    info!(
-        "found {} total Apple SDKs; {} support {}",
-        sdks.len(),
-        target_sdks.len(),
-        platform,
-    );
-
-    let mut candidate_sdks = target_sdks
-        .into_iter()
-        .filter(|sdk| {
-            let version = match sdk.version_as_semver() {
-                Ok(v) => v,
-                Err(_) => return false,
-            };
-
-            if version < minimum_semver {
-                info!(
-                    "ignoring SDK {} because it is too old ({} < {})",
-                    sdk.path.display(),
-                    sdk.version,
-                    minimum_version
-                );
-
-                false
-            } else if !sdk
-                .supported_targets
-                .get(platform)
-                // Safe because key was validated above.
-                .unwrap()
-                .valid_deployment_targets
-                .contains(&deployment_target.to_string())
-            {
-                info!(
-                    "ignoring SDK {} because it doesn't support deployment target {}",
-                    sdk.path.display(),
-                    deployment_target
-                );
-
-                false
-            } else {
-                true
-            }
-        })
-        .collect::<Vec<_>>();
-    candidate_sdks.sort_by(|a, b| {
-        b.version_as_semver()
-            .unwrap()
-            .cmp(&a.version_as_semver().unwrap())
-    });
-
-    if candidate_sdks.is_empty() {
-        Err(anyhow!(
-            "unable to find suitable Apple SDK supporting {}{} or newer",
-            platform,
-            minimum_version
-        ))
-    } else {
-        info!(
-            "found {} suitable Apple SDKs ({})",
-            candidate_sdks.len(),
-            candidate_sdks
-                .iter()
-                .map(|sdk| sdk.name.clone())
-                .collect::<Vec<_>>()
-                .join(" ")
-        );
-
-        Ok(candidate_sdks[0].clone())
-    }
 }
