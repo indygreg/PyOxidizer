@@ -4,5 +4,3 @@
 
 mod macho;
 pub use macho::*;
-mod sdk;
-pub use sdk::*;

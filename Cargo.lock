@@ -6513,14 +6513,8 @@ name = "tugger-apple"
 version = "0.7.0-pre"
 dependencies = [
  "anyhow",
- "duct",
  "goblin",
- "once_cell",
- "plist",
  "scroll",
- "semver",
- "serde",
- "serde_json",
  "thiserror",
 ]
 
