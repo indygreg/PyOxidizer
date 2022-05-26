@@ -23,6 +23,11 @@ static ENVIRONMENT: Lazy<Environment> =
     Lazy::new(|| Environment::new().expect("error spawning global Environment"));
 
 pub fn get_env() -> Result<Environment> {
+    let _ = env_logger::builder()
+        .is_test(true)
+        .filter_level(log::LevelFilter::Info)
+        .try_init();
+
     Ok(ENVIRONMENT.clone())
 }
 
