@@ -132,36 +132,23 @@ pub fn parse_str(data: &str) -> Result<Vec<TbdVersionedRecord>, ParseError> {
 mod tests {
     use {
         super::*,
+        apple_sdk::{AppleSdk, SdkSearch, SdkSearchLocation, SimpleSdk},
         rand::seq::SliceRandom,
         rayon::prelude::*,
-        tugger_apple::{
-            find_command_line_tools_sdks, find_developer_sdks,
-            find_system_xcode_developer_directories,
-        },
     };
 
     #[test]
     fn test_parse_apple_sdk_tbds() {
         // This will find older Xcode versions and their SDKs when run in GitHub
         // Actions. That gives us extreme test coverage of real world .tbd files.
-        let mut sdks = find_system_xcode_developer_directories()
-            .unwrap()
-            .into_iter()
-            .flat_map(|p| find_developer_sdks(&p).unwrap())
-            .collect::<Vec<_>>();
-
-        if let Some(extra) = find_command_line_tools_sdks().unwrap() {
-            sdks.extend(extra);
-        }
-
-        // Filter out symlinked SDKs to avoid duplicates.
-        let sdks = sdks
-            .into_iter()
-            .filter(|sdk| !sdk.is_symlink)
-            .collect::<Vec<_>>();
+        let sdks = SdkSearch::empty()
+            .location(SdkSearchLocation::SystemXcodes)
+            .location(SdkSearchLocation::CommandLineTools)
+            .search::<SimpleSdk>()
+            .unwrap();
 
         sdks.into_par_iter().for_each(|sdk| {
-            let mut tbd_paths = walkdir::WalkDir::new(&sdk.path)
+            let mut tbd_paths = walkdir::WalkDir::new(sdk.path())
                 .into_iter()
                 .filter_map(|entry| {
                     let entry = entry.unwrap();
