@@ -25,7 +25,7 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<LicensedComponent>> {
         "MIT OR Apache-2.0",
     )?);
 
-    // via python-packaging, charset
+    // via charset
     res.push(LicensedComponent::new_spdx(
         ComponentFlavor::RustCrate("base64".to_string()),
         "MIT OR Apache-2.0",
@@ -37,31 +37,13 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<LicensedComponent>> {
         "MIT OR Apache-2.0",
     )?);
 
-    // via digest
-    res.push(LicensedComponent::new_spdx(
-        ComponentFlavor::RustCrate("block-buffer".to_string()),
-        "MIT OR Apache-2.0",
-    )?);
-
     // via python-packaging, python-packed-resources, zip
     res.push(LicensedComponent::new_spdx(
         ComponentFlavor::RustCrate("byteorder".to_string()),
         "Unlicense OR MIT",
     )?);
 
-    // via zip
-    res.push(LicensedComponent::new_spdx(
-        ComponentFlavor::RustCrate("bzip2".to_string()),
-        "MIT OR Apache-2.0",
-    )?);
-
-    // via bzip2
-    res.push(LicensedComponent::new_spdx(
-        ComponentFlavor::RustCrate("bzip2-sys".to_string()),
-        "MIT OR Apache-2.0",
-    )?);
-
-    // via pyo3, parking_lot_core, encoding_rs, sha2, getrandom, crc32fast, crossbeam-utils, flate2
+    // via crc32fast, crossbeam-utils, encoding_rs, flate2, parking_lot_core, pyo3
     res.push(LicensedComponent::new_spdx(
         ComponentFlavor::RustCrate("cfg-if".to_string()),
         "MIT OR Apache-2.0",
@@ -73,13 +55,7 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<LicensedComponent>> {
         "MIT OR Apache-2.0",
     )?);
 
-    // via sha2
-    res.push(LicensedComponent::new_spdx(
-        ComponentFlavor::RustCrate("cpufeatures".to_string()),
-        "MIT OR Apache-2.0",
-    )?);
-
-    // via zip, flate2
+    // via flate2, zip
     res.push(LicensedComponent::new_spdx(
         ComponentFlavor::RustCrate("crc32fast".to_string()),
         "MIT OR Apache-2.0",
@@ -88,12 +64,6 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<LicensedComponent>> {
     // via zip
     res.push(LicensedComponent::new_spdx(
         ComponentFlavor::RustCrate("crossbeam-utils".to_string()),
-        "MIT OR Apache-2.0",
-    )?);
-
-    // via digest
-    res.push(LicensedComponent::new_spdx(
-        ComponentFlavor::RustCrate("crypto-common".to_string()),
         "MIT OR Apache-2.0",
     )?);
 
@@ -109,12 +79,6 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<LicensedComponent>> {
         "MIT",
     )?);
 
-    // via sha2
-    res.push(LicensedComponent::new_spdx(
-        ComponentFlavor::RustCrate("digest".to_string()),
-        "MIT OR Apache-2.0",
-    )?);
-
     // via pyembed
     res.push(LicensedComponent::new_spdx(
         ComponentFlavor::RustCrate("dunce".to_string()),
@@ -127,7 +91,7 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<LicensedComponent>> {
         "MIT OR Apache-2.0",
     )?);
 
-    // via python-packaging, charset
+    // via charset, python-packaging
     res.push(LicensedComponent::new_spdx(
         ComponentFlavor::RustCrate("encoding_rs".to_string()),
         "(Apache-2.0 OR MIT) AND BSD-3-Clause",
@@ -136,18 +100,6 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<LicensedComponent>> {
     // via zip
     res.push(LicensedComponent::new_spdx(
         ComponentFlavor::RustCrate("flate2".to_string()),
-        "MIT OR Apache-2.0",
-    )?);
-
-    // via block-buffer, crypto-common
-    res.push(LicensedComponent::new_spdx(
-        ComponentFlavor::RustCrate("generic-array".to_string()),
-        "MIT",
-    )?);
-
-    // via rand_core
-    res.push(LicensedComponent::new_spdx(
-        ComponentFlavor::RustCrate("getrandom".to_string()),
         "MIT OR Apache-2.0",
     )?);
 
@@ -163,12 +115,6 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<LicensedComponent>> {
         "MIT OR Apache-2.0",
     )?);
 
-    // via time
-    res.push(LicensedComponent::new_spdx(
-        ComponentFlavor::RustCrate("itoa".to_string()),
-        "MIT OR Apache-2.0",
-    )?);
-
     // via pyembed
     res.push(LicensedComponent::new_spdx(
         ComponentFlavor::RustCrate("jemalloc-sys".to_string()),
@@ -181,7 +127,7 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<LicensedComponent>> {
         "MIT OR Apache-2.0",
     )?);
 
-    // via pyembed, jemalloc-sys, pyo3, parking_lot_core, pyo3-ffi, memmap2, memory-module-sys, cpufeatures, time, num_threads, rand, getrandom, bzip2, bzip2-sys, flate2
+    // via flate2, jemalloc-sys, memmap2, memory-module-sys, parking_lot_core, pyembed, pyo3, pyo3-ffi
     res.push(LicensedComponent::new_spdx(
         ComponentFlavor::RustCrate("libc".to_string()),
         "MIT OR Apache-2.0",
@@ -205,7 +151,7 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<LicensedComponent>> {
         "0BSD",
     )?);
 
-    // via regex, aho-corasick
+    // via aho-corasick, regex
     res.push(LicensedComponent::new_spdx(
         ComponentFlavor::RustCrate("memchr".to_string()),
         "Unlicense OR MIT",
@@ -229,12 +175,6 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<LicensedComponent>> {
         "MIT OR Zlib OR Apache-2.0",
     )?);
 
-    // via time
-    res.push(LicensedComponent::new_spdx(
-        ComponentFlavor::RustCrate("num_threads".to_string()),
-        "MIT OR Apache-2.0",
-    )?);
-
     // via pyembed, python-oxidized-importer, python-packaging
     res.push(LicensedComponent::new_spdx(
         ComponentFlavor::RustCrate("once_cell".to_string()),
@@ -253,19 +193,12 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<LicensedComponent>> {
         "MIT OR Apache-2.0",
     )?);
 
-    // via rand_chacha
-    res.push(LicensedComponent::new_spdx(
-        ComponentFlavor::RustCrate("ppv-lite86".to_string()),
-        "MIT OR Apache-2.0",
-    )?);
-
-    // via pyo3-macros, pyo3-macros-backend, quote, syn, serde_derive
+    // via pyo3-macros, pyo3-macros-backend, quote, serde_derive, syn
     res.push(LicensedComponent::new_spdx(
         ComponentFlavor::RustCrate("proc-macro2".to_string()),
         "MIT OR Apache-2.0",
     )?);
 
-    // via
     res.push(LicensedComponent::new_spdx(
         ComponentFlavor::RustCrate("pyembed".to_string()),
         "Python-2.0 OR MPL-2.0",
@@ -313,13 +246,7 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<LicensedComponent>> {
         "MIT OR Apache-2.0",
     )?);
 
-    // via time
-    res.push(LicensedComponent::new_spdx(
-        ComponentFlavor::RustCrate("quickcheck".to_string()),
-        "Unlicense OR MIT",
-    )?);
-
-    // via pyo3-macros, pyo3-macros-backend, syn, serde_derive
+    // via pyo3-macros, pyo3-macros-backend, serde_derive, syn
     res.push(LicensedComponent::new_spdx(
         ComponentFlavor::RustCrate("quote".to_string()),
         "MIT OR Apache-2.0",
@@ -329,24 +256,6 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<LicensedComponent>> {
     res.push(LicensedComponent::new_spdx(
         ComponentFlavor::RustCrate("quoted_printable".to_string()),
         "0BSD",
-    )?);
-
-    // via quickcheck
-    res.push(LicensedComponent::new_spdx(
-        ComponentFlavor::RustCrate("rand".to_string()),
-        "MIT OR Apache-2.0",
-    )?);
-
-    // via rand
-    res.push(LicensedComponent::new_spdx(
-        ComponentFlavor::RustCrate("rand_chacha".to_string()),
-        "MIT OR Apache-2.0",
-    )?);
-
-    // via rand, rand_chacha
-    res.push(LicensedComponent::new_spdx(
-        ComponentFlavor::RustCrate("rand_core".to_string()),
-        "MIT OR Apache-2.0",
     )?);
 
     // via parking_lot_core
@@ -391,12 +300,6 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<LicensedComponent>> {
         "MIT OR Apache-2.0",
     )?);
 
-    // via python-packaging
-    res.push(LicensedComponent::new_spdx(
-        ComponentFlavor::RustCrate("sha2".to_string()),
-        "MIT OR Apache-2.0",
-    )?);
-
     // via parking_lot_core, spdx
     res.push(LicensedComponent::new_spdx(
         ComponentFlavor::RustCrate("smallvec".to_string()),
@@ -415,45 +318,15 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<LicensedComponent>> {
         "MIT OR Apache-2.0",
     )?);
 
-    // via lazy_static
-    res.push(LicensedComponent::new_spdx(
-        ComponentFlavor::RustCrate("spin".to_string()),
-        "MIT",
-    )?);
-
-    // via digest
-    res.push(LicensedComponent::new_spdx(
-        ComponentFlavor::RustCrate("subtle".to_string()),
-        "BSD-3-Clause",
-    )?);
-
     // via pyo3-macros, pyo3-macros-backend, serde_derive
     res.push(LicensedComponent::new_spdx(
         ComponentFlavor::RustCrate("syn".to_string()),
         "MIT OR Apache-2.0",
     )?);
 
-    // via python-packaging, zip
-    res.push(LicensedComponent::new_spdx(
-        ComponentFlavor::RustCrate("time".to_string()),
-        "MIT OR Apache-2.0",
-    )?);
-
-    // via time
-    res.push(LicensedComponent::new_spdx(
-        ComponentFlavor::RustCrate("time-macros".to_string()),
-        "MIT OR Apache-2.0",
-    )?);
-
     // via python-oxidized-importer, python-packaging
     res.push(LicensedComponent::new_spdx(
         ComponentFlavor::RustCrate("tugger-file-manifest".to_string()),
-        "MIT OR Apache-2.0",
-    )?);
-
-    // via generic-array, crypto-common
-    res.push(LicensedComponent::new_spdx(
-        ComponentFlavor::RustCrate("typenum".to_string()),
         "MIT OR Apache-2.0",
     )?);
 
@@ -475,13 +348,7 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<LicensedComponent>> {
         "Unlicense OR MIT",
     )?);
 
-    // via getrandom
-    res.push(LicensedComponent::new_spdx(
-        ComponentFlavor::RustCrate("wasi".to_string()),
-        "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
-    )?);
-
-    // via python-oxidized-importer, memory-module-sys, walkdir, winapi-util
+    // via memory-module-sys, python-oxidized-importer, walkdir, winapi-util
     res.push(LicensedComponent::new_spdx(
         ComponentFlavor::RustCrate("winapi".to_string()),
         "MIT OR Apache-2.0",
@@ -493,7 +360,7 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<LicensedComponent>> {
         "MIT OR Apache-2.0",
     )?);
 
-    // via walkdir, same-file
+    // via same-file, walkdir
     res.push(LicensedComponent::new_spdx(
         ComponentFlavor::RustCrate("winapi-util".to_string()),
         "Unlicense OR MIT",
@@ -541,7 +408,7 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<LicensedComponent>> {
         "MIT OR Apache-2.0",
     )?);
 
-    // via python-oxidized-importer, python-packaging
+    // via python-oxidized-importer
     res.push(LicensedComponent::new_spdx(
         ComponentFlavor::RustCrate("zip".to_string()),
         "MIT",

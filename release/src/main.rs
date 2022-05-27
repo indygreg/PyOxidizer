@@ -14,7 +14,7 @@ use {
     },
     once_cell::sync::Lazy,
     std::{
-        collections::BTreeMap,
+        collections::{BTreeMap, BTreeSet},
         ffi::OsString,
         fmt::Write,
         io::{BufRead, BufReader},
@@ -1064,19 +1064,22 @@ fn generate_pyembed_license(repo_root: &Path) -> Result<String> {
         .ok_or_else(|| anyhow!("could not find pyembed package"))?
         .id();
 
-    let query = package_graph.query_forward([pyembed_id])?;
+    let feature_graph = package_graph.feature_graph();
+
+    let pyembed_features = feature_graph.all_features_for(pyembed_id)?;
 
     let mut package_dependencies = BTreeMap::new();
 
-    let packages = query.resolve_with_fn(|_, link| {
-        // Exclude build and dev dependencies.
+    let query = feature_graph.query_forward(pyembed_features)?;
+    let features = query.resolve_with_fn(|_, link| {
+        // Exclude build and dev dependencies and packages not in features graph.
         let filter = !(link.build().is_present() || link.dev_only());
 
-        if filter {
+        if filter && link.to().package() != link.from().package() {
             package_dependencies
-                .entry(link.to().name())
-                .or_insert(vec![])
-                .push(link.from().name());
+                .entry(link.to().package().name())
+                .or_insert_with(|| BTreeSet::new())
+                .insert(link.from().package().name());
         }
 
         filter
@@ -1084,7 +1087,10 @@ fn generate_pyembed_license(repo_root: &Path) -> Result<String> {
 
     let mut package_licenses = BTreeMap::new();
 
-    for package in packages.packages(DependencyDirection::Forward) {
+    for package in features
+        .to_package_set()
+        .packages(DependencyDirection::Forward)
+    {
         package_licenses.insert(
             package.name(),
             package.license().map(|x| x.replace('/', " OR ")),
@@ -1125,11 +1131,14 @@ fn generate_pyembed_license(repo_root: &Path) -> Result<String> {
             format!("LicensesComponent::new({}, LicenseFlavor::None)", flavor)
         };
 
-        writeln!(
-            &mut text,
-            "// via {}",
-            package_dependencies.get(name).unwrap_or(&vec![]).join(", ")
-        )?;
+        if let Some(depends) = package_dependencies.get(name) {
+            writeln!(
+                &mut text,
+                "// via {}",
+                depends.iter().map(|x| *x).collect::<Vec<_>>().join(", ")
+            )?;
+        }
+
         writeln!(&mut text, "    res.push({});", component)?;
         writeln!(&mut text)?;
     }
