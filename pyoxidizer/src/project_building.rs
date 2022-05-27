@@ -216,6 +216,26 @@ impl BuildEnvironment {
     }
 }
 
+/// Derive cargo features for project building.
+pub fn cargo_features(exe: &dyn PythonBinaryBuilder) -> Vec<&str> {
+    let mut res = vec!["build-mode-prebuilt-artifacts"];
+
+    if exe.requires_jemalloc() {
+        res.push("global-allocator-jemalloc");
+        res.push("allocator-jemalloc");
+    }
+    if exe.requires_mimalloc() {
+        res.push("global-allocator-mimalloc");
+        res.push("allocator-mimalloc");
+    }
+    if exe.requires_snmalloc() {
+        res.push("global-allocator-snmalloc");
+        res.push("allocator-snmalloc");
+    }
+
+    res
+}
+
 /// Holds results from building an executable.
 pub struct BuiltExecutable<'a> {
     /// Path to built executable file.
@@ -296,22 +316,8 @@ pub fn build_executable_with_rust_project<'a>(
     }
 
     args.push("--no-default-features");
-    let mut features = vec!["build-mode-prebuilt-artifacts"];
 
-    if exe.requires_jemalloc() {
-        features.push("global-allocator-jemalloc");
-        features.push("allocator-jemalloc");
-    }
-    if exe.requires_mimalloc() {
-        features.push("global-allocator-mimalloc");
-        features.push("allocator-mimalloc");
-    }
-    if exe.requires_snmalloc() {
-        features.push("global-allocator-snmalloc");
-        features.push("allocator-snmalloc");
-    }
-
-    let features = features.join(" ");
+    let features = cargo_features(exe).join(" ");
 
     if !features.is_empty() {
         args.push("--features");
