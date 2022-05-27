@@ -4593,18 +4593,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "python-packaging-net"
-version = "0.9.0-pre"
-dependencies = [
- "anyhow",
- "python-packaging",
- "reqwest",
- "spdx",
- "tugger-common",
- "url",
-]
-
-[[package]]
 name = "python-packed-resources"
 version = "0.9.0-pre"
 dependencies = [

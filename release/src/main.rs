@@ -63,7 +63,6 @@ static RELEASE_ORDER: Lazy<Vec<&'static str>> = Lazy::new(|| {
         "tugger-wix",
         "python-packed-resources",
         "python-packaging",
-        "python-packaging-net",
         "tugger",
         "text-stub-library",
         "python-oxidized-importer",
