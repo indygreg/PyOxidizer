@@ -120,6 +120,9 @@ pub struct StandalonePythonExecutableBuilder {
     /// Path to python executable that can be invoked at build time.
     host_python_exe: PathBuf,
 
+    /// Filename to write out with licensing information.
+    licenses_filename: Option<String>,
+
     /// Value for the `windows_subsystem` Rust attribute for generated Rust projects.
     windows_subsystem: String,
 
@@ -223,6 +226,7 @@ impl StandalonePythonExecutableBuilder {
             extension_build_contexts: BTreeMap::new(),
             config,
             host_python_exe,
+            licenses_filename: Some("COPYING.txt".into()),
             windows_subsystem: "console".to_string(),
             tcl_files_path: None,
             windows_runtime_dlls_mode: WindowsRuntimeDllsMode::WhenPresent,
@@ -503,6 +507,14 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         self.windows_subsystem = value.to_string();
 
         Ok(())
+    }
+
+    fn licenses_filename(&self) -> Option<&str> {
+        self.licenses_filename.as_deref()
+    }
+
+    fn set_licenses_filename(&mut self, value: Option<String>) {
+        self.licenses_filename = value;
     }
 
     fn packed_resources_load_mode(&self) -> &PackedResourcesLoadMode {
@@ -887,6 +899,13 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         let mut pending_resources = vec![];
 
         let mut extra_files = compiled_resources.extra_files_manifest()?;
+
+        if let Some(filename) = self.licenses_filename() {
+            extra_files.add_file_entry(
+                filename,
+                FileEntry::new_from_data(licenses.aggregate_license_document()?.as_bytes(), false),
+            )?;
+        }
 
         let mut config = self.config.clone();
 

@@ -20,6 +20,15 @@ impl ToValue for Option<bool> {
     }
 }
 
+impl ToValue for Option<&str> {
+    fn to_value(&self) -> Value {
+        match self {
+            Some(value) => Value::from(value.to_string()),
+            None => Value::from(NoneType::None),
+        }
+    }
+}
+
 impl ToValue for Option<String> {
     fn to_value(&self) -> Value {
         match self {

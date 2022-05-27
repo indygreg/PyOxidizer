@@ -14,6 +14,7 @@ use {
         python_package_resource::PythonPackageResourceValue,
         python_packaging_policy::PythonPackagingPolicyValue,
         python_resource::{is_resource_starlark_compatible, python_resource_to_value},
+        util::ToValue,
     },
     crate::{
         project_building::build_python_executable,
@@ -40,8 +41,8 @@ use {
         },
     },
     starlark_dialect_build_targets::{
-        optional_dict_arg, optional_list_arg, optional_type_arg, required_list_arg, ResolvedTarget,
-        ResolvedTargetValue, RunMode, ToOptional,
+        optional_dict_arg, optional_list_arg, optional_str_arg, optional_type_arg,
+        required_list_arg, ResolvedTarget, ResolvedTargetValue, RunMode, ToOptional,
     },
     std::{
         collections::HashMap,
@@ -174,6 +175,7 @@ impl TypedValue for PythonExecutableValue {
         let exe = self.inner(&format!("PythonExecutable.{}", attribute))?;
 
         match attribute {
+            "licenses_filename" => Ok(exe.licenses_filename().to_value()),
             "packed_resources_load_mode" => {
                 Ok(Value::from(exe.packed_resources_load_mode().to_string()))
             }
@@ -196,7 +198,8 @@ impl TypedValue for PythonExecutableValue {
     fn has_attr(&self, attribute: &str) -> Result<bool, ValueError> {
         Ok(matches!(
             attribute,
-            "packed_resources_load_mode"
+            "licenses_filename"
+                | "packed_resources_load_mode"
                 | "tcl_files_path"
                 | "windows_runtime_dlls_mode"
                 | "windows_subsystem"
@@ -207,6 +210,12 @@ impl TypedValue for PythonExecutableValue {
         let mut exe = self.inner(&format!("PythonExecutable.{}", attribute))?;
 
         match attribute {
+            "licenses_filename" => {
+                let value = optional_str_arg("licenses_filename", &value)?;
+                exe.set_licenses_filename(value);
+
+                Ok(())
+            }
             "packed_resources_load_mode" => {
                 exe.set_packed_resources_load_mode(
                     PackedResourcesLoadMode::try_from(value.to_string().as_str()).map_err(|e| {
@@ -939,23 +948,6 @@ impl PythonExecutableValue {
 
         Ok(Value::new(NoneType::None))
     }
-
-    /// PythonExecutable.write_licenses(path)
-    pub fn write_licenses(&self, path: &str) -> ValueResult {
-        const LABEL: &str = "PythonExecutable.write_aggregate_license_text()";
-
-        let exe = self.inner(LABEL)?;
-
-        error_context(LABEL, || {
-            let text = exe.licensed_components()?.aggregate_license_document()?;
-
-            std::fs::write(path, text.as_bytes()).context("writing license file")?;
-
-            Ok(())
-        })?;
-
-        Ok(Value::new(NoneType::None))
-    }
 }
 
 starlark_module! { python_executable_env =>
@@ -1103,15 +1095,6 @@ starlark_module! { python_executable_env =>
     ) {
         let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
         this.to_wix_msi_builder(env, cs, id_prefix, product_name, product_version, product_manufacturer)
-    }
-
-
-    PythonExecutable.write_licenses(
-        this,
-        path: String
-    ) {
-        let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
-        this.write_licenses(&path)
     }
 }
 
@@ -1307,6 +1290,27 @@ mod tests {
         assert!(!inner.m.is_package);
         assert_eq!(inner.m.source.resolve_content().unwrap(), b"# foo");
         drop(inner);
+
+        Ok(())
+    }
+
+    #[test]
+    fn licenses_filename() -> Result<()> {
+        let mut env = test_evaluation_context_builder()?.into_context()?;
+        add_exe(&mut env)?;
+
+        let v = env.eval("exe.licenses_filename")?;
+        assert_eq!(v.get_type(), "string");
+        assert_eq!(v.to_string(), "COPYING.txt");
+
+        env.eval("exe.licenses_filename = 'licenses'")?;
+        let v = env.eval("exe.licenses_filename")?;
+        assert_eq!(v.get_type(), "string");
+        assert_eq!(v.to_string(), "licenses");
+
+        env.eval("exe.licenses_filename = None")?;
+        let v = env.eval("exe.licenses_filename")?;
+        assert_eq!(v.get_type(), "NoneType");
 
         Ok(())
     }

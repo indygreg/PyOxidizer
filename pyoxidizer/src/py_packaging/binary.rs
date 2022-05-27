@@ -225,6 +225,12 @@ pub trait PythonBinaryBuilder {
     /// Set the value of the `windows_subsystem` Rust attribute for generated Rust projects.
     fn set_windows_subsystem(&mut self, value: &str) -> Result<()>;
 
+    /// Obtain the path of a filename to write containing a licensing report.
+    fn licenses_filename(&self) -> Option<&str>;
+
+    /// Set the path of a filename to write containing a licensing report.
+    fn set_licenses_filename(&mut self, value: Option<String>);
+
     /// How packed Python resources will be loaded by the binary.
     fn packed_resources_load_mode(&self) -> &PackedResourcesLoadMode;
 

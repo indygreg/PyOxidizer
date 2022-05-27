@@ -13,6 +13,27 @@
     Instances are constructed from :py:class:`PythonDistribution` instances
     using :py:meth:`PythonDistribution.to_python_executable`.
 
+    .. py:attribute:: licenses_filename
+
+        (``str``)
+
+        The filename to use / write for an auto-generated report of software
+        component licensing relevant to the built executable.
+
+        The file will contain a bill-of-materials of all the known software
+        components in the built binary. This includes information about the
+        Python distribution, extension modules and libraries used by the
+        Python distribution, 3rd party Python packages, and Rust crates.
+
+        Each component is annotated with licensing information, including the
+        license text, if available.
+
+        All content in the file is best effort.
+
+        If ``None``, no file will be written.
+
+        Default: ``COPYING.txt``
+
     .. py:attribute:: packed_resources_load_mode
 
         (``str``)
