@@ -356,6 +356,11 @@ pub struct LicensedComponents {
 }
 
 impl LicensedComponents {
+    /// Obtain an iterator over the components, consuming self.
+    pub fn into_components(self) -> impl Iterator<Item = LicensedComponent> {
+        self.components.into_values()
+    }
+
     /// Iterate over components in this collection.
     pub fn iter_components(&self) -> impl Iterator<Item = &LicensedComponent> {
         self.components.values()

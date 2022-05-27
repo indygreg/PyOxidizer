@@ -8,15 +8,9 @@ use {
     clap::{Arg, ArgMatches, Command},
     duct::cmd,
     git2::{Repository, Status},
-    guppy::{
-        graph::{DependencyDirection, PackageGraph},
-        MetadataCommand,
-    },
     once_cell::sync::Lazy,
     std::{
-        collections::{BTreeMap, BTreeSet},
         ffi::OsString,
-        fmt::Write,
         io::{BufRead, BufReader},
         path::Path,
     },
@@ -955,9 +949,6 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
         return Err(anyhow!("repo has uncommited changes; refusing to proceed"));
     }
 
-    // The license content shouldn't change as part of the release.
-    ensure_pyembed_license_current(repo_root)?;
-
     // The cargo lock content will change as part of the release as dependencies
     // are updated. We verify it multiple times during the release. But we want to
     // start in a consistent state, so we check it up front as well.
@@ -1050,111 +1041,6 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
     }
 
     Ok(())
-}
-
-fn generate_pyembed_license(repo_root: &Path) -> Result<String> {
-    let pyembed_manifest_path = repo_root.join("pyembed").join("Cargo.toml");
-
-    let package_graph =
-        PackageGraph::from_command(MetadataCommand::new().manifest_path(&pyembed_manifest_path))?;
-
-    let pyembed_id = package_graph
-        .packages()
-        .find(|p| p.name() == "pyembed")
-        .ok_or_else(|| anyhow!("could not find pyembed package"))?
-        .id();
-
-    let feature_graph = package_graph.feature_graph();
-
-    let pyembed_features = feature_graph.all_features_for(pyembed_id)?;
-
-    let mut package_dependencies = BTreeMap::new();
-
-    let query = feature_graph.query_forward(pyembed_features)?;
-    let features = query.resolve_with_fn(|_, link| {
-        // Exclude build and dev dependencies and packages not in features graph.
-        let filter = !(link.build().is_present() || link.dev_only());
-
-        if filter && link.to().package() != link.from().package() {
-            package_dependencies
-                .entry(link.to().package().name())
-                .or_insert_with(|| BTreeSet::new())
-                .insert(link.from().package().name());
-        }
-
-        filter
-    });
-
-    let mut package_licenses = BTreeMap::new();
-
-    for package in features
-        .to_package_set()
-        .packages(DependencyDirection::Forward)
-    {
-        package_licenses.insert(
-            package.name(),
-            package.license().map(|x| x.replace('/', " OR ")),
-        );
-    }
-
-    let mut text = String::new();
-
-    writeln!(
-        &mut text,
-        "// This Source Code Form is subject to the terms of the Mozilla Public"
-    )?;
-    writeln!(
-        &mut text,
-        "// License, v. 2.0. If a copy of the MPL was not distributed with this"
-    )?;
-    writeln!(
-        &mut text,
-        "// file, You can obtain one at https://mozilla.org/MPL/2.0/."
-    )?;
-    writeln!(&mut text)?;
-    writeln!(&mut text, "use python_packaging::licensing::*;")?;
-    writeln!(&mut text)?;
-
-    writeln!(
-        &mut text,
-        "pub fn pyembed_licenses() -> anyhow::Result<Vec<LicensedComponent>> {{"
-    )?;
-    writeln!(&mut text, "    let mut res = vec![];")?;
-    writeln!(&mut text)?;
-
-    for (name, license) in package_licenses {
-        let flavor = format!("ComponentFlavor::RustCrate(\"{}\".to_string())", name);
-
-        let component = if let Some(license) = license {
-            format!("LicensedComponent::new_spdx({}, \"{}\")?", flavor, license)
-        } else {
-            format!("LicensesComponent::new({}, LicenseFlavor::None)", flavor)
-        };
-
-        if let Some(depends) = package_dependencies.get(name) {
-            writeln!(
-                &mut text,
-                "// via {}",
-                depends.iter().map(|x| *x).collect::<Vec<_>>().join(", ")
-            )?;
-        }
-
-        writeln!(&mut text, "    res.push({});", component)?;
-        writeln!(&mut text)?;
-    }
-
-    writeln!(&mut text, "    Ok(res)")?;
-    writeln!(&mut text, "}}")?;
-
-    let mut text = cmd("rustfmt", &vec!["--emit", "stdout"])
-        .dir(repo_root)
-        .stdout_capture()
-        .stdin_bytes(text.as_bytes())
-        .read()?;
-
-    text.push('\n');
-
-    Ok(text)
 }
 
 fn generate_new_project_cargo_lock(repo_root: &Path, pyembed_force_path: bool) -> Result<String> {
@@ -1255,51 +1141,21 @@ fn ensure_new_project_cargo_lock_current(repo_root: &Path) -> Result<()> {
     }
 }
 
-/// Ensures the `pyembed-license.rs` file in source control is up to date with reality.
-fn ensure_pyembed_license_current(repo_root: &Path) -> Result<()> {
-    let path = repo_root
-        .join("pyoxidizer")
-        .join("src")
-        .join("pyembed-license.rs");
-
-    let file_text = std::fs::read_to_string(&path)?;
-    let wanted_text = generate_pyembed_license(repo_root)?;
-
-    if file_text == wanted_text {
-        Ok(())
-    } else {
-        Err(anyhow!(
-            "{} does not match expected content",
-            path.display()
-        ))
-    }
-}
-
 fn command_generate_new_project_cargo_lock(repo_root: &Path, _args: &ArgMatches) -> Result<()> {
     print!("{}", generate_new_project_cargo_lock(repo_root, false)?);
 
     Ok(())
 }
 
-fn command_generate_pyembed_license(repo_root: &Path, _args: &ArgMatches) -> Result<()> {
-    print!("{}", generate_pyembed_license(repo_root)?);
-
-    Ok(())
-}
-
 fn command_synchronize_generated_files(repo_root: &Path) -> Result<()> {
     let cargo_lock = generate_new_project_cargo_lock(repo_root, false)?;
-    let pyembed_license = generate_pyembed_license(repo_root)?;
     crate::documentation::generate_sphinx_files(repo_root)?;
 
     let pyoxidizer_src_path = repo_root.join("pyoxidizer").join("src");
     let lock_path = pyoxidizer_src_path.join("new-project-cargo.lock");
-    let license_path = pyoxidizer_src_path.join("pyembed-license.rs");
 
     println!("writing {}", lock_path.display());
     std::fs::write(&lock_path, cargo_lock.as_bytes())?;
-    println!("writing {}", license_path.display());
-    std::fs::write(&license_path, pyembed_license.as_bytes())?;
 
     Ok(())
 }
@@ -1320,10 +1176,6 @@ fn main_impl() -> Result<()> {
         .subcommand(
             Command::new("generate-new-project-cargo-lock")
                 .about("Emit a Cargo.lock file for the pyembed crate"),
-        )
-        .subcommand(
-            Command::new("generate-pyembed-license")
-                .about("Emit license information for the pyembed crate"),
         )
         .subcommand(
             Command::new("release")
@@ -1408,9 +1260,6 @@ fn main_impl() -> Result<()> {
         Some(("release", args)) => command_release(repo_root, args, &repo),
         Some(("generate-new-project-cargo-lock", args)) => {
             command_generate_new_project_cargo_lock(repo_root, args)
-        }
-        Some(("generate-pyembed-license", args)) => {
-            command_generate_pyembed_license(repo_root, args)
         }
         Some(("synchronize-generated-files", _)) => command_synchronize_generated_files(repo_root),
         Some(("upload-release-artifacts", args)) => tokio::runtime::Builder::new_current_thread()

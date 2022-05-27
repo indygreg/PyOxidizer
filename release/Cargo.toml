@@ -19,7 +19,6 @@ duct = "0"
 futures = "0"
 # We don't need network functionality.
 git2 = { version = "0", default-features = false }
-guppy = "0.14"
 hex = "0"
 maturin = "0"
 octocrab = { version = "0", default-features = false, features = ["rustls"] }

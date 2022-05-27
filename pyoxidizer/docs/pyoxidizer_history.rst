@@ -58,11 +58,17 @@ New Features
   these distributions at
   https://github.com/indygreg/python-build-standalone/releases/tag/20220318
   and https://github.com/indygreg/python-build-standalone/releases/tag/20220501.
-* :py:class:`PythonExecutable` Starlark types now write out a file containing
-  licensing information for software components within the binary. This restores
-  a feature that was dropped in version 0.5. The name of the file (or disabling
-  of the feature) can be controlled via the
-  :py:attr:`PythonExecutable.licenses_filename` attribute.
+* The mechanism for handling software licenses has been overhauled.
+
+  * The formatting of licenses during building has changed significantly.
+  * Rust licensing information is now dynamically derived at build time rather
+    than derived from a static list. The Rust components with annotated licensing
+    should be more accurate as a result.
+  * :py:class:`PythonExecutable` Starlark types now write out a file containing
+    licensing information for software components within the binary. This restores
+    a feature that was dropped in version 0.5. The name of the file (or disabling
+    of the feature) can be controlled via the
+    :py:attr:`PythonExecutable.licenses_filename` attribute.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

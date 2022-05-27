@@ -5,7 +5,7 @@
 use {
     super::{
         binary::{
-            pyembed_licenses, LibpythonLinkMode, PackedResourcesLoadMode, PythonBinaryBuilder,
+            LibpythonLinkMode, PackedResourcesLoadMode, PythonBinaryBuilder,
             ResourceAddCollectionContextCallback, WindowsRuntimeDllsMode,
         },
         config::{PyembedPackedResourcesSource, PyembedPythonInterpreterConfig},
@@ -21,7 +21,7 @@ use {
         },
         standalone_distribution::StandaloneDistribution,
     },
-    crate::{environment::Environment, licensing::log_licensing_info},
+    crate::environment::Environment,
     anyhow::{anyhow, Context, Result},
     log::warn,
     once_cell::sync::Lazy,
@@ -238,10 +238,6 @@ impl StandalonePythonExecutableBuilder {
     }
 
     fn add_distribution_core_state(&mut self) -> Result<()> {
-        for component in pyembed_licenses().context("deriving pyembed component licenses")? {
-            self.resources_collector.add_licensed_component(component)?;
-        }
-
         self.core_build_context.inittab_cflags =
             Some(self.target_distribution.inittab_cflags.clone());
 
@@ -886,10 +882,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             warn!("See https://github.com/indygreg/PyOxidizer/issues/69 for more");
         }
 
-        let licenses = self.resources_collector.normalized_licensed_components();
-
-        log_licensing_info(&licenses);
-
         let compiled_resources = {
             let temp_dir = tempfile::TempDir::new()?;
             let mut compiler = BytecodeCompiler::new(self.host_python_exe_path(), temp_dir.path())?;
@@ -899,13 +891,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         let mut pending_resources = vec![];
 
         let mut extra_files = compiled_resources.extra_files_manifest()?;
-
-        if let Some(filename) = self.licenses_filename() {
-            extra_files.add_file_entry(
-                filename,
-                FileEntry::new_from_data(licenses.aggregate_license_document()?.as_bytes(), false),
-            )?;
-        }
 
         let mut config = self.config.clone();
 
