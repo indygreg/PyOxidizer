@@ -1094,31 +1094,27 @@ fn generate_pyembed_license(repo_root: &Path) -> Result<String> {
         "// file, You can obtain one at https://mozilla.org/MPL/2.0/."
     )?;
     writeln!(&mut text)?;
+    writeln!(&mut text, "use python_packaging::licensing::*;")?;
+    writeln!(&mut text)?;
 
     writeln!(
         &mut text,
-        "pub fn pyembed_licenses() -> anyhow::Result<Vec<python_packaging::licensing::LicensedComponent>> {{"
+        "pub fn pyembed_licenses() -> anyhow::Result<Vec<LicensedComponent>> {{"
     )?;
     writeln!(&mut text, "    let mut res = vec![];")?;
     writeln!(&mut text)?;
 
     for (name, license) in package_licenses {
-        let flavor = format!(
-            "python_packaging::licensing::ComponentFlavor::RustCrate(\"{}\".to_string())",
-            name
-        );
+        let flavor = format!("ComponentFlavor::RustCrate(\"{}\".to_string())", name);
 
         let component = if let Some(license) = license {
-            format!(
-                "python_packaging::licensing::LicensedComponent::new_spdx({}, \"{}\")?",
-                flavor, license
-            )
+            format!("LicensedComponent::new_spdx({}, \"{}\")?", flavor, license)
         } else {
-            format!("python_packaging::licensing::LicensesComponent::new({}, python_packaging::licensing::LicenseFlavor::None)", flavor)
+            format!("LicensesComponent::new({}, LicenseFlavor::None)", flavor)
         };
 
         writeln!(&mut text, "    res.push({});", component)?;
-        writeln!(&mut text, "")?;
+        writeln!(&mut text)?;
     }
 
     writeln!(&mut text, "    Ok(res)")?;
