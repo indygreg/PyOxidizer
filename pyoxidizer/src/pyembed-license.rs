@@ -56,11 +56,6 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<python_packaging::licensing::Lic
     )?);
 
     res.push(python_packaging::licensing::LicensedComponent::new_spdx(
-        python_packaging::licensing::ComponentFlavor::RustCrate("camino".to_string()),
-        "MIT OR Apache-2.0",
-    )?);
-
-    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
         python_packaging::licensing::ComponentFlavor::RustCrate("cc".to_string()),
         "MIT OR Apache-2.0",
     )?);
@@ -131,18 +126,8 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<python_packaging::licensing::Lic
     )?);
 
     res.push(python_packaging::licensing::LicensedComponent::new_spdx(
-        python_packaging::licensing::ComponentFlavor::RustCrate("fastrand".to_string()),
-        "Apache-2.0 OR MIT",
-    )?);
-
-    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
         python_packaging::licensing::ComponentFlavor::RustCrate("flate2".to_string()),
         "MIT OR Apache-2.0",
-    )?);
-
-    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
-        python_packaging::licensing::ComponentFlavor::RustCrate("fnv".to_string()),
-        "Apache-2.0  OR  MIT",
     )?);
 
     res.push(python_packaging::licensing::LicensedComponent::new_spdx(
@@ -163,11 +148,6 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<python_packaging::licensing::Lic
     res.push(python_packaging::licensing::LicensedComponent::new_spdx(
         python_packaging::licensing::ComponentFlavor::RustCrate("indoc".to_string()),
         "MIT OR Apache-2.0",
-    )?);
-
-    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
-        python_packaging::licensing::ComponentFlavor::RustCrate("instant".to_string()),
-        "BSD-3-Clause",
     )?);
 
     res.push(python_packaging::licensing::LicensedComponent::new_spdx(
@@ -256,11 +236,6 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<python_packaging::licensing::Lic
     )?);
 
     res.push(python_packaging::licensing::LicensedComponent::new_spdx(
-        python_packaging::licensing::ComponentFlavor::RustCrate("pathdiff".to_string()),
-        "MIT OR Apache-2.0",
-    )?);
-
-    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
         python_packaging::licensing::ComponentFlavor::RustCrate("pkg-config".to_string()),
         "MIT OR Apache-2.0",
     )?);
@@ -325,11 +300,6 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<python_packaging::licensing::Lic
     )?);
 
     res.push(python_packaging::licensing::LicensedComponent::new_spdx(
-        python_packaging::licensing::ComponentFlavor::RustCrate("quick-error".to_string()),
-        "MIT OR Apache-2.0",
-    )?);
-
-    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
         python_packaging::licensing::ComponentFlavor::RustCrate("quickcheck".to_string()),
         "Unlicense OR MIT",
     )?);
@@ -371,16 +341,6 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<python_packaging::licensing::Lic
 
     res.push(python_packaging::licensing::LicensedComponent::new_spdx(
         python_packaging::licensing::ComponentFlavor::RustCrate("regex-syntax".to_string()),
-        "MIT OR Apache-2.0",
-    )?);
-
-    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
-        python_packaging::licensing::ComponentFlavor::RustCrate("remove_dir_all".to_string()),
-        "MIT OR Apache-2.0",
-    )?);
-
-    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
-        python_packaging::licensing::ComponentFlavor::RustCrate("rusty-fork".to_string()),
         "MIT OR Apache-2.0",
     )?);
 
@@ -445,11 +405,6 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<python_packaging::licensing::Lic
     )?);
 
     res.push(python_packaging::licensing::LicensedComponent::new_spdx(
-        python_packaging::licensing::ComponentFlavor::RustCrate("tempfile".to_string()),
-        "MIT OR Apache-2.0",
-    )?);
-
-    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
         python_packaging::licensing::ComponentFlavor::RustCrate("time".to_string()),
         "MIT OR Apache-2.0",
     )?);
@@ -481,11 +436,6 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<python_packaging::licensing::Lic
 
     res.push(python_packaging::licensing::LicensedComponent::new_spdx(
         python_packaging::licensing::ComponentFlavor::RustCrate("version_check".to_string()),
-        "MIT OR Apache-2.0",
-    )?);
-
-    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
-        python_packaging::licensing::ComponentFlavor::RustCrate("wait-timeout".to_string()),
         "MIT OR Apache-2.0",
     )?);
 
