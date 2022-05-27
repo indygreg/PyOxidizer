@@ -8,10 +8,13 @@ use {
     clap::{Arg, ArgMatches, Command},
     duct::cmd,
     git2::{Repository, Status},
+    guppy::{
+        graph::{DependencyDirection, PackageGraph},
+        MetadataCommand,
+    },
     once_cell::sync::Lazy,
-    serde::Deserialize,
     std::{
-        collections::{BTreeMap, BTreeSet},
+        collections::BTreeMap,
         ffi::OsString,
         fmt::Write,
         io::{BufRead, BufReader},
@@ -1049,42 +1052,28 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
     Ok(())
 }
 
-#[derive(Debug, Deserialize)]
-struct CargoDenyLicenseList {
-    licenses: Vec<(String, Vec<String>)>,
-}
-
 fn generate_pyembed_license(repo_root: &Path) -> Result<String> {
     let pyembed_manifest_path = repo_root.join("pyembed").join("Cargo.toml");
 
-    let output = cmd(
-        "cargo",
-        vec![
-            "deny".to_string(),
-            "--all-features".to_string(),
-            "--manifest-path".to_string(),
-            pyembed_manifest_path.display().to_string(),
-            "list".to_string(),
-            "-f".to_string(),
-            "json".to_string(),
-        ],
-    )
-    .stdout_capture()
-    .run()?;
+    let package_graph =
+        PackageGraph::from_command(MetadataCommand::new().manifest_path(&pyembed_manifest_path))?;
 
-    let deny: CargoDenyLicenseList = serde_json::from_slice(&output.stdout)?;
+    let pyembed_id = package_graph
+        .packages()
+        .find(|p| p.name() == "pyembed")
+        .ok_or_else(|| anyhow!("could not find pyembed package"))?
+        .id();
 
-    let mut crates = BTreeMap::new();
+    let query = package_graph.query_forward([pyembed_id])?;
+    let packages = query.resolve();
 
-    for (license, entries) in &deny.licenses {
-        for entry in entries {
-            let crate_name = entry.split(' ').next().unwrap();
+    let mut package_licenses = BTreeMap::new();
 
-            crates
-                .entry(crate_name.to_string())
-                .or_insert_with(BTreeSet::new)
-                .insert(license.clone());
-        }
+    for package in packages.packages(DependencyDirection::Forward) {
+        package_licenses.insert(
+            package.name(),
+            package.license().map(|x| x.replace('/', " OR ")),
+        );
     }
 
     let mut text = String::new();
@@ -1110,15 +1099,14 @@ fn generate_pyembed_license(repo_root: &Path) -> Result<String> {
     writeln!(&mut text, "    let mut res = vec![];")?;
     writeln!(&mut text)?;
 
-    for (crate_name, licenses) in crates {
-        let expression = licenses.into_iter().collect::<Vec<_>>().join(" OR ");
-
-        writeln!(
+    for (name, license) in package_licenses {
+        if let Some(license) = license {
+            writeln!(
             &mut text,
             "    res.push(python_packaging::licensing::LicensedComponent::new_spdx(python_packaging::licensing::ComponentFlavor::RustCrate(\"{}\".to_string()), \"{}\")?);",
-            crate_name, expression
-        )?;
-        writeln!(&mut text)?;
+            name, license)?;
+            writeln!(&mut text)?;
+        }
     }
 
     writeln!(&mut text, "    Ok(res)")?;

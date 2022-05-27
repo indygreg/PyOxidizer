@@ -19,6 +19,7 @@ duct = "0"
 futures = "0"
 # We don't need network functionality.
 git2 = { version = "0", default-features = false }
+guppy = "0.14"
 hex = "0"
 maturin = "0"
 octocrab = { version = "0", default-features = false, features = ["rustls"] }
@@ -27,7 +28,6 @@ pulldown-cmark = "0.9"
 reqwest = {version = "0", default-features = false, features = ["rustls"] }
 rustdoc-types = "0"
 semver = "1"
-serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0"
 tempfile = "3"
