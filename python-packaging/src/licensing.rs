@@ -102,9 +102,12 @@ impl PartialOrd for ComponentFlavor {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match (self.python_module_name(), other.python_module_name()) {
             (Some(a), Some(b)) => a.partial_cmp(b),
-            (Some(_), None) => Some(Ordering::Less),
-            (None, Some(_)) => Some(Ordering::Greater),
-            (None, None) => self.to_string().partial_cmp(&other.to_string()),
+            _ => {
+                let a = (self.ordinal_value(), self.to_string());
+                let b = (other.ordinal_value(), other.to_string());
+
+                a.partial_cmp(&b)
+            }
         }
     }
 }
@@ -116,6 +119,18 @@ impl Ord for ComponentFlavor {
 }
 
 impl ComponentFlavor {
+    fn ordinal_value(&self) -> u8 {
+        match self {
+            Self::PythonDistribution => 0,
+            ComponentFlavor::PythonStandardLibraryModule(_) => 1,
+            ComponentFlavor::PythonStandardLibraryExtensionModule(_) => 2,
+            ComponentFlavor::PythonExtensionModule(_) => 3,
+            ComponentFlavor::PythonModule(_) => 4,
+            ComponentFlavor::Library(_) => 5,
+            ComponentFlavor::RustCrate(_) => 6,
+        }
+    }
+
     /// Whether this component is part of the Python standard library.
     pub fn is_python_standard_library(&self) -> bool {
         match self {
