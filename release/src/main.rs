@@ -1103,13 +1103,22 @@ fn generate_pyembed_license(repo_root: &Path) -> Result<String> {
     writeln!(&mut text)?;
 
     for (name, license) in package_licenses {
-        if let Some(license) = license {
-            writeln!(
-            &mut text,
-            "    res.push(python_packaging::licensing::LicensedComponent::new_spdx(python_packaging::licensing::ComponentFlavor::RustCrate(\"{}\".to_string()), \"{}\")?);",
-            name, license)?;
-            writeln!(&mut text)?;
-        }
+        let flavor = format!(
+            "python_packaging::licensing::ComponentFlavor::RustCrate(\"{}\".to_string())",
+            name
+        );
+
+        let component = if let Some(license) = license {
+            format!(
+                "python_packaging::licensing::LicensedComponent::new_spdx({}, \"{}\")?",
+                flavor, license
+            )
+        } else {
+            format!("python_packaging::licensing::LicensesComponent::new({}, python_packaging::licensing::LicenseFlavor::None)", flavor)
+        };
+
+        writeln!(&mut text, "    res.push({});", component)?;
+        writeln!(&mut text, "")?;
     }
 
     writeln!(&mut text, "    Ok(res)")?;
