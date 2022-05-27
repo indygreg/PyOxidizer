@@ -380,7 +380,12 @@ pub fn update_new_cargo_toml(path: &Path, pyembed_location: &PyembedLocation) ->
     let (before, after) = content.split_at(nl_off);
 
     let mut content = before.to_string();
-    content.push_str("license = \"MIT OR Apache-2.0\"\n");
+
+    // We license to the public domain because it is the most liberal in terms of allowed use.
+    content.push_str("# The license for the project boilerplate is public domain.\n");
+    content.push_str("# Feel free to change the license if you make modifications.\n");
+    content.push_str("license = \"CC-PDDC\"\n");
+
     content.push_str("build = \"build.rs\"\n");
     content.push_str(after);
 

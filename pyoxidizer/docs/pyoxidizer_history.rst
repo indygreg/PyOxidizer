@@ -84,6 +84,8 @@ Other Relevant Changes
   subtle changes in behavior. If you see new build errors related to Apple SDKs
   in this release, don't hesitate to create an issue.
 * The jemalloc allocator in built binaries has been upgraded to version 5.3.
+* The auto-generated Rust project created during binary building is now explicitly
+  licensed to the public domain.
 
 .. _version_0_20_0:
 
