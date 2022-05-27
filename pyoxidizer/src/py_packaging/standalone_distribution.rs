@@ -701,8 +701,10 @@ impl StandaloneDistribution {
 
             let expression = pi.licenses.clone().unwrap().join(" OR ");
 
-            let mut component =
-                LicensedComponent::new_spdx(ComponentFlavor::PythonDistribution, &expression)?;
+            let mut component = LicensedComponent::new_spdx(
+                ComponentFlavor::PythonDistribution(pi.python_implementation_name.clone()),
+                &expression,
+            )?;
             component.add_license_text(license_text);
 
             Some(component)

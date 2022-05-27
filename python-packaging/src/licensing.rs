@@ -41,7 +41,7 @@ pub enum LicenseFlavor {
 #[derive(Clone, Debug)]
 pub enum ComponentFlavor {
     /// A Python distribution.
-    PythonDistribution,
+    PythonDistribution(String),
     /// A Python module in the standard library.
     PythonStandardLibraryModule(String),
     /// A compiled Python extension module in the standard library.
@@ -59,7 +59,7 @@ pub enum ComponentFlavor {
 impl Display for ComponentFlavor {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::PythonDistribution => f.write_str("Python distribution"),
+            Self::PythonDistribution(name) => f.write_str(name),
             Self::PythonStandardLibraryModule(name) => {
                 f.write_fmt(format_args!("Python stdlib module {}", name))
             }
@@ -87,7 +87,7 @@ impl PartialEq for ComponentFlavor {
             (Some(_), None) => false,
             (None, Some(_)) => false,
             (None, None) => match (self, other) {
-                (Self::PythonDistribution, Self::PythonDistribution) => true,
+                (Self::PythonDistribution(a), Self::PythonDistribution(b)) => a.eq(b),
                 (Self::Library(a), Self::Library(b)) => a.eq(b),
                 (Self::RustCrate(a), Self::RustCrate(b)) => a.eq(b),
                 _ => false,
@@ -121,7 +121,7 @@ impl Ord for ComponentFlavor {
 impl ComponentFlavor {
     fn ordinal_value(&self) -> u8 {
         match self {
-            Self::PythonDistribution => 0,
+            Self::PythonDistribution(_) => 0,
             ComponentFlavor::PythonStandardLibraryModule(_) => 1,
             ComponentFlavor::PythonStandardLibraryExtensionModule(_) => 2,
             ComponentFlavor::PythonExtensionModule(_) => 3,
@@ -134,7 +134,7 @@ impl ComponentFlavor {
     /// Whether this component is part of the Python standard library.
     pub fn is_python_standard_library(&self) -> bool {
         match self {
-            Self::PythonDistribution => false,
+            Self::PythonDistribution(_) => false,
             Self::PythonStandardLibraryModule(_) => true,
             Self::PythonStandardLibraryExtensionModule(_) => true,
             Self::PythonExtensionModule(_) => true,
@@ -146,7 +146,7 @@ impl ComponentFlavor {
 
     pub fn python_module_name(&self) -> Option<&str> {
         match self {
-            Self::PythonDistribution => None,
+            Self::PythonDistribution(_) => None,
             Self::PythonStandardLibraryModule(name) => Some(name.as_str()),
             Self::PythonStandardLibraryExtensionModule(name) => Some(name.as_str()),
             Self::PythonExtensionModule(name) => Some(name.as_str()),
@@ -160,7 +160,7 @@ impl ComponentFlavor {
     pub fn is_python_distribution_component(&self) -> bool {
         matches!(
             self,
-            Self::PythonDistribution
+            Self::PythonDistribution(_)
                 | Self::PythonStandardLibraryModule(_)
                 | Self::PythonStandardLibraryExtensionModule(_)
         )
@@ -406,7 +406,7 @@ impl LicensedComponents {
         let distribution = self
             .components
             .values()
-            .find(|c| c.flavor() == &ComponentFlavor::PythonDistribution);
+            .find(|c| matches!(c.flavor(), ComponentFlavor::PythonDistribution(_)));
 
         self.components =
             BTreeMap::from_iter(self.components.clone().into_iter().filter(|(k, v)| {
@@ -792,11 +792,11 @@ mod tests {
     #[test]
     fn component_flavor_equivalence() {
         assert_eq!(
-            ComponentFlavor::PythonDistribution,
-            ComponentFlavor::PythonDistribution
+            ComponentFlavor::PythonDistribution("foo".to_string()),
+            ComponentFlavor::PythonDistribution("foo".to_string())
         );
         assert_ne!(
-            ComponentFlavor::PythonDistribution,
+            ComponentFlavor::PythonDistribution("foo".to_string()),
             ComponentFlavor::PythonStandardLibraryModule("foo".into())
         );
         assert_eq!(
@@ -837,19 +837,19 @@ mod tests {
     #[test]
     fn parse_advanced() -> Result<()> {
         LicensedComponent::new_spdx(
-            ComponentFlavor::PythonDistribution,
+            ComponentFlavor::PythonDistribution("foo".into()),
             "Apache-2.0 OR MPL-2.0 OR 0BSD",
         )?;
         LicensedComponent::new_spdx(
-            ComponentFlavor::PythonDistribution,
+            ComponentFlavor::PythonDistribution("foo".into()),
             "Apache-2.0 AND MPL-2.0 AND 0BSD",
         )?;
         LicensedComponent::new_spdx(
-            ComponentFlavor::PythonDistribution,
+            ComponentFlavor::PythonDistribution("foo".into()),
             "Apache-2.0 AND MPL-2.0 OR 0BSD",
         )?;
         LicensedComponent::new_spdx(
-            ComponentFlavor::PythonDistribution,
+            ComponentFlavor::PythonDistribution("foo".into()),
             "MIT AND (LGPL-2.1-or-later OR BSD-3-Clause)",
         )?;
 
