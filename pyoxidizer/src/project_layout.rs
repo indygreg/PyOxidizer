@@ -365,7 +365,7 @@ impl PyembedLocation {
 pub fn update_new_cargo_toml(path: &Path, pyembed_location: &PyembedLocation) -> Result<()> {
     let content = std::fs::read_to_string(path)?;
 
-    // Insert a `build = build.rs` line after the `version = *\n` line. We key off
+    // Insert a `[package]` content after the `version = *\n` line. We key off
     // version because it should always be present.
     let version_start = match content.find("version =") {
         Some(off) => off,
@@ -380,6 +380,7 @@ pub fn update_new_cargo_toml(path: &Path, pyembed_location: &PyembedLocation) ->
     let (before, after) = content.split_at(nl_off);
 
     let mut content = before.to_string();
+    content.push_str("license = \"MIT OR Apache-2.0\"\n");
     content.push_str("build = \"build.rs\"\n");
     content.push_str(after);
 
