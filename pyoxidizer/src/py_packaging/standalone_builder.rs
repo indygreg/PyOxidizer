@@ -21,7 +21,7 @@ use {
         },
         standalone_distribution::StandaloneDistribution,
     },
-    crate::environment::Environment,
+    crate::{environment::Environment, licensing::log_licensing_info},
     anyhow::{anyhow, Context, Result},
     log::warn,
     once_cell::sync::Lazy,
@@ -870,32 +870,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
         let licenses = self.resources_collector.normalized_licensed_components();
 
-        for component in licenses.license_spdx_components() {
-            warn!(
-                "{} uses SPDX licenses {}",
-                component.flavor(),
-                component
-                    .spdx_expression()
-                    .expect("should have SPDX expression")
-            );
-        }
-
-        warn!(
-            "All SPDX licenses: {}",
-            licenses.all_spdx_license_names().join(", ")
-        );
-        for component in licenses.license_missing_components() {
-            warn!("{} lacks a known software license", component.flavor());
-        }
-        for component in licenses.license_public_domain_components() {
-            warn!("{} is in the public domain", component.flavor());
-        }
-        for component in licenses.license_unknown_components() {
-            warn!("{} has an unknown software license", component.flavor());
-        }
-        for component in licenses.license_copyleft_components() {
-            warn!("Component has copyleft license: {}", component.flavor());
-        }
+        log_licensing_info(&licenses);
 
         let compiled_resources = {
             let temp_dir = tempfile::TempDir::new()?;
