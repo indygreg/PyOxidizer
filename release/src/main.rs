@@ -1065,9 +1065,21 @@ fn generate_pyembed_license(repo_root: &Path) -> Result<String> {
         .id();
 
     let query = package_graph.query_forward([pyembed_id])?;
+
+    let mut package_dependencies = BTreeMap::new();
+
     let packages = query.resolve_with_fn(|_, link| {
         // Exclude build and dev dependencies.
-        !(link.build().is_present() || link.dev_only())
+        let filter = !(link.build().is_present() || link.dev_only());
+
+        if filter {
+            package_dependencies
+                .entry(link.to().name())
+                .or_insert(vec![])
+                .push(link.from().name());
+        }
+
+        filter
     });
 
     let mut package_licenses = BTreeMap::new();
@@ -1113,6 +1125,11 @@ fn generate_pyembed_license(repo_root: &Path) -> Result<String> {
             format!("LicensesComponent::new({}, LicenseFlavor::None)", flavor)
         };
 
+        writeln!(
+            &mut text,
+            "// via {}",
+            package_dependencies.get(name).unwrap_or(&vec![]).join(", ")
+        )?;
         writeln!(&mut text, "    res.push({});", component)?;
         writeln!(&mut text)?;
     }
