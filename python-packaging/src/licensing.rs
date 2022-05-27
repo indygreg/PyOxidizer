@@ -303,6 +303,24 @@ impl LicensedComponent {
         }
     }
 
+    /// Obtain all the distinct [LicenseId] in this component.
+    ///
+    /// Unlike [Self::all_spdx_licenses()], this returns just the license IDs without exceptions.
+    pub fn all_spdx_license_ids(&self) -> BTreeSet<LicenseId> {
+        self.all_spdx_licenses()
+            .into_iter()
+            .map(|(lid, _)| lid)
+            .collect::<BTreeSet<_>>()
+    }
+
+    /// Obtain all the [ExceptionId] present in this component.
+    pub fn all_spdx_exception_ids(&self) -> BTreeSet<ExceptionId> {
+        self.all_spdx_licenses()
+            .into_iter()
+            .filter_map(|(_, id)| id)
+            .collect::<BTreeSet<_>>()
+    }
+
     /// Whether all licenses are copyleft.
     pub fn is_copyleft(&self) -> bool {
         let licenses = self.all_spdx_licenses();
@@ -405,6 +423,16 @@ impl LicensedComponents {
             .collect::<BTreeSet<_>>()
     }
 
+    /// Obtain all SPDX license IDs referenced by all components.
+    ///
+    /// Unlike [Self::all_spdx_licenses()], this returns just the [LicenseId], without exceptions.
+    pub fn all_spdx_license_ids(&self) -> BTreeSet<LicenseId> {
+        self.components
+            .values()
+            .flat_map(|component| component.all_spdx_license_ids())
+            .collect::<BTreeSet<_>>()
+    }
+
     /// Obtain all SPDX license names referenced by registered components.
     pub fn all_spdx_license_names(&self) -> Vec<&'static str> {
         self.all_spdx_licenses()
@@ -452,6 +480,111 @@ impl LicensedComponents {
     /// licenses.
     pub fn license_copyleft_components(&self) -> impl Iterator<Item = &LicensedComponent> {
         self.components.values().filter(|c| c.is_copyleft())
+    }
+
+    /// Generate a unified text document describing licensing info for the components within.
+    #[cfg(feature = "spdx-text")]
+    pub fn aggregate_license_document(&self) -> Result<String> {
+        let mut lines = vec![
+            "Software Components".to_string(),
+            "===================".to_string(),
+            "".to_string(),
+        ];
+
+        for component in self.iter_components() {
+            lines.push(component.flavor().to_string());
+            lines.push("-".repeat(component.flavor().to_string().len()));
+            lines.push("".into());
+
+            match component.license() {
+                LicenseFlavor::None => {
+                    lines.push("No licensing information available.".into());
+                }
+                LicenseFlavor::Spdx(expression) | LicenseFlavor::OtherExpression(expression) => {
+                    lines.push(format!(
+                        "Licensed according to SPDX expression: {}",
+                        expression
+                    ));
+
+                    if component.license_texts().is_empty() {
+                        lines.push("".into());
+                        lines.push("The license texts for this component are reproduced elsewhere in this document.".into());
+                        lines.push("".into());
+                    }
+
+                    for exception in component.all_spdx_exception_ids() {
+                        lines.push(format!(
+                        "In addition to the standard SPDX license, this component has the license exception: {}",
+                        exception.name
+                    ));
+                        lines.push("The text of that exception follows.".into());
+                        lines.push("".into());
+                        lines.push(exception.text().to_string());
+                        lines.push(format!("(end of exception text for {})", exception.name));
+                    }
+                }
+                LicenseFlavor::PublicDomain => {
+                    lines.push("Licensed to the public domain.".into());
+                }
+                LicenseFlavor::Unknown(terms) => {
+                    lines.push(format!("Licensed according to {}", terms.join(", ")));
+                }
+            }
+
+            match component.source_location() {
+                SourceLocation::NotSet => {}
+                SourceLocation::Url(url) => {
+                    lines.push("".into());
+                    lines.push(
+                        "The source code for this software is available at the following URL:"
+                            .to_string(),
+                    );
+                    lines.push("".into());
+                    lines.push(format!("    {}", url));
+                    lines.push("".into());
+                }
+            }
+
+            if !component.license_texts().is_empty() {
+                lines.push("".into());
+                lines.push("The license text for this component is as follows.".into());
+                lines.push("".into());
+                lines.push("-".repeat(80).to_string());
+
+                for text in component.license_texts() {
+                    lines.push(text.to_string());
+                }
+                lines.push("".into());
+                lines.push("-".repeat(80).to_string());
+                lines.push(format!("(end of license text for {})", component.flavor()));
+            }
+
+            lines.push("".into());
+        }
+
+        lines.push("SPDX License Texts".into());
+        lines.push("==================".into());
+        lines.push("".into());
+        lines.push("The following sections contain license texts for all SPDX licenses".into());
+        lines.push("referenced by software components listed above.".into());
+        lines.push("".into());
+
+        for license in self.all_spdx_license_ids() {
+            let header = format!("{} / {}", license.name, license.full_name);
+
+            lines.push(header.clone());
+            lines.push("-".repeat(header.len()));
+
+            lines.push("".into());
+
+            lines.push(license.text().to_string());
+
+            lines.push("".into());
+        }
+
+        let text = lines.join("\n");
+
+        Ok(text)
     }
 }
 

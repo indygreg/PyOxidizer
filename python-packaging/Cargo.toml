@@ -47,4 +47,5 @@ tempfile = "3.2"
 [features]
 default = ["wheel"]
 serialization = ["serde"]
+spdx-text = ["spdx/text"]
 wheel = ["base64", "sha2", "time", "zip"]
