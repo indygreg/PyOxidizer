@@ -1065,7 +1065,10 @@ fn generate_pyembed_license(repo_root: &Path) -> Result<String> {
         .id();
 
     let query = package_graph.query_forward([pyembed_id])?;
-    let packages = query.resolve_with_fn(|_, link| !link.dev_only());
+    let packages = query.resolve_with_fn(|_, link| {
+        // Exclude build and dev dependencies.
+        !(link.build().is_present() || link.dev_only())
+    });
 
     let mut package_licenses = BTreeMap::new();
 

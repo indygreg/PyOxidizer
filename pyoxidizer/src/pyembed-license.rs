@@ -21,11 +21,6 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<python_packaging::licensing::Lic
     )?);
 
     res.push(python_packaging::licensing::LicensedComponent::new_spdx(
-        python_packaging::licensing::ComponentFlavor::RustCrate("autocfg".to_string()),
-        "Apache-2.0 OR MIT",
-    )?);
-
-    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
         python_packaging::licensing::ComponentFlavor::RustCrate("base64".to_string()),
         "MIT OR Apache-2.0",
     )?);
@@ -56,22 +51,12 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<python_packaging::licensing::Lic
     )?);
 
     res.push(python_packaging::licensing::LicensedComponent::new_spdx(
-        python_packaging::licensing::ComponentFlavor::RustCrate("cc".to_string()),
-        "MIT OR Apache-2.0",
-    )?);
-
-    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
         python_packaging::licensing::ComponentFlavor::RustCrate("cfg-if".to_string()),
         "MIT OR Apache-2.0",
     )?);
 
     res.push(python_packaging::licensing::LicensedComponent::new_spdx(
         python_packaging::licensing::ComponentFlavor::RustCrate("charset".to_string()),
-        "MIT OR Apache-2.0",
-    )?);
-
-    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
-        python_packaging::licensing::ComponentFlavor::RustCrate("cmake".to_string()),
         "MIT OR Apache-2.0",
     )?);
 
@@ -131,11 +116,6 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<python_packaging::licensing::Lic
     )?);
 
     res.push(python_packaging::licensing::LicensedComponent::new_spdx(
-        python_packaging::licensing::ComponentFlavor::RustCrate("fs_extra".to_string()),
-        "MIT",
-    )?);
-
-    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
         python_packaging::licensing::ComponentFlavor::RustCrate("generic-array".to_string()),
         "MIT",
     )?);
@@ -162,11 +142,6 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<python_packaging::licensing::Lic
 
     res.push(python_packaging::licensing::LicensedComponent::new_spdx(
         python_packaging::licensing::ComponentFlavor::RustCrate("jemalloc-sys".to_string()),
-        "MIT OR Apache-2.0",
-    )?);
-
-    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
-        python_packaging::licensing::ComponentFlavor::RustCrate("jobserver".to_string()),
         "MIT OR Apache-2.0",
     )?);
 
@@ -236,11 +211,6 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<python_packaging::licensing::Lic
     )?);
 
     res.push(python_packaging::licensing::LicensedComponent::new_spdx(
-        python_packaging::licensing::ComponentFlavor::RustCrate("pkg-config".to_string()),
-        "MIT OR Apache-2.0",
-    )?);
-
-    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
         python_packaging::licensing::ComponentFlavor::RustCrate("ppv-lite86".to_string()),
         "MIT OR Apache-2.0",
     )?);
@@ -257,11 +227,6 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<python_packaging::licensing::Lic
 
     res.push(python_packaging::licensing::LicensedComponent::new_spdx(
         python_packaging::licensing::ComponentFlavor::RustCrate("pyo3".to_string()),
-        "Apache-2.0",
-    )?);
-
-    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
-        python_packaging::licensing::ComponentFlavor::RustCrate("pyo3-build-config".to_string()),
         "Apache-2.0",
     )?);
 
@@ -400,11 +365,6 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<python_packaging::licensing::Lic
     )?);
 
     res.push(python_packaging::licensing::LicensedComponent::new_spdx(
-        python_packaging::licensing::ComponentFlavor::RustCrate("target-lexicon".to_string()),
-        "Apache-2.0 WITH LLVM-exception",
-    )?);
-
-    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
         python_packaging::licensing::ComponentFlavor::RustCrate("time".to_string()),
         "MIT OR Apache-2.0",
     )?);
@@ -431,11 +391,6 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<python_packaging::licensing::Lic
 
     res.push(python_packaging::licensing::LicensedComponent::new_spdx(
         python_packaging::licensing::ComponentFlavor::RustCrate("unindent".to_string()),
-        "MIT OR Apache-2.0",
-    )?);
-
-    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
-        python_packaging::licensing::ComponentFlavor::RustCrate("version_check".to_string()),
         "MIT OR Apache-2.0",
     )?);
 
