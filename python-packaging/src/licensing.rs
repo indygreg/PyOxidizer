@@ -454,10 +454,16 @@ impl LicensedComponents {
     }
 
     /// Obtain all SPDX license names referenced by registered components.
-    pub fn all_spdx_license_names(&self) -> Vec<&'static str> {
+    pub fn all_spdx_license_names(&self) -> Vec<String> {
         self.all_spdx_licenses()
             .into_iter()
-            .map(|(id, _)| id.name)
+            .map(|(id, exception)| {
+                if let Some(exception) = exception {
+                    format!("{} WITH {}", id.name, exception.name)
+                } else {
+                    id.name.to_string()
+                }
+            })
             .collect::<Vec<_>>()
     }
 
