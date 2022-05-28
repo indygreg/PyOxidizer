@@ -89,6 +89,9 @@ Other Relevant Changes
 * The jemalloc allocator in built binaries has been upgraded to version 5.3.
 * The auto-generated Rust project created during binary building is now explicitly
   licensed to the public domain.
+* Derivation of a custom ``libpython`` library archive now sometimes uses pure
+  Rust code instead of calling external processes. There should be no meaningful
+  change in behavior except for build output being more concise.
 
 .. _version_0_20_0:
 

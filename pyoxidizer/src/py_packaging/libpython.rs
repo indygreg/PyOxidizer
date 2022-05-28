@@ -13,11 +13,34 @@ use {
     },
     anyhow::{anyhow, Context, Result},
     apple_sdk::AppleSdk,
+    duct::cmd,
     log::warn,
     python_packaging::libpython::LibPythonBuildContext,
-    std::{fs, fs::create_dir_all, path::PathBuf},
+    std::{
+        ffi::OsStr,
+        fs,
+        fs::create_dir_all,
+        io::{BufRead, BufReader, Cursor},
+        path::{Path, PathBuf},
+    },
     tugger_file_manifest::FileData,
 };
+
+#[cfg(target_family = "unix")]
+use std::os::unix::ffi::OsStrExt;
+
+#[cfg(unix)]
+fn osstr_to_bytes(s: &OsStr) -> Result<Vec<u8>> {
+    Ok(s.as_bytes().to_vec())
+}
+
+#[cfg(not(unix))]
+fn osstr_to_bytes(s: &OsStr) -> Result<Vec<u8>> {
+    let utf8: &str = s
+        .to_str()
+        .ok_or_else(|| anyhow!("invalid UTF-8 filename"))?;
+    Ok(utf8.as_bytes().to_vec())
+}
 
 /// Produce the content of the config.c file containing built-in extensions.
 pub fn make_config_c<T>(extensions: &[(T, T)]) -> String
@@ -45,6 +68,74 @@ where
     lines.push(String::from("};"));
 
     lines.join("\n")
+}
+
+/// The `ar` crate doesn't support emitting the symbols index. So call out to `ar s` ourselves.
+fn create_ar_symbols_index(dest_dir: &Path, lib_data: &[u8]) -> Result<Vec<u8>> {
+    let lib_path = dest_dir.join("lib.a");
+
+    std::fs::write(&lib_path, lib_data).context("writing archive to temporary file")?;
+
+    warn!("invoking `ar s` to index archive symbols");
+    let command = cmd("ar", &["s".to_string(), lib_path.display().to_string()])
+        .stderr_to_stdout()
+        .reader()?;
+    {
+        let reader = BufReader::new(&command);
+        for line in reader.lines() {
+            warn!("{}", line?);
+        }
+    }
+    let output = command
+        .try_wait()?
+        .ok_or_else(|| anyhow!("unable to wait on ar"))?;
+
+    if !output.status.success() {
+        return Err(anyhow!("failed to invoke `ar s`"));
+    }
+
+    Ok(std::fs::read(&lib_path)?)
+}
+
+fn assemble_archive_gnu(objects: &[PathBuf], temp_dir: &Path) -> Result<Vec<u8>> {
+    let buffer = Cursor::new(vec![]);
+
+    let identifiers = objects
+        .iter()
+        .map(|p| {
+            Ok(p.file_name()
+                .ok_or_else(|| anyhow!("object file name could not be determined"))?
+                .to_string_lossy()
+                .as_bytes()
+                .to_vec())
+        })
+        .collect::<Result<Vec<_>>>()?;
+
+    let mut builder = ar::GnuBuilder::new(buffer, identifiers);
+
+    for path in objects {
+        let filename = path
+            .file_name()
+            .ok_or_else(|| anyhow!("could not determine file name"))?;
+
+        let identifier = osstr_to_bytes(filename)?;
+
+        let fh = std::fs::File::open(path)?;
+        let metadata = fh.metadata()?;
+
+        let mut header = ar::Header::from_metadata(identifier, &metadata);
+
+        header.set_uid(0);
+        header.set_gid(0);
+        header.set_mtime(0);
+        header.set_mode(0o644);
+
+        builder.append(&header, fh)?;
+    }
+
+    let data = builder.into_inner()?.into_inner();
+
+    create_ar_symbols_index(temp_dir, &data)
 }
 
 /// Represents a built libpython.
@@ -196,23 +287,27 @@ pub fn link_libpython(
     }
 
     warn!("linking customized Python library...");
-    let mut build = cc::Build::new();
-    build.out_dir(&libpython_dir);
-    build.host(host_triple);
-    build.target(target_triple);
-    build.opt_level_str(opt_level);
-    // We handle this ourselves.
-    build.cargo_metadata(false);
 
-    for object in objects {
-        build.object(object);
-    }
+    let libpython_data = if target_triple.contains("-linux-") {
+        assemble_archive_gnu(&objects, &libpython_dir)?
+    } else {
+        let mut build = cc::Build::new();
+        build.out_dir(&libpython_dir);
+        build.host(host_triple);
+        build.target(target_triple);
+        build.opt_level_str(opt_level);
+        // We handle this ourselves.
+        build.cargo_metadata(false);
 
-    build.compile("python");
+        for object in objects {
+            build.object(object);
+        }
 
-    let libpython_data =
+        build.compile("python");
+
         std::fs::read(libpython_dir.join(if windows { "python.lib" } else { "libpython.a" }))
-            .context("reading libpython")?;
+            .context("reading libpython")?
+    };
 
     warn!("{} byte Python library created", libpython_data.len());
 

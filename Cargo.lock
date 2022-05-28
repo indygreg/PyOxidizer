@@ -4531,6 +4531,7 @@ version = "0.21.0-pre"
 dependencies = [
  "anyhow",
  "apple-sdk",
+ "ar",
  "assert_cmd",
  "assert_fs",
  "cargo-lock",
