@@ -9,17 +9,18 @@ use {
     cargo_toml::Manifest,
     guppy::{
         graph::{
-            cargo::{CargoOptions, CargoResolverVersion},
-            feature::{named_feature_filter, FeatureFilter, StandardFeatures},
+            cargo::{CargoOptions, CargoResolverVersion, CargoSet},
+            feature::{named_feature_filter, StandardFeatures},
             DependencyDirection,
         },
+        platform::{Platform, PlatformSpec, TargetFeatures, Triple},
         MetadataCommand,
     },
     log::warn,
     python_packaging::licensing::{
         ComponentFlavor, LicenseFlavor, LicensedComponent, LicensedComponents,
     },
-    std::path::Path,
+    std::{path::Path, sync::Arc},
 };
 
 /// Log a summary of licensing info.
@@ -57,6 +58,7 @@ pub fn licenses_from_cargo_manifest<'a>(
     manifest_path: impl AsRef<Path>,
     all_features: bool,
     features: impl IntoIterator<Item = &'a str>,
+    target_triple: Option<impl Into<String>>,
     cargo_path: Option<&Path>,
     include_main_package: bool,
 ) -> Result<LicensedComponents> {
@@ -84,7 +86,6 @@ pub fn licenses_from_cargo_manifest<'a>(
     command.manifest_path(manifest_path);
 
     let package_graph = command.build_graph().context("resolving cargo metadata")?;
-    let feature_graph = package_graph.feature_graph();
 
     let main_package_id = package_graph
         .packages()
@@ -92,36 +93,69 @@ pub fn licenses_from_cargo_manifest<'a>(
         .ok_or_else(|| anyhow!("could not find package {} in metadata", main_package))?
         .id();
 
-    // Simulate a cargo build using the features specified.
+    let workspace_package_set = package_graph.resolve_workspace();
+    let main_package_set = package_graph.query_forward([main_package_id])?.resolve();
+
+    // Simulate a cargo build from the current platform targeting a specified platform or the current.
     let mut cargo_options = CargoOptions::new();
     cargo_options.set_resolver(CargoResolverVersion::V2);
-
-    let feature_filter: Box<dyn FeatureFilter> = if all_features {
-        Box::new(StandardFeatures::All)
+    cargo_options.set_host_platform(PlatformSpec::Platform(Arc::new(Platform::current()?)));
+    cargo_options.set_target_platform(if let Some(triple) = target_triple {
+        PlatformSpec::Platform(Arc::new(Platform::from_triple(
+            Triple::new(triple.into())?,
+            TargetFeatures::Unknown,
+        )))
     } else {
-        Box::new(named_feature_filter(StandardFeatures::Default, features))
-    };
+        PlatformSpec::current()?
+    });
 
-    let cargo_set = feature_graph
-        .query_workspace(feature_filter)
-        .resolve()
-        .into_cargo_set(&cargo_options)?;
+    // Apply our desired features settings.
+    let initials = workspace_package_set.to_feature_set(named_feature_filter(
+        if all_features {
+            StandardFeatures::All
+        } else {
+            StandardFeatures::Default
+        },
+        features,
+    ));
 
-    // Turn the cargo set into packages, filtering out build and dev dependencies, since
-    // they don't affect run-time licensing.
-    let package_set = cargo_set
-        .package_graph()
-        .query_forward([main_package_id])?
-        .resolve_with_fn(|_, link| {
-            // Ignore build and dev dependencies since they don't affect run-time licensing.
-            !(link.build().is_present() || link.dev_only())
-        });
+    // This is always empty because we don't use the functionality.
+    let features_only = package_graph
+        .resolve_none()
+        .to_feature_set(StandardFeatures::All);
+
+    let cargo_set = CargoSet::new(initials, features_only, &cargo_options)?;
+
+    // The meaningful packages for licensing are those that are built for the target
+    // unioned with proc macro crates for the host. It is important we capture the host
+    // proc macro crates because those can generate code that end up in the final binary.
+    let target_features = cargo_set.target_features();
+
+    let proc_macro_feature_set = package_graph
+        .resolve_ids(cargo_set.proc_macro_links().map(|link| link.to().id()))?
+        .to_feature_set(StandardFeatures::All);
+    let proc_macro_host_feature_set = cargo_set
+        .host_features()
+        .intersection(&proc_macro_feature_set);
+
+    let relevant_feature_set = target_features.union(&proc_macro_host_feature_set);
+
+    // Turn it into packages.
+    //
+    // Note: this has packages for the entire workspace. We still need to intersect
+    // with the packages set relevant to the main package!
+    let feature_list = relevant_feature_set.packages_with_features(DependencyDirection::Forward);
 
     // Now turn the packages into licensing metadata.
-
     let mut components = LicensedComponents::default();
 
-    for package in package_set.packages(DependencyDirection::Forward) {
+    for feature_list in feature_list {
+        let package = feature_list.package();
+
+        if !main_package_set.contains(package.id())? {
+            continue;
+        }
+
         if package.id() == main_package_id && !include_main_package {
             continue;
         }

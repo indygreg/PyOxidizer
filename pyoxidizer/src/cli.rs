@@ -470,6 +470,12 @@ pub fn run_cli() -> Result<()> {
                     .help("Activate all crate features during evaluation"),
             )
             .arg(
+                Arg::new("target_triple")
+                    .long("target-triple")
+                    .takes_value(true)
+                    .help("Rust target triple to simulate building for"),
+            )
+            .arg(
                 Arg::new("unified_license")
                     .long("unified-license")
                     .help("Print a unified license document"),
@@ -671,9 +677,16 @@ pub fn run_cli() -> Result<()> {
             let project_path =
                 Path::new(args.value_of("project_path").expect("argument is required"));
             let all_features = args.is_present("all_features");
+            let target_triple = args.value_of("target_triple");
             let unified_license = args.is_present("unified_license");
 
-            projectmgmt::rust_project_licensing(&env, project_path, all_features, unified_license)
+            projectmgmt::rust_project_licensing(
+                &env,
+                project_path,
+                all_features,
+                target_triple,
+                unified_license,
+            )
         }
 
         _ => Err(anyhow!("invalid sub-command")),
