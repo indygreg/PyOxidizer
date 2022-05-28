@@ -146,26 +146,21 @@ pub fn link_libpython(
         .compile("irrelevant");
 
     warn!("resolving inputs for custom Python library...");
-    let mut build = cc::Build::new();
-    build.out_dir(&libpython_dir);
-    build.host(host_triple);
-    build.target(target_triple);
-    build.opt_level_str(opt_level);
-    // We handle this ourselves.
-    build.cargo_metadata(false);
+
+    let mut objects = vec![];
 
     // Link our custom config.c's object file.
-    build.object(&config_object_path);
+    objects.push(config_object_path);
 
     for (i, location) in context.object_files.iter().enumerate() {
         match location {
             FileData::Memory(data) => {
                 let out_path = libpython_dir.join(format!("libpython.{}.o", i));
                 fs::write(&out_path, data)?;
-                build.object(&out_path);
+                objects.push(out_path);
             }
             FileData::Path(p) => {
-                build.object(&p);
+                objects.push(p.clone());
             }
         }
     }
@@ -201,6 +196,18 @@ pub fn link_libpython(
     }
 
     warn!("linking customized Python library...");
+    let mut build = cc::Build::new();
+    build.out_dir(&libpython_dir);
+    build.host(host_triple);
+    build.target(target_triple);
+    build.opt_level_str(opt_level);
+    // We handle this ourselves.
+    build.cargo_metadata(false);
+
+    for object in objects {
+        build.object(object);
+    }
+
     build.compile("python");
 
     let libpython_data =
