@@ -97,6 +97,25 @@ fn create_ar_symbols_index(dest_dir: &Path, lib_data: &[u8]) -> Result<Vec<u8>> 
     Ok(std::fs::read(&lib_path)?)
 }
 
+fn ar_header(path: &Path) -> Result<ar::Header> {
+    let filename = path
+        .file_name()
+        .ok_or_else(|| anyhow!("could not determine file name"))?;
+
+    let identifier = osstr_to_bytes(filename)?;
+
+    let metadata = std::fs::metadata(path)?;
+
+    let mut header = ar::Header::from_metadata(identifier, &metadata);
+
+    header.set_uid(0);
+    header.set_gid(0);
+    header.set_mtime(0);
+    header.set_mode(0o644);
+
+    Ok(header)
+}
+
 fn assemble_archive_gnu(objects: &[PathBuf], temp_dir: &Path) -> Result<Vec<u8>> {
     let buffer = Cursor::new(vec![]);
 
@@ -114,21 +133,25 @@ fn assemble_archive_gnu(objects: &[PathBuf], temp_dir: &Path) -> Result<Vec<u8>>
     let mut builder = ar::GnuBuilder::new(buffer, identifiers);
 
     for path in objects {
-        let filename = path
-            .file_name()
-            .ok_or_else(|| anyhow!("could not determine file name"))?;
-
-        let identifier = osstr_to_bytes(filename)?;
-
+        let header = ar_header(path)?;
         let fh = std::fs::File::open(path)?;
-        let metadata = fh.metadata()?;
 
-        let mut header = ar::Header::from_metadata(identifier, &metadata);
+        builder.append(&header, fh)?;
+    }
 
-        header.set_uid(0);
-        header.set_gid(0);
-        header.set_mtime(0);
-        header.set_mode(0o644);
+    let data = builder.into_inner()?.into_inner();
+
+    create_ar_symbols_index(temp_dir, &data)
+}
+
+fn assemble_archive_bsd(objects: &[PathBuf], temp_dir: &Path) -> Result<Vec<u8>> {
+    let buffer = Cursor::new(vec![]);
+
+    let mut builder = ar::Builder::new(buffer);
+
+    for path in objects {
+        let header = ar_header(path)?;
+        let fh = std::fs::File::open(path)?;
 
         builder.append(&header, fh)?;
     }
@@ -290,6 +313,8 @@ pub fn link_libpython(
 
     let libpython_data = if target_triple.contains("-linux-") {
         assemble_archive_gnu(&objects, &libpython_dir)?
+    } else if target_triple.contains("-apple-") {
+        assemble_archive_bsd(&objects, &libpython_dir)?
     } else {
         let mut build = cc::Build::new();
         build.out_dir(&libpython_dir);
