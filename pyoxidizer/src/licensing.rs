@@ -53,6 +53,7 @@ pub fn licenses_from_cargo_manifest<'a>(
     manifest_path: impl AsRef<Path>,
     features: impl IntoIterator<Item = &'a str>,
     cargo_path: Option<&Path>,
+    include_main_package: bool,
 ) -> Result<LicensedComponents> {
     let manifest_path = manifest_path.as_ref();
     let features = features.into_iter().collect::<Vec<&str>>();
@@ -104,6 +105,10 @@ pub fn licenses_from_cargo_manifest<'a>(
     let mut components = LicensedComponents::default();
 
     for package in package_set.packages(DependencyDirection::Forward) {
+        if package.id() == main_package_id && !include_main_package {
+            continue;
+        }
+
         let flavor = ComponentFlavor::RustCrate(package.name().into());
 
         let component = if let Some(expression) = package.license() {

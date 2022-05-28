@@ -272,6 +272,7 @@ pub fn build_executable_with_rust_project<'a>(
     opt_level: &str,
     release: bool,
     locked: bool,
+    include_self_license: bool,
 ) -> Result<BuiltExecutable<'a>> {
     create_dir_all(&artifacts_path).context("creating directory for PyOxidizer build artifacts")?;
 
@@ -375,6 +376,7 @@ pub fn build_executable_with_rust_project<'a>(
         project_path.join("Cargo.toml"),
         cargo_features(exe),
         Some(&build_env.rust_environment.cargo_exe),
+        include_self_license,
     )?
     .into_components()
     {
@@ -450,6 +452,9 @@ pub fn build_python_executable<'a>(
         // Always build with locked because we crated a Cargo.lock with the
         // Rust project we just created.
         true,
+        // Don't include license for self because the Rust project is temporary and its
+        // licensing isn't material.
+        false,
     )
     .context("building executable with Rust project")?;
 
