@@ -251,7 +251,7 @@ pub fn install_rust_toolchain(
     install_root_dir: &Path,
     download_cache_dir: Option<&Path>,
 ) -> Result<InstalledToolchain> {
-    let manifest = fetch_channel_manifest(toolchain).context("fetching manifest")?;
+    let mut manifest = None;
 
     // The actual install directory is composed of the toolchain name and the
     // host triple.
@@ -286,13 +286,22 @@ pub fn install_rust_toolchain(
                 install_dir.display()
             );
         } else {
+            if manifest.is_none() {
+                manifest.replace(fetch_channel_manifest(toolchain).context("fetching manifest")?);
+            }
+
             warn!(
                 "extracting {} for {} to {}",
                 package,
                 triple,
                 install_dir.display()
             );
-            let archive = resolve_package_archive(&manifest, package, triple, download_cache_dir)?;
+            let archive = resolve_package_archive(
+                manifest.as_ref().unwrap(),
+                package,
+                triple,
+                download_cache_dir,
+            )?;
             materialize_archive(&archive, package, triple, &install_dir)?;
         }
     }
