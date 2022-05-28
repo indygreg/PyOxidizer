@@ -11,6 +11,7 @@ distribution and embedding it in a larger binary, oftentimes an executable.
 This library exposes that functionality to other tools.
 */
 
+mod default_python_distributions;
 pub mod environment;
 pub mod licensing;
 pub mod project_building;

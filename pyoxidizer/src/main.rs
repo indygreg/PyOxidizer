@@ -28,6 +28,7 @@ a rather effective and powerful tool.
 */
 
 mod cli;
+mod default_python_distributions;
 mod environment;
 mod licensing;
 mod project_building;
