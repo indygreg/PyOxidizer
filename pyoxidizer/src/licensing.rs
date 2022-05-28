@@ -8,7 +8,11 @@ use {
     anyhow::{anyhow, Context, Result},
     cargo_toml::Manifest,
     guppy::{
-        graph::{feature::FeatureLabel, DependencyDirection},
+        graph::{
+            cargo::{CargoOptions, CargoResolverVersion},
+            feature::{named_feature_filter, FeatureFilter, StandardFeatures},
+            DependencyDirection,
+        },
         MetadataCommand,
     },
     log::warn,
@@ -59,6 +63,12 @@ pub fn licenses_from_cargo_manifest<'a>(
     let manifest_path = manifest_path.as_ref();
     let features = features.into_iter().collect::<Vec<&str>>();
 
+    warn!(
+        "evaluating dependencies for {} using features {}",
+        manifest_path.display(),
+        features.join(",")
+    );
+
     let manifest = Manifest::from_path(manifest_path)?;
     let main_package = manifest
         .package
@@ -82,32 +92,32 @@ pub fn licenses_from_cargo_manifest<'a>(
         .ok_or_else(|| anyhow!("could not find package {} in metadata", main_package))?
         .id();
 
-    // Obtain the graph reachable given our enabled features.
-    let main_package_features = feature_graph.all_features_for(main_package_id)?;
-    let query_features = main_package_features
-        .into_iter()
-        .filter(|f| {
-            if all_features {
-                true
-            } else {
-                match f.label() {
-                    FeatureLabel::Base => true,
-                    FeatureLabel::Named(s) => features.contains(&s),
-                    FeatureLabel::OptionalDependency(_) => false,
-                }
-            }
-        })
-        .collect::<Vec<_>>();
+    // Simulate a cargo build using the features specified.
+    let mut cargo_options = CargoOptions::new();
+    cargo_options.set_resolver(CargoResolverVersion::V2);
 
-    let feature_set = feature_graph
-        .query_forward(query_features)?
+    let feature_filter: Box<dyn FeatureFilter> = if all_features {
+        Box::new(StandardFeatures::All)
+    } else {
+        Box::new(named_feature_filter(StandardFeatures::Default, features))
+    };
+
+    let cargo_set = feature_graph
+        .query_workspace(feature_filter)
+        .resolve()
+        .into_cargo_set(&cargo_options)?;
+
+    // Turn the cargo set into packages, filtering out build and dev dependencies, since
+    // they don't affect run-time licensing.
+    let package_set = cargo_set
+        .package_graph()
+        .query_forward([main_package_id])?
         .resolve_with_fn(|_, link| {
             // Ignore build and dev dependencies since they don't affect run-time licensing.
             !(link.build().is_present() || link.dev_only())
         });
 
-    // Now we can extract the packages and turn into licensing info.
-    let package_set = feature_set.to_package_set();
+    // Now turn the packages into licensing metadata.
 
     let mut components = LicensedComponents::default();
 
