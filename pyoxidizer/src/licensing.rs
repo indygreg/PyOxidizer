@@ -65,11 +65,18 @@ pub fn licenses_from_cargo_manifest<'a>(
     let manifest_path = manifest_path.as_ref();
     let features = features.into_iter().collect::<Vec<&str>>();
 
-    warn!(
-        "evaluating dependencies for {} using features {}",
-        manifest_path.display(),
-        features.join(",")
-    );
+    if all_features {
+        warn!(
+            "evaluating dependencies for {} using all features",
+            manifest_path.display()
+        );
+    } else {
+        warn!(
+            "evaluating dependencies for {} using features: {}",
+            manifest_path.display(),
+            features.join(", ")
+        );
+    }
 
     let manifest = Manifest::from_path(manifest_path)?;
     let main_package = manifest
