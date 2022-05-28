@@ -374,6 +374,7 @@ pub fn build_executable_with_rust_project<'a>(
 
     for component in licenses_from_cargo_manifest(
         project_path.join("Cargo.toml"),
+        false,
         cargo_features(exe),
         Some(&build_env.rust_environment.cargo_exe),
         include_self_license,

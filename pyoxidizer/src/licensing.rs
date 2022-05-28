@@ -51,6 +51,7 @@ pub fn log_licensing_info(components: &LicensedComponents) {
 /// Resolve licenses from a cargo manifest.
 pub fn licenses_from_cargo_manifest<'a>(
     manifest_path: impl AsRef<Path>,
+    all_features: bool,
     features: impl IntoIterator<Item = &'a str>,
     cargo_path: Option<&Path>,
     include_main_package: bool,
@@ -85,10 +86,16 @@ pub fn licenses_from_cargo_manifest<'a>(
     let main_package_features = feature_graph.all_features_for(main_package_id)?;
     let query_features = main_package_features
         .into_iter()
-        .filter(|f| match f.label() {
-            FeatureLabel::Base => true,
-            FeatureLabel::Named(s) => features.contains(&s),
-            FeatureLabel::OptionalDependency(_) => false,
+        .filter(|f| {
+            if all_features {
+                true
+            } else {
+                match f.label() {
+                    FeatureLabel::Base => true,
+                    FeatureLabel::Named(s) => features.contains(&s),
+                    FeatureLabel::OptionalDependency(_) => false,
+                }
+            }
         })
         .collect::<Vec<_>>();
 

@@ -7,6 +7,7 @@
 use {
     crate::{
         environment::{canonicalize_path, default_target_triple, Environment, PyOxidizerSource},
+        licensing::{licenses_from_cargo_manifest, log_licensing_info},
         project_building::find_pyoxidizer_config_file_env,
         project_layout::{initialize_project, write_new_pyoxidizer_config_file},
         py_packaging::{
@@ -663,6 +664,31 @@ pub fn generate_python_embedding_artifacts(
 
     m.materialize_files_with_replace(dest_path.join("stdlib"))
         .context("writing standard library")?;
+
+    Ok(())
+}
+
+pub fn rust_project_licensing(
+    env: &Environment,
+    project_path: &Path,
+    all_features: bool,
+    unified_license: bool,
+) -> Result<()> {
+    let manifest_path = project_path.join("Cargo.toml");
+
+    let cargo_exe = env
+        .ensure_rust_toolchain(None)
+        .context("resolving Rust toolchain")?
+        .cargo_exe;
+
+    let licensing =
+        licenses_from_cargo_manifest(&manifest_path, all_features, [], Some(&cargo_exe), true)?;
+
+    log_licensing_info(&licensing);
+
+    if unified_license {
+        println!("{}", licensing.aggregate_license_document()?);
+    }
 
     Ok(())
 }

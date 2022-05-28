@@ -69,6 +69,9 @@ New Features
     a feature that was dropped in version 0.5. The name of the file (or disabling
     of the feature) can be controlled via the
     :py:attr:`PythonExecutable.licenses_filename` attribute.
+  * A new ``pyoxidizer rust-project-licensing`` command for printing licensing
+    information for Rust projects. This can be used to help debug Rust licensing
+    issues or to generate licensing content for any Rust project.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

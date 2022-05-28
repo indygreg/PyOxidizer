@@ -461,6 +461,27 @@ pub fn run_cli() -> Result<()> {
             ),
     ));
 
+    let app = app.subcommand(
+        Command::new("rust-project-licensing")
+            .about("Show licensing information for a Rust project")
+            .arg(
+                Arg::new("all_features")
+                    .long("all-features")
+                    .help("Activate all crate features during evaluation"),
+            )
+            .arg(
+                Arg::new("unified_license")
+                    .long("unified-license")
+                    .help("Print a unified license document"),
+            )
+            .arg(
+                Arg::new("project_path")
+                    .takes_value(true)
+                    .required(true)
+                    .help("The path to the Rust project to evaluate"),
+            ),
+    );
+
     let matches = app.get_matches();
 
     let verbose = matches.is_present("verbose");
@@ -644,6 +665,15 @@ pub fn run_cli() -> Result<()> {
                 &extra,
                 verbose,
             )
+        }
+
+        "rust-project-licensing" => {
+            let project_path =
+                Path::new(args.value_of("project_path").expect("argument is required"));
+            let all_features = args.is_present("all_features");
+            let unified_license = args.is_present("unified_license");
+
+            projectmgmt::rust_project_licensing(&env, project_path, all_features, unified_license)
         }
 
         _ => Err(anyhow!("invalid sub-command")),
