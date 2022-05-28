@@ -54,10 +54,11 @@ New Features
 ^^^^^^^^^^^^
 
 * Default CPython distributions upgraded from 3.8.12, 3.9.10, and 3.10.2
-  to 3.8.13, 3.9.12, and 3.10.4, respectively. See additional changes in
+  to 3.8.13, 3.9.13, and 3.10.4, respectively. See additional changes in
   these distributions at
-  https://github.com/indygreg/python-build-standalone/releases/tag/20220318
-  and https://github.com/indygreg/python-build-standalone/releases/tag/20220501.
+  https://github.com/indygreg/python-build-standalone/releases/tag/20220318,
+  https://github.com/indygreg/python-build-standalone/releases/tag/20220501,
+  and https://github.com/indygreg/python-build-standalone/releases/tag/20220528.
 * The mechanism for handling software licenses has been overhauled.
 
   * The formatting of licenses during building has changed significantly.
