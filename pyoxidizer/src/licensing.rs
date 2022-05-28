@@ -16,7 +16,7 @@ use {
         platform::{Platform, PlatformSpec, TargetFeatures, Triple},
         MetadataCommand,
     },
-    log::warn,
+    log::{info, warn},
     python_packaging::licensing::{
         ComponentFlavor, LicenseFlavor, LicensedComponent, LicensedComponents,
     },
@@ -25,32 +25,15 @@ use {
 
 /// Log a summary of licensing info.
 pub fn log_licensing_info(components: &LicensedComponents) {
-    for component in components.license_spdx_components() {
-        warn!(
-            "{} uses SPDX licenses {}",
-            component.flavor(),
-            component
-                .spdx_expression()
-                .expect("should have SPDX expression")
-        );
+    for line in components.license_summary().lines() {
+        warn!("{}", line);
     }
+    warn!("");
 
-    warn!(
-        "All SPDX licenses: {}",
-        components.all_spdx_license_names().join(", ")
-    );
-    for component in components.license_missing_components() {
-        warn!("{} lacks a known software license", component.flavor());
+    for line in components.spdx_license_breakdown().lines() {
+        info!("{}", line);
     }
-    for component in components.license_public_domain_components() {
-        warn!("{} is in the public domain", component.flavor());
-    }
-    for component in components.license_unknown_components() {
-        warn!("{} has an unknown software license", component.flavor());
-    }
-    for component in components.license_copyleft_components() {
-        warn!("Component has copyleft license: {}", component.flavor());
-    }
+    info!("");
 }
 
 /// Resolve licenses from a cargo manifest.

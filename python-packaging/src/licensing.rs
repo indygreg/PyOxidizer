@@ -22,6 +22,16 @@ pub const SAFE_SYSTEM_LIBRARIES: &[&str] = &[
     "cabinet", "iphlpapi", "msi", "rpcrt4", "rt", "winmm", "ws2_32",
 ];
 
+fn format_spdx(id: LicenseId, exception: Option<ExceptionId>, full: bool) -> String {
+    let name = if full { id.full_name } else { id.name };
+
+    if let Some(exception) = exception {
+        format!("{} WITH {}", name, exception.name)
+    } else {
+        name.to_string()
+    }
+}
+
 /// The type of a license.
 #[derive(Clone, Debug, PartialEq)]
 pub enum LicenseFlavor {
@@ -322,6 +332,14 @@ impl LicensedComponent {
         }
     }
 
+    /// Obtain all SPDX license names.
+    pub fn all_spdx_license_names(&self, full: bool) -> Vec<String> {
+        self.all_spdx_licenses()
+            .into_iter()
+            .map(|(id, exception)| format_spdx(id, exception, full))
+            .collect::<Vec<_>>()
+    }
+
     /// Obtain all the distinct [LicenseId] in this component.
     ///
     /// Unlike [Self::all_spdx_licenses()], this returns just the license IDs without exceptions.
@@ -340,8 +358,15 @@ impl LicensedComponent {
             .collect::<BTreeSet<_>>()
     }
 
+    /// Whether the component has any copyleft licenses.
+    pub fn has_copyleft(&self) -> bool {
+        self.all_spdx_licenses()
+            .into_iter()
+            .any(|(id, _)| id.is_copyleft())
+    }
+
     /// Whether all licenses are copyleft.
-    pub fn is_copyleft(&self) -> bool {
+    pub fn is_always_copyleft(&self) -> bool {
         let licenses = self.all_spdx_licenses();
 
         if licenses.is_empty() {
@@ -481,16 +506,12 @@ impl LicensedComponents {
     }
 
     /// Obtain all SPDX license names referenced by registered components.
-    pub fn all_spdx_license_names(&self) -> Vec<String> {
-        self.all_spdx_licenses()
+    pub fn all_spdx_license_names(&self, full: bool) -> Vec<String> {
+        self.iter_components()
+            .map(|c| c.all_spdx_license_names(full))
+            .flatten()
+            .collect::<BTreeSet<_>>()
             .into_iter()
-            .map(|(id, exception)| {
-                if let Some(exception) = exception {
-                    format!("{} WITH {}", id.name, exception.name)
-                } else {
-                    id.name.to_string()
-                }
-            })
             .collect::<Vec<_>>()
     }
 
@@ -532,7 +553,146 @@ impl LicensedComponents {
     /// There may be false negatives if the component doesn't have fully SPDX parsed
     /// licenses.
     pub fn license_copyleft_components(&self) -> impl Iterator<Item = &LicensedComponent> {
-        self.components.values().filter(|c| c.is_copyleft())
+        self.components.values().filter(|c| c.has_copyleft())
+    }
+
+    pub fn license_summary(&self) -> String {
+        let mut lines = vec![
+            "Software Licensing Summary".to_string(),
+            "==========================".to_string(),
+            "".to_string(),
+        ];
+
+        lines.push(format!(
+            "{} distinct software components",
+            self.components.len()
+        ));
+        lines.push(format!(
+            "{} lack a known software license",
+            self.license_missing_components().count()
+        ));
+        lines.push(format!(
+            "{} have unknown license expressions",
+            self.license_unknown_components().count()
+        ));
+        lines.push(format!(
+            "{} distinct SPDX licenses",
+            self.all_spdx_licenses().len()
+        ));
+        lines.push(format!(
+            "{} components in the public domain",
+            self.license_public_domain_components().count()
+        ));
+        lines.push(format!(
+            "{} have copyleft licenses",
+            self.license_copyleft_components().count()
+        ));
+        lines.push(format!(
+            "All SPDX licenses: {}",
+            self.all_spdx_license_names(false).join(", ")
+        ));
+        lines.push("".to_string());
+
+        lines.push("Components of Interest".to_string());
+        lines.push("----------------------".to_string());
+        lines.push("".to_string());
+
+        let mut have_interesting = false;
+
+        for component in self.iter_components() {
+            match component.license() {
+                LicenseFlavor::None => {
+                    lines.push(format!("* {} lacks a known license", component.flavor()));
+                    have_interesting = true;
+                }
+                LicenseFlavor::Spdx(_) => {
+                    let copyleft_names = component
+                        .all_spdx_licenses()
+                        .into_iter()
+                        .filter(|(id, _)| id.is_copyleft())
+                        .map(|(id, exception)| format_spdx(id, exception, true))
+                        .collect::<Vec<_>>();
+
+                    if component.is_always_copyleft() {
+                        lines.push(format!(
+                            "* {} has copyleft licenses exclusively ({})",
+                            component.flavor(),
+                            copyleft_names.join(", ")
+                        ));
+                        have_interesting = true;
+                    } else if component.has_copyleft() {
+                        lines.push(format!(
+                            "* {} has a copyleft license ({})",
+                            component.flavor(),
+                            copyleft_names.join(", ")
+                        ));
+                        have_interesting = true;
+                    }
+                }
+                LicenseFlavor::OtherExpression(expr) => {
+                    lines.push(format!(
+                        "* {} has an unknown SPDX license expression: {}",
+                        component.flavor(),
+                        expr
+                    ));
+                    have_interesting = true;
+                }
+                LicenseFlavor::PublicDomain => {}
+                LicenseFlavor::Unknown(terms) => {
+                    lines.push(format!(
+                        "* {} has unknown license expression: {}",
+                        component.flavor(),
+                        terms.join(", ")
+                    ));
+                    have_interesting = true;
+                }
+            }
+        }
+
+        if !have_interesting {
+            lines.push("No components had noteworthy licensing characteristics.".to_string());
+        }
+
+        lines.join("\n")
+    }
+
+    pub fn spdx_license_breakdown(&self) -> String {
+        let mut lines = vec![
+            "SPDX License Breakdown".to_string(),
+            "======================".to_string(),
+            "".to_string(),
+        ];
+
+        for (license, exception) in self.all_spdx_licenses() {
+            lines.push(format_spdx(license, exception, true));
+            lines.push("-".repeat(format_spdx(license, exception, true).len()));
+            lines.push("".to_string());
+
+            lines.push(format!(
+                "[{}] OSI approved; [{}] FSF free libre; [{}] copyleft",
+                if license.is_osi_approved() { "*" } else { " " },
+                if license.is_fsf_free_libre() {
+                    "*"
+                } else {
+                    " "
+                },
+                if license.is_copyleft() { "*" } else { " " }
+            ));
+            lines.push("".to_string());
+
+            for component in self.iter_components() {
+                if component
+                    .all_spdx_licenses()
+                    .contains(&(license, exception))
+                {
+                    lines.push(format!("* {}", component.flavor()));
+                }
+            }
+
+            lines.push("".to_string());
+        }
+
+        lines.join("\n")
     }
 
     /// Generate a unified text document describing licensing info for the components within.
