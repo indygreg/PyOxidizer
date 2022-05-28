@@ -393,42 +393,63 @@ impl LicensedComponents {
             .contains_key(&ComponentFlavor::PythonModule(name.into()))
     }
 
-    /// Ensure all Python modules in the specified iterable are present.
-    pub fn add_missing_python_modules<'a>(&mut self, modules: impl Iterator<Item = &'a str>) {
-        for name in modules {
-            if !self.has_python_module(name) {
-                self.add_component(LicensedComponent::new(
-                    ComponentFlavor::PythonModule(name.to_string()),
-                    LicenseFlavor::None,
-                ));
-            }
-        }
-    }
-
     /// Adjusts Python modules in the components set.
     ///
     /// Standard library modules that have identical licensing to the Python
     /// distribution are removed.
     ///
-    /// Modules that aren't top-level packages are removed.
-    pub fn normalize_python_modules(&mut self) {
+    /// Missing top-level packages are added with an unknown license annotation.
+    ///
+    /// Modules that aren't top-level modules are removed.
+    pub fn normalize_python_modules<'a>(&self) -> Self {
         let distribution = self
             .components
             .values()
             .find(|c| matches!(c.flavor(), ComponentFlavor::PythonDistribution(_)));
 
-        self.components =
-            BTreeMap::from_iter(self.components.clone().into_iter().filter(|(k, v)| {
-                // Remove standard library modules with licensing identical to the distribution.
-                if k.is_python_standard_library() {
-                    if let Some(distribution) = distribution {
-                        if v.license() == distribution.license() {
-                            return false;
-                        }
+        let mut top_level_names = BTreeSet::new();
+        let mut components = Self::default();
+
+        let filtered = self.components.iter().filter(|(k, v)| {
+            // Remove standard library modules with licensing identical to the distribution.
+            if k.is_python_standard_library() {
+                if let Some(distribution) = distribution {
+                    if v.license() == distribution.license() {
+                        return false;
                     }
                 }
+            }
 
-                // Remove Python modules that aren't top-level packages.
+            if let Some(name) = k.python_module_name() {
+                let top_level_name = if let Some((name, _)) = name.split_once('.') {
+                    name
+                } else {
+                    name
+                };
+
+                top_level_names.insert(top_level_name.to_string());
+            }
+
+            true
+        });
+
+        for (_, component) in filtered {
+            components.add_component(component.clone());
+        }
+
+        // Ensure top-level modules are present.
+        for name in top_level_names {
+            if !components.has_python_module(&name) {
+                components.add_component(LicensedComponent::new(
+                    ComponentFlavor::PythonModule(name.to_string()),
+                    LicenseFlavor::None,
+                ));
+            }
+        }
+
+        // Filter non top-levels from the list.
+        components.components =
+            BTreeMap::from_iter(components.components.into_iter().filter(|(k, _)| {
                 if let Some(name) = k.python_module_name() {
                     if name.contains('.') {
                         return false;
@@ -437,6 +458,8 @@ impl LicensedComponents {
 
                 true
             }));
+
+        components
     }
 
     /// Obtain all SPDX license identifiers referenced by registered components.

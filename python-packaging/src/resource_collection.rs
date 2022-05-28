@@ -817,13 +817,7 @@ impl PythonResourceCollector {
     /// The collection has entries for components that lack licenses and has additional
     /// normalization performed.
     pub fn normalized_licensed_components(&self) -> LicensedComponents {
-        let mut components = self.licensed_components.clone();
-        components.add_missing_python_modules(
-            self.all_top_level_module_names().iter().map(|x| x.as_str()),
-        );
-        components.normalize_python_modules();
-
-        components
+        self.licensed_components.normalize_python_modules()
     }
 
     /// Add Python module source with a specific location.
