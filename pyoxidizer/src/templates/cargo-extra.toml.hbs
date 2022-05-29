@@ -37,3 +37,8 @@ build-mode-pyoxidizer-exe = []
 # to the directory containing build artifacts produced by `pyoxidizer`. If not
 # set, OUT_DIR will be used.
 build-mode-prebuilt-artifacts = []
+
+# This empty workspace table forces Cargo to treat this manifest as its
+# own workspace, even if a parent directory defines a workspace. If you want
+# this Rust project to exist as part of a larger workspace, simply delete this.
+[workspace]

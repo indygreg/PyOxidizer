@@ -96,6 +96,10 @@ Other Relevant Changes
 * Derivation of a custom ``libpython`` library archive now sometimes uses pure
   Rust code instead of calling external processes. There should be no meaningful
   change in behavior except for build output being more concise.
+* Auto-generated Rust projects now contain an empty ``[workspace]`` table in their
+  ``Cargo.toml``. This enables auto-generated projects to be nested under an existing
+  workspace directory without Cargo complaining. This approach is more robust in
+  the common case where the Rust project isn't part of a larger workspace.
 
 .. _version_0_20_0:
 
