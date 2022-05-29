@@ -13,7 +13,7 @@ use {
     },
     anyhow::Result,
     python_packaging::{
-        licensing::LicensedComponents,
+        licensing::{LicensedComponent, LicensedComponents},
         policy::PythonPackagingPolicy,
         resource::{
             PythonExtensionModule, PythonModuleSource, PythonPackageDistributionResource,
@@ -388,6 +388,13 @@ pub trait PythonBinaryBuilder {
 
     /// Obtain software licensing information.
     fn licensed_components(&self) -> Result<LicensedComponents>;
+
+    /// Add a licensed software component to the instance.
+    ///
+    /// Calling this effectively conveys that the software will be built into
+    /// the final binary and its licensing should be captured in order to
+    /// generate a licensing report.
+    fn add_licensed_component(&mut self, component: LicensedComponent) -> Result<()>;
 
     /// Obtain an `EmbeddedPythonContext` instance from this one.
     fn to_embedded_python_context(

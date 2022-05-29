@@ -865,6 +865,10 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         Ok(self.resources_collector.normalized_licensed_components())
     }
 
+    fn add_licensed_component(&mut self, component: LicensedComponent) -> Result<()> {
+        self.resources_collector.add_licensed_component(component)
+    }
+
     fn to_embedded_python_context(
         &self,
         env: &Environment,
