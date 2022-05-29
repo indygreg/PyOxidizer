@@ -18,7 +18,6 @@ use {
     apple_sdk::AppleSdk,
     duct::cmd,
     log::warn,
-    python_packaging::licensing::LicensedComponents,
     starlark_dialect_build_targets::ResolvedTarget,
     std::{
         collections::HashMap,
@@ -252,9 +251,6 @@ pub struct BuiltExecutable<'a> {
 
     /// Holds state generated from building.
     pub binary_data: EmbeddedPythonContext<'a>,
-
-    /// Licensing info.
-    pub licensing: LicensedComponents,
 }
 
 /// Build an executable embedding Python using an existing Rust project.
@@ -370,8 +366,6 @@ pub fn build_executable_with_rust_project<'a>(
 
     // Construct unified licensing info by combining the Python licensing metadata
     // with the dynamically derived licensing info for Rust crates from the Cargo manifest.
-    let mut licensing = exe.licensed_components()?;
-
     for component in licenses_from_cargo_manifest(
         project_path.join("Cargo.toml"),
         false,
@@ -382,17 +376,23 @@ pub fn build_executable_with_rust_project<'a>(
     )?
     .into_components()
     {
-        licensing.add_component(component);
+        embedded_data.licensing.add_component(component);
     }
 
     // Inform user about licensing info.
-    log_licensing_info(&licensing);
+    log_licensing_info(&embedded_data.licensing);
 
     // Write a unified licensing file if told to do so.
     if let Some(filename) = exe.licenses_filename() {
         embedded_data.extra_files.add_file_entry(
             filename,
-            FileEntry::new_from_data(licensing.aggregate_license_document()?.as_bytes(), false),
+            FileEntry::new_from_data(
+                embedded_data
+                    .licensing
+                    .aggregate_license_document()?
+                    .as_bytes(),
+                false,
+            ),
         )?;
     }
 
@@ -401,7 +401,6 @@ pub fn build_executable_with_rust_project<'a>(
         exe_name,
         exe_data,
         binary_data: embedded_data,
-        licensing,
     })
 }
 

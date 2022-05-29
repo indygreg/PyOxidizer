@@ -1023,6 +1023,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             python_version,
             python_exe_host: self.host_python_exe.clone(),
             python_build_flags,
+            licensing: self.licensed_components()?,
         })
     }
 }

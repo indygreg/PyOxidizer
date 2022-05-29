@@ -10,7 +10,9 @@ use {
     pyo3_build_config::{
         BuildFlags, InterpreterConfig as PyO3InterpreterConfig, PythonImplementation, PythonVersion,
     },
-    python_packaging::resource_collection::CompiledResourcesCollection,
+    python_packaging::{
+        licensing::LicensedComponents, resource_collection::CompiledResourcesCollection,
+    },
     std::path::{Path, PathBuf},
     tugger_file_manifest::FileManifest,
 };
@@ -257,6 +259,9 @@ pub struct EmbeddedPythonContext<'a> {
     ///
     /// To pass to PyO3.
     pub python_build_flags: BuildFlags,
+
+    /// Licensing metadata for components to be built/embedded.
+    pub licensing: LicensedComponents,
 }
 
 impl<'a> EmbeddedPythonContext<'a> {
