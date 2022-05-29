@@ -539,8 +539,14 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         Ok(())
     }
 
-    fn pip_download(&mut self, verbose: bool, args: &[String]) -> Result<Vec<PythonResource>> {
+    fn pip_download(
+        &mut self,
+        env: &Environment,
+        verbose: bool,
+        args: &[String],
+    ) -> Result<Vec<PythonResource>> {
         let resources = pip_download(
+            env,
             &*self.host_distribution,
             &*self.target_distribution,
             self.python_packaging_policy(),
@@ -557,11 +563,13 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
     fn pip_install(
         &mut self,
+        env: &Environment,
         verbose: bool,
         install_args: &[String],
         extra_envs: &HashMap<String, String>,
     ) -> Result<Vec<PythonResource>> {
         let resources = pip_install(
+            env,
             &*self.target_distribution,
             self.python_packaging_policy(),
             self.link_mode,
@@ -621,12 +629,14 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
     fn setup_py_install(
         &mut self,
+        env: &Environment,
         package_path: &Path,
         verbose: bool,
         extra_envs: &HashMap<String, String>,
         extra_global_arguments: &[String],
     ) -> Result<Vec<PythonResource>> {
         let resources = setup_py_install(
+            env,
             &*self.target_distribution,
             self.python_packaging_policy(),
             self.link_mode,
@@ -2910,6 +2920,8 @@ pub mod tests {
     #[cfg(target_os = "linux")]
     #[test]
     fn test_linux_extension_build_with_library() -> Result<()> {
+        let env = get_env()?;
+
         for libpython_link_mode in vec![
             BinaryLibpythonLinkMode::Static,
             BinaryLibpythonLinkMode::Dynamic,
@@ -2924,8 +2936,12 @@ pub mod tests {
 
             let mut builder = options.new_builder()?;
 
-            let resources =
-                builder.pip_install(false, &["pyyaml==5.3.1".to_string()], &HashMap::new())?;
+            let resources = builder.pip_install(
+                &env,
+                false,
+                &["pyyaml==5.3.1".to_string()],
+                &HashMap::new(),
+            )?;
 
             let extensions = resources
                 .iter()

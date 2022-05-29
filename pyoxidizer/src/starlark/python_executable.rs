@@ -366,7 +366,7 @@ impl PythonExecutableValue {
         let mut exe = self.inner(LABEL)?;
 
         let resources = error_context("PythonExecutable.pip_download()", || {
-            exe.pip_download(pyoxidizer_context.verbose, &args)
+            exe.pip_download(pyoxidizer_context.env(), pyoxidizer_context.verbose, &args)
         })?;
 
         let resources = resources
@@ -425,7 +425,12 @@ impl PythonExecutableValue {
         let mut exe = self.inner(LABEL)?;
 
         let resources = error_context(LABEL, || {
-            exe.pip_install(pyoxidizer_context.verbose, &args, &extra_envs)
+            exe.pip_install(
+                pyoxidizer_context.env(),
+                pyoxidizer_context.verbose,
+                &args,
+                &extra_envs,
+            )
         })?;
 
         let resources = resources
@@ -575,6 +580,7 @@ impl PythonExecutableValue {
 
         let resources = error_context(LABEL, || {
             exe.setup_py_install(
+                pyoxidizer_context.env(),
                 &package_path,
                 pyoxidizer_context.verbose,
                 &extra_envs,

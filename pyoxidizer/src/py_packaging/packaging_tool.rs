@@ -11,6 +11,7 @@ use {
         binary::LibpythonLinkMode, distribution::PythonDistribution,
         distutils::read_built_extensions, standalone_distribution::resolve_python_paths,
     },
+    crate::environment::Environment,
     anyhow::{anyhow, Result},
     duct::cmd,
     log::warn,
@@ -83,15 +84,14 @@ pub fn find_resources<'a>(
 /// resolve resources for a non-native platform, which enables it to be used
 /// when cross-compiling.
 pub fn pip_download<'a>(
+    env: &Environment,
     host_dist: &dyn PythonDistribution,
     taget_dist: &dyn PythonDistribution,
     policy: &PythonPackagingPolicy,
     verbose: bool,
     args: &[String],
 ) -> Result<Vec<PythonResource<'a>>> {
-    let temp_dir = tempfile::Builder::new()
-        .prefix("pyoxidizer-pip-download")
-        .tempdir()?;
+    let temp_dir = env.temporary_directory("pyoxidizer-pip-download")?;
 
     host_dist.ensure_pip()?;
 
@@ -182,6 +182,7 @@ pub fn pip_download<'a>(
 
 /// Run `pip install` and return found resources.
 pub fn pip_install<'a, S: BuildHasher>(
+    env: &Environment,
     dist: &dyn PythonDistribution,
     policy: &PythonPackagingPolicy,
     libpython_link_mode: LibpythonLinkMode,
@@ -189,9 +190,7 @@ pub fn pip_install<'a, S: BuildHasher>(
     install_args: &[String],
     extra_envs: &HashMap<String, String, S>,
 ) -> Result<Vec<PythonResource<'a>>> {
-    let temp_dir = tempfile::Builder::new()
-        .prefix("pyoxidizer-pip-install")
-        .tempdir()?;
+    let temp_dir = env.temporary_directory("pyoxidizer-pip-install")?;
 
     dist.ensure_pip()?;
 
@@ -263,6 +262,7 @@ pub fn read_virtualenv<'a>(
 /// Run `setup.py install` against a path and return found resources.
 #[allow(clippy::too_many_arguments)]
 pub fn setup_py_install<'a, S: BuildHasher>(
+    env: &Environment,
     dist: &dyn PythonDistribution,
     policy: &PythonPackagingPolicy,
     libpython_link_mode: LibpythonLinkMode,
@@ -278,9 +278,7 @@ pub fn setup_py_install<'a, S: BuildHasher>(
         ));
     }
 
-    let temp_dir = tempfile::Builder::new()
-        .prefix("pyoxidizer-setup-py-install")
-        .tempdir()?;
+    let temp_dir = env.temporary_directory("pyoxidizer-setup-py-install")?;
 
     let target_dir_path = temp_dir.path().join("install");
     let target_dir_s = target_dir_path.display().to_string();
@@ -359,9 +357,11 @@ mod tests {
 
     #[test]
     fn test_install_black() -> Result<()> {
+        let env = get_env()?;
         let distribution = get_default_distribution(None)?;
 
         let resources: Vec<PythonResource> = pip_install(
+            &env,
             distribution.deref(),
             &distribution.create_packaging_policy()?,
             LibpythonLinkMode::Dynamic,
@@ -379,10 +379,12 @@ mod tests {
     #[test]
     #[cfg(windows)]
     fn test_install_cffi() -> Result<()> {
+        let env = get_env()?;
         let distribution = get_default_dynamic_distribution()?;
         let policy = distribution.create_packaging_policy()?;
 
         let resources: Vec<PythonResource> = pip_install(
+            &env,
             distribution.deref(),
             &policy,
             LibpythonLinkMode::Dynamic,
@@ -404,6 +406,8 @@ mod tests {
 
     #[test]
     fn test_pip_download_zstandard() -> Result<()> {
+        let env = get_env()?;
+
         for target_dist in get_all_standalone_distributions()? {
             if target_dist.python_platform_compatibility_tag() == "none" {
                 continue;
@@ -421,6 +425,7 @@ mod tests {
             let policy = target_dist.create_packaging_policy()?;
 
             let resources = pip_download(
+                &env,
                 &*host_dist,
                 &*target_dist,
                 &policy,
@@ -498,6 +503,8 @@ mod tests {
 
     #[test]
     fn test_pip_download_numpy() -> Result<()> {
+        let env = get_env()?;
+
         for target_dist in get_all_standalone_distributions()? {
             if target_dist.python_platform_compatibility_tag() == "none" {
                 continue;
@@ -517,6 +524,7 @@ mod tests {
             policy.set_file_scanner_classify_files(true);
 
             let res = pip_download(
+                &env,
                 &*host_dist,
                 &*target_dist,
                 &policy,
