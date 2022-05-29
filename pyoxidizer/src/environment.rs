@@ -225,11 +225,35 @@ impl PyOxidizerSource {
     }
 }
 
+/// Resolves the cargo target directory.
+///
+/// Should only evaluate to `Some` when running from an executable in a `target` directory.
+fn cargo_target_directory() -> Result<Option<PathBuf>> {
+    if std::env::var_os("CARGO_MANIFEST_DIR").is_none() {
+        return Ok(None);
+    }
+
+    let mut exe = std::env::current_exe().context("locating current executable")?;
+
+    exe.pop();
+    if exe.ends_with("deps") {
+        exe.pop();
+    }
+
+    Ok(Some(exe))
+}
+
 /// Describes the PyOxidizer run-time environment.
 #[derive(Clone, Debug)]
 pub struct Environment {
     /// Where a copy of PyOxidizer can be obtained from.
     pub pyoxidizer_source: PyOxidizerSource,
+
+    /// Cargo target directory.
+    ///
+    /// Should only be set if we're running a binary from a `cargo` command,
+    /// as the environment variables this keys off of are set by `cargo`.
+    cargo_target_directory: Option<PathBuf>,
 
     /// Directory to use for caching things.
     cache_dir: PathBuf,
@@ -260,6 +284,7 @@ impl Environment {
 
         Ok(Self {
             pyoxidizer_source,
+            cargo_target_directory: cargo_target_directory()?,
             cache_dir,
             managed_rust,
             rust_environment: Arc::new(RwLock::new(None)),
@@ -477,10 +502,19 @@ impl Environment {
 
     /// Create a new temporary directory.
     pub fn temporary_directory(&self, prefix: &str) -> Result<tempfile::TempDir> {
-        tempfile::Builder::new()
-            .prefix(prefix)
-            .tempdir()
-            .context("creating temporary directory")
+        let mut builder = tempfile::Builder::new();
+        builder.prefix(prefix);
+
+        if let Some(target_dir) = &self.cargo_target_directory {
+            let base = target_dir.join("tempdir");
+            std::fs::create_dir_all(&base)
+                .context("creating temporary directory base in cargo target dir")?;
+
+            builder.tempdir_in(&base)
+        } else {
+            builder.tempdir()
+        }
+        .context("creating temporary directory")
     }
 }
 
