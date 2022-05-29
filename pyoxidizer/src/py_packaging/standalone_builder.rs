@@ -899,7 +899,11 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         let compiled_resources = {
             let temp_dir = env.temporary_directory("pyoxidizer-bytecode-compile")?;
             let mut compiler = BytecodeCompiler::new(self.host_python_exe_path(), temp_dir.path())?;
-            self.resources_collector.compile_resources(&mut compiler)?
+            let resources = self.resources_collector.compile_resources(&mut compiler)?;
+
+            temp_dir.close().context("closing temporary directory")?;
+
+            resources
         };
 
         let mut pending_resources = vec![];
@@ -1322,6 +1326,8 @@ pub mod tests {
 
         let resources_path = temp_dir.path().join("packed-resources");
         assert!(resources_path.exists(), "packed-resources file exists");
+
+        temp_dir.close()?;
 
         Ok(())
     }
@@ -3155,6 +3161,8 @@ pub mod tests {
         builder
             .resources_collector
             .compile_resources(&mut compiler)?;
+
+        temp_dir.close()?;
 
         Ok(())
     }

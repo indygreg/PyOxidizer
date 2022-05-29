@@ -444,6 +444,8 @@ pub fn build_python_executable<'a>(
     // Blank out the path since it is in the temporary directory.
     build.exe_path = None;
 
+    temp_dir.close().context("closing temporary directory")?;
+
     Ok(build)
 }
 

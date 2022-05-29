@@ -337,6 +337,8 @@ pub fn link_libpython(
         linking_annotations.push(LinkingAnnotation::SearchNative(path.clone()));
     }
 
+    temp_dir.close().context("closing temporary directory")?;
+
     Ok(LibpythonInfo {
         libpython_data,
         linking_annotations,

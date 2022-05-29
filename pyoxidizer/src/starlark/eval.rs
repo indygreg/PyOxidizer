@@ -415,6 +415,8 @@ mod tests {
         .into_context()?;
         context.evaluate_file(&main_path)?;
 
+        temp_dir.close()?;
+
         Ok(())
     }
 
@@ -434,6 +436,8 @@ mod tests {
         .verbose(true)
         .into_context()?;
         context.evaluate_file(&config_path)?;
+
+        temp_dir.close()?;
 
         Ok(())
     }
@@ -464,6 +468,8 @@ mod tests {
 
         let v = vars.get(&Value::from("empty")).unwrap().unwrap();
         assert_eq!(v.get_type(), "NoneType");
+
+        temp_dir.close()?;
 
         Ok(())
     }

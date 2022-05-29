@@ -1359,6 +1359,8 @@ mod tests {
         assert_eq!(inner.m.source.resolve_content().unwrap(), b"# foo");
         drop(inner);
 
+        temp_dir.close()?;
+
         Ok(())
     }
 

@@ -1604,6 +1604,8 @@ pub mod tests {
             .to_string()
             .starts_with("compiling error: invalid syntax"));
 
+        temp_dir.close()?;
+
         Ok(())
     }
 

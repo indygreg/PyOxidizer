@@ -12,7 +12,7 @@ use {
         distutils::read_built_extensions, standalone_distribution::resolve_python_paths,
     },
     crate::environment::Environment,
-    anyhow::{anyhow, Result},
+    anyhow::{anyhow, Context, Result},
     duct::cmd,
     log::warn,
     python_packaging::{
@@ -177,6 +177,8 @@ pub fn pip_download<'a>(
         )?);
     }
 
+    temp_dir.close().context("closing temporary directory")?;
+
     Ok(res)
 }
 
@@ -245,7 +247,12 @@ pub fn pip_install<'a, S: BuildHasher>(
 
     let state_dir = env.get("PYOXIDIZER_DISTUTILS_STATE_DIR").map(PathBuf::from);
 
-    find_resources(dist, policy, &target_dir, state_dir)
+    let resources =
+        find_resources(dist, policy, &target_dir, state_dir).context("scanning for resources")?;
+
+    temp_dir.close().context("closing temporary directory")?;
+
+    Ok(resources)
 }
 
 /// Discover Python resources from a populated virtualenv directory.
@@ -344,7 +351,12 @@ pub fn setup_py_install<'a, S: BuildHasher>(
         "scanning {} for resources",
         python_paths.site_packages.display()
     );
-    find_resources(dist, policy, &python_paths.site_packages, state_dir)
+    let resources = find_resources(dist, policy, &python_paths.site_packages, state_dir)
+        .context("scanning for resources")?;
+
+    temp_dir.close().context("closing temporary directory")?;
+
+    Ok(resources)
 }
 
 #[cfg(test)]
