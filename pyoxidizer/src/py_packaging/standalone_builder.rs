@@ -1302,13 +1302,11 @@ pub mod tests {
 
     #[test]
     fn test_write_embedded_files() -> Result<()> {
+        let temp_dir = get_env()?.temporary_directory("pyoxidizer-test")?;
+
         let options = StandalonePythonExecutableBuilderOptions::default();
         let exe = options.new_builder()?;
         let embedded = exe.to_embedded_python_context(&get_env()?, "0")?;
-
-        let temp_dir = tempfile::Builder::new()
-            .prefix("pyoxidizer-test")
-            .tempdir()?;
 
         embedded.write_files(temp_dir.path())?;
 
@@ -3130,9 +3128,7 @@ pub mod tests {
 
         builder.add_distribution_resources(None)?;
 
-        let temp_dir = tempfile::Builder::new()
-            .prefix("pyoxidizer-test")
-            .tempdir()?;
+        let temp_dir = get_env()?.temporary_directory("pyoxidizer-test")?;
 
         let mut compiler =
             BytecodeCompiler::new(host_distribution.python_exe_path(), temp_dir.path())?;

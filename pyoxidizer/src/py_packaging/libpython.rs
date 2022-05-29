@@ -183,10 +183,7 @@ pub fn link_libpython(
     opt_level: &str,
     apple_sdk_info: Option<&AppleSdkInfo>,
 ) -> Result<LibpythonInfo> {
-    let temp_dir = tempfile::Builder::new()
-        .prefix("pyoxidizer-libpython-")
-        .tempdir()
-        .context("creating temp directory")?;
+    let temp_dir = env.temporary_directory("pyoxidizer-libpython")?;
 
     let config_c_dir = temp_dir.path().join("config_c");
     std::fs::create_dir(&config_c_dir).context("creating config_c subdirectory")?;

@@ -474,6 +474,14 @@ impl Environment {
 
         Ok(sdk)
     }
+
+    /// Create a new temporary directory.
+    pub fn temporary_directory(&self, prefix: &str) -> Result<tempfile::TempDir> {
+        tempfile::Builder::new()
+            .prefix(prefix)
+            .tempdir()
+            .context("creating temporary directory")
+    }
 }
 
 /// Represents an available Rust toolchain.

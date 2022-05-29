@@ -1160,7 +1160,11 @@ starlark_module! { python_executable_env =>
 
 #[cfg(test)]
 mod tests {
-    use {super::super::testutil::*, super::*, crate::python_distributions::PYTHON_DISTRIBUTIONS};
+    use {
+        super::super::testutil::*,
+        super::*,
+        crate::{python_distributions::PYTHON_DISTRIBUTIONS, testutil::*},
+    };
 
     #[test]
     fn test_default_values() -> Result<()> {
@@ -1297,9 +1301,7 @@ mod tests {
 
     #[test]
     fn test_read_package_root_simple() -> Result<()> {
-        let temp_dir = tempfile::Builder::new()
-            .prefix("pyoxidizer-test")
-            .tempdir()?;
+        let temp_dir = get_env()?.temporary_directory("pyoxidizer-test")?;
 
         let root = temp_dir.path();
         std::fs::create_dir(root.join("bar"))?;

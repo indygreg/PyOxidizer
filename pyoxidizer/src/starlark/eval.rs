@@ -387,10 +387,8 @@ mod tests {
 
     #[test]
     fn test_load() -> Result<()> {
-        let temp_dir = tempfile::Builder::new()
-            .prefix("pyoxidizer-test")
-            .tempdir()?;
         let env = get_env()?;
+        let temp_dir = env.temporary_directory("pyoxidizer-test")?;
 
         let load_path = temp_dir.path().join("load.bzl");
         std::fs::write(
@@ -422,10 +420,8 @@ mod tests {
 
     #[test]
     fn test_register_target() -> Result<()> {
-        let temp_dir = tempfile::Builder::new()
-            .prefix("pyoxidizer-test")
-            .tempdir()?;
         let env = get_env()?;
+        let temp_dir = env.temporary_directory("pyoxidizer-test")?;
 
         let config_path = temp_dir.path().join("pyoxidizer.bzl");
         std::fs::write(&config_path, "def make_dist():\n    return default_python_distribution()\nregister_target('dist', make_dist)\n".as_bytes())?;
@@ -444,10 +440,8 @@ mod tests {
 
     #[test]
     fn extra_vars() -> Result<()> {
-        let temp_dir = tempfile::Builder::new()
-            .prefix("pyoxidizer-test")
-            .tempdir()?;
         let env = get_env()?;
+        let temp_dir = env.temporary_directory("pyoxidizer-test")?;
 
         let config_path = temp_dir.path().join("pyoxidizer.bzl");
         std::fs::write(&config_path, "my_var_copy = my_var\nempty_copy = empty\n")?;

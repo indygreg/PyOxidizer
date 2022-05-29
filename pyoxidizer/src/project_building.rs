@@ -405,10 +405,7 @@ pub fn build_python_executable<'a>(
         .context("resolving Rust toolchain")?
         .cargo_exe;
 
-    let temp_dir = tempfile::Builder::new()
-        .prefix("pyoxidizer")
-        .tempdir()
-        .context("creating temp directory")?;
+    let temp_dir = env.temporary_directory("pyoxidizer")?;
 
     // Directory needs to have name of project.
     let project_path = temp_dir.path().join(bin_name);
