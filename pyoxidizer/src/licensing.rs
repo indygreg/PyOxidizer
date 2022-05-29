@@ -5,6 +5,7 @@
 //! Licensing functionality.
 
 use {
+    crate::environment::canonicalize_path,
     anyhow::{anyhow, Context, Result},
     cargo_toml::Manifest,
     guppy::{
@@ -45,7 +46,7 @@ pub fn licenses_from_cargo_manifest<'a>(
     cargo_path: Option<&Path>,
     include_main_package: bool,
 ) -> Result<LicensedComponents> {
-    let manifest_path = manifest_path.as_ref();
+    let manifest_path = canonicalize_path(manifest_path.as_ref())?;
     let features = features.into_iter().collect::<Vec<&str>>();
 
     if all_features {
@@ -61,7 +62,7 @@ pub fn licenses_from_cargo_manifest<'a>(
         );
     }
 
-    let manifest = Manifest::from_path(manifest_path)?;
+    let manifest = Manifest::from_path(&manifest_path)?;
     let main_package = manifest
         .package
         .ok_or_else(|| anyhow!("could not find a package in Cargo manifest"))?
@@ -73,7 +74,11 @@ pub fn licenses_from_cargo_manifest<'a>(
         command.cargo_path(path);
     }
 
-    command.manifest_path(manifest_path);
+    command.manifest_path(&manifest_path);
+
+    if let Some(parent) = manifest_path.parent() {
+        command.current_dir(parent);
+    }
 
     let package_graph = command.build_graph().context("resolving cargo metadata")?;
 
