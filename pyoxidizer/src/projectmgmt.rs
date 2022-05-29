@@ -677,17 +677,16 @@ pub fn rust_project_licensing(
 ) -> Result<()> {
     let manifest_path = project_path.join("Cargo.toml");
 
-    let cargo_exe = env
+    let toolchain = env
         .ensure_rust_toolchain(None)
-        .context("resolving Rust toolchain")?
-        .cargo_exe;
+        .context("resolving Rust toolchain")?;
 
     let licensing = licenses_from_cargo_manifest(
         &manifest_path,
         all_features,
         [],
         target_triple,
-        Some(&cargo_exe),
+        &toolchain,
         true,
     )?;
 

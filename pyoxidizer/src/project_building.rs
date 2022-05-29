@@ -370,7 +370,7 @@ pub fn build_executable_with_rust_project<'a>(
         false,
         cargo_features(exe),
         Some(target_triple),
-        Some(&build_env.rust_environment.cargo_exe),
+        &build_env.rust_environment,
         include_self_license,
     )?
     .into_components()

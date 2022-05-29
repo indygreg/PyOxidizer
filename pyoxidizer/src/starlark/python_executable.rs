@@ -787,17 +787,14 @@ impl PythonExecutableValue {
         let mut exe = self.inner(LABEL)?;
 
         error_context(LABEL, || {
-            let cargo_exe = pyoxidizer_context
-                .env()
-                .ensure_rust_toolchain(None)?
-                .cargo_exe;
+            let toolchain = pyoxidizer_context.env().ensure_rust_toolchain(None)?;
 
             let components = licenses_from_cargo_manifest(
                 manifest_path,
                 all_features,
                 features.iter().map(|x| x.as_str()),
                 Some(exe.target_triple()),
-                Some(&cargo_exe),
+                &toolchain,
                 true,
             )?;
 

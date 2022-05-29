@@ -5,7 +5,7 @@
 //! Licensing functionality.
 
 use {
-    crate::environment::canonicalize_path,
+    crate::environment::{canonicalize_path, RustEnvironment},
     anyhow::{anyhow, Context, Result},
     cargo_toml::Manifest,
     guppy::{
@@ -43,11 +43,15 @@ pub fn licenses_from_cargo_manifest<'a>(
     all_features: bool,
     features: impl IntoIterator<Item = &'a str>,
     target_triple: Option<impl Into<String>>,
-    cargo_path: Option<&Path>,
+    rust_environment: &RustEnvironment,
     include_main_package: bool,
 ) -> Result<LicensedComponents> {
     let manifest_path = canonicalize_path(manifest_path.as_ref())?;
     let features = features.into_iter().collect::<Vec<&str>>();
+
+    let manifest_dir = manifest_path
+        .parent()
+        .ok_or_else(|| anyhow!("could not determine parent director of manifest"))?;
 
     if all_features {
         warn!(
@@ -70,17 +74,34 @@ pub fn licenses_from_cargo_manifest<'a>(
 
     let mut command = MetadataCommand::new();
 
-    if let Some(path) = cargo_path {
-        command.cargo_path(path);
+    command.cargo_path(&rust_environment.cargo_exe);
+
+    command.current_dir(manifest_dir);
+
+    // We need to set RUSTC so things work with our managed Rust toolchain. But
+    // guppy doesn't have an API for that. So reinvent this wheel.
+    let mut command = command.cargo_command();
+
+    command.env("RUSTC", &rust_environment.rustc_exe);
+
+    let output = command.output().context("invoking cargo metadata")?;
+    if !output.status.success() {
+        return Err(anyhow!(
+            "error running cargo: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ));
     }
 
-    command.manifest_path(&manifest_path);
+    let stdout = String::from_utf8(output.stdout).context("converting output to UTF-8")?;
 
-    if let Some(parent) = manifest_path.parent() {
-        command.current_dir(parent);
-    }
+    let json = stdout
+        .lines()
+        .find(|line| line.starts_with('{'))
+        .ok_or_else(|| anyhow!("could not find JSON output"))?;
 
-    let package_graph = command.build_graph().context("resolving cargo metadata")?;
+    let metadata = guppy::CargoMetadata::parse_json(json)?;
+
+    let package_graph = metadata.build_graph()?;
 
     let main_package_id = package_graph
         .packages()
