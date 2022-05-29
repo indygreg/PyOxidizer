@@ -25,7 +25,6 @@ use {
         io::{BufRead, BufReader},
         path::{Path, PathBuf},
     },
-    tugger_file_manifest::FileEntry,
 };
 
 /// Find a pyoxidizer.toml configuration file by walking directory ancestry.
@@ -376,25 +375,11 @@ pub fn build_executable_with_rust_project<'a>(
     )?
     .into_components()
     {
-        embedded_data.licensing.add_component(component);
+        embedded_data.add_licensed_component(component)?;
     }
 
     // Inform user about licensing info.
-    log_licensing_info(&embedded_data.licensing);
-
-    // Write a unified licensing file if told to do so.
-    if let Some(filename) = exe.licenses_filename() {
-        embedded_data.extra_files.add_file_entry(
-            filename,
-            FileEntry::new_from_data(
-                embedded_data
-                    .licensing
-                    .aggregate_license_document()?
-                    .as_bytes(),
-                false,
-            ),
-        )?;
-    }
+    log_licensing_info(embedded_data.licensing());
 
     Ok(BuiltExecutable {
         exe_path: Some(exe_path),

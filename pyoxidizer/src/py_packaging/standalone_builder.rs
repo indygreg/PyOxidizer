@@ -1016,7 +1016,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             python_build_flags.0.insert(BuildFlag::COUNT_ALLOCS);
         }
 
-        Ok(EmbeddedPythonContext {
+        let mut context = EmbeddedPythonContext {
             config,
             link_settings,
             pending_resources,
@@ -1027,8 +1027,13 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             python_version,
             python_exe_host: self.host_python_exe.clone(),
             python_build_flags,
+            licensing_filename: self.licenses_filename.clone(),
             licensing: self.licensed_components()?,
-        })
+        };
+
+        context.synchronize_licensing()?;
+
+        Ok(context)
     }
 }
 

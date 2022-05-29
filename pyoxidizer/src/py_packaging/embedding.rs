@@ -11,10 +11,11 @@ use {
         BuildFlags, InterpreterConfig as PyO3InterpreterConfig, PythonImplementation, PythonVersion,
     },
     python_packaging::{
-        licensing::LicensedComponents, resource_collection::CompiledResourcesCollection,
+        licensing::{LicensedComponent, LicensedComponents},
+        resource_collection::CompiledResourcesCollection,
     },
     std::path::{Path, PathBuf},
-    tugger_file_manifest::FileManifest,
+    tugger_file_manifest::{FileEntry, FileManifest},
 };
 
 /// Describes extra behavior for a linker invocation.
@@ -260,6 +261,9 @@ pub struct EmbeddedPythonContext<'a> {
     /// To pass to PyO3.
     pub python_build_flags: BuildFlags,
 
+    /// Name of file to write licensing information to.
+    pub licensing_filename: Option<String>,
+
     /// Licensing metadata for components to be built/embedded.
     pub licensing: LicensedComponents,
 }
@@ -364,6 +368,36 @@ impl<'a> EmbeddedPythonContext<'a> {
             .context("write_interpreter_config_rs()")?;
         self.write_pyo3_config(&dest_dir)
             .context("write_pyo3_config()")?;
+
+        Ok(())
+    }
+
+    /// Obtain licensing information for this instance.
+    pub fn licensing(&self) -> &LicensedComponents {
+        &self.licensing
+    }
+
+    /// Add a licensed component to the collection.
+    pub fn add_licensed_component(&mut self, component: LicensedComponent) -> Result<()> {
+        self.licensing.add_component(component);
+
+        self.synchronize_licensing()?;
+
+        Ok(())
+    }
+
+    /// Ensuring licensing state between registered licenses and an output licensing file is in sync.
+    pub fn synchronize_licensing(&mut self) -> Result<()> {
+        // Write a unified licensing file if told to do so.
+        if let Some(filename) = &self.licensing_filename {
+            self.extra_files.add_file_entry(
+                filename,
+                FileEntry::new_from_data(
+                    self.licensing.aggregate_license_document()?.as_bytes(),
+                    false,
+                ),
+            )?;
+        }
 
         Ok(())
     }
