@@ -2513,6 +2513,8 @@ pub mod tests {
 
     #[test]
     fn test_windows_dynamic_distribution_dynamic_extension_files() -> Result<()> {
+        let env = get_env()?;
+
         for target in WINDOWS_TARGET_TRIPLES.iter() {
             let options = StandalonePythonExecutableBuilderOptions {
                 target_triple: target.to_string(),
@@ -2604,7 +2606,7 @@ pub mod tests {
                 format!("libssl-1_1{}", lib_suffix)
             );
 
-            let mut compiler = builder.host_distribution.create_bytecode_compiler()?;
+            let mut compiler = builder.host_distribution.create_bytecode_compiler(&env)?;
 
             let resources = shared_libraries
                 .iter()

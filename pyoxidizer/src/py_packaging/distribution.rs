@@ -12,7 +12,7 @@ use {
         config::PyembedPythonInterpreterConfig,
         standalone_distribution::StandaloneDistribution,
     },
-    crate::python_distributions::PYTHON_DISTRIBUTIONS,
+    crate::{environment::Environment, python_distributions::PYTHON_DISTRIBUTIONS},
     anyhow::{anyhow, Context, Result},
     fs2::FileExt,
     log::warn,
@@ -158,7 +158,10 @@ pub trait PythonDistribution {
     fn apple_sdk_info(&self) -> Option<&AppleSdkInfo>;
 
     /// Create a `PythonBytecodeCompiler` from this instance.
-    fn create_bytecode_compiler(&self) -> Result<Box<dyn PythonBytecodeCompiler>>;
+    fn create_bytecode_compiler(
+        &self,
+        env: &Environment,
+    ) -> Result<Box<dyn PythonBytecodeCompiler>>;
 
     /// Construct a `PythonPackagingPolicy` derived from this instance.
     fn create_packaging_policy(&self) -> Result<PythonPackagingPolicy>;

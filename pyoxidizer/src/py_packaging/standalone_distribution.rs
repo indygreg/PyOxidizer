@@ -15,7 +15,7 @@ use {
         distutils::prepare_hacked_distutils,
         standalone_builder::StandalonePythonExecutableBuilder,
     },
-    crate::environment::{LINUX_TARGET_TRIPLES, MACOS_TARGET_TRIPLES},
+    crate::environment::{Environment, LINUX_TARGET_TRIPLES, MACOS_TARGET_TRIPLES},
     anyhow::{anyhow, Context, Result},
     duct::cmd,
     log::{info, warn},
@@ -1240,8 +1240,12 @@ impl PythonDistribution for StandaloneDistribution {
         self.apple_sdk_info.as_ref()
     }
 
-    fn create_bytecode_compiler(&self) -> Result<Box<dyn PythonBytecodeCompiler>> {
-        let temp_dir = tempfile::TempDir::new()?;
+    fn create_bytecode_compiler(
+        &self,
+        env: &Environment,
+    ) -> Result<Box<dyn PythonBytecodeCompiler>> {
+        let temp_dir = env.temporary_directory("pyoxidizer-bytecode-compiler")?;
+
         Ok(Box::new(BytecodeCompiler::new(
             &self.python_exe,
             temp_dir.path(),
