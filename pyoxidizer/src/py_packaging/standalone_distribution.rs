@@ -1582,9 +1582,10 @@ pub mod tests {
 
     #[test]
     fn compile_syntax_error() -> Result<()> {
+        let env = get_env()?;
         let dist = get_default_distribution(None)?;
 
-        let temp_dir = tempfile::TempDir::new()?;
+        let temp_dir = env.temporary_directory("pyoxidizer-test")?;
 
         let mut compiler = BytecodeCompiler::new(dist.python_exe_path(), temp_dir.path())?;
         let res = compiler.compile(
