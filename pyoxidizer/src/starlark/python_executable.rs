@@ -1332,7 +1332,7 @@ mod tests {
 
         let resources = env.eval(&format!(
             "exe.read_package_root(\"{}\", packages=['foo', 'bar'])",
-            root.display()
+            root.display().to_string().replace('\\', "/")
         ))?;
 
         assert_eq!(resources.get_type(), "list");
