@@ -19,6 +19,8 @@ def make_resources():
         packaging_policy=policy,
     )
 
+    exe.add_cargo_manifest_licensing(CWD + "/Cargo.toml")
+
     return exe.to_embedded_resources()
 
 

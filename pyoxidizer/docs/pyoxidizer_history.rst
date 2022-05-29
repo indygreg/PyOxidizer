@@ -73,6 +73,9 @@ New Features
   * A new ``pyoxidizer rust-project-licensing`` command for printing licensing
     information for Rust projects. This can be used to help debug Rust licensing
     issues or to generate licensing content for any Rust project.
+  * A :py:meth:`PythonExecutable.add_cargo_manifest_licensing` Starlark method for
+    registering the licensing information for a ``Cargo.toml`` Rust project. This can
+    be used by Rust projects wishing to have their licensing information captured.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

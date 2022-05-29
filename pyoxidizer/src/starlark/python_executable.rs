@@ -17,6 +17,7 @@ use {
         util::ToValue,
     },
     crate::{
+        licensing::licenses_from_cargo_manifest,
         project_building::build_python_executable,
         py_packaging::binary::PythonBinaryBuilder,
         py_packaging::binary::{PackedResourcesLoadMode, WindowsRuntimeDllsMode},
@@ -760,6 +761,57 @@ impl PythonExecutableValue {
         Ok(Value::new(NoneType::None))
     }
 
+    /// Add licensing information from a `Cargo.toml` manifest.
+    pub fn add_cargo_manifest_licensing(
+        &mut self,
+        type_values: &TypeValues,
+        manifest_path: &str,
+        all_features: bool,
+        features: &Value,
+    ) -> ValueResult {
+        const LABEL: &str = "PythonExecutable.add_cargo_manifest_licensing()";
+
+        optional_list_arg("features", "string", features)?;
+
+        let features = match features.get_type() {
+            "list" => features.iter()?.iter().map(|x| x.to_string()).collect(),
+            "NoneType" => Vec::new(),
+            _ => panic!("type should have been validated above"),
+        };
+
+        let pyoxidizer_context_value = get_context(type_values)?;
+        let pyoxidizer_context = pyoxidizer_context_value
+            .downcast_ref::<PyOxidizerEnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)?;
+
+        let mut exe = self.inner(LABEL)?;
+
+        error_context(LABEL, || {
+            let cargo_exe = pyoxidizer_context
+                .env()
+                .ensure_rust_toolchain(None)?
+                .cargo_exe;
+
+            let components = licenses_from_cargo_manifest(
+                manifest_path,
+                all_features,
+                features.iter().map(|x| x.as_str()),
+                Some(exe.target_triple()),
+                Some(&cargo_exe),
+                true,
+            )?;
+
+            for component in components.into_components() {
+                warn!("adding licensed component {}", component.flavor());
+                exe.add_licensed_component(component)?;
+            }
+
+            Ok(())
+        })?;
+
+        Ok(Value::new(NoneType::None))
+    }
+
     /// PythonExecutable.to_embedded_resources()
     pub fn to_embedded_resources(&self) -> ValueResult {
         const LABEL: &str = "PythonExecutable.to_embedded_resources()";
@@ -1041,6 +1093,17 @@ starlark_module! { python_executable_env =>
         this.add_python_resources(
             &resources,
         )
+    }
+
+    PythonExecutable.add_cargo_manifest_licensing(
+        env env,
+        this,
+        manifest_path: String,
+        all_features: bool = false,
+        features=NoneType::None
+    ) {
+        let mut this = this.downcast_mut::<PythonExecutableValue>().unwrap().unwrap();
+        this.add_cargo_manifest_licensing(env, &manifest_path, all_features, &features)
     }
 
     PythonExecutable.filter_resources_from_files(

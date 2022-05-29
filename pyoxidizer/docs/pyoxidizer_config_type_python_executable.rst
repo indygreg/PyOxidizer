@@ -302,6 +302,24 @@
         This method is identical to :py:meth:`add_python_resource` except the argument is
         an iterable of resources. All other arguments are identical.
 
+    .. py:method:: add_cargo_manifest_licensing(manifest_path: str, all_features: bool = False, features = None)
+
+       Register software component licensing for a package defined in a ``Cargo.toml``
+       manifest.
+
+       This method accepts the following arguments:
+
+       ``manifest_path``
+         Filesystem path of ``Cargo.toml`` to process.
+
+       ``all_features``
+         Whether to activate all crate features when determining licensing info.
+
+       ``features``
+         List of strings denoting explicit features to enable.
+
+         Ignored if ``all_features`` is enabled.
+
     .. py:method:: filter_resources_from_files(files: list[str], glob_files: list[str])
 
         This method filters all embedded resources (source modules, bytecode modules,
