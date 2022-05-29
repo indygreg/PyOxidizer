@@ -874,7 +874,7 @@ impl StandaloneDistribution {
             &module_suffixes,
             false,
             true,
-        ) {
+        )? {
             match entry? {
                 PythonResource::PackageResource(resource) => {
                     if !resources.contains_key(&resource.leaf_package) {

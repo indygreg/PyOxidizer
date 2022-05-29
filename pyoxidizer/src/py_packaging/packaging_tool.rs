@@ -51,7 +51,7 @@ pub fn find_resources<'a>(
         &dist.python_module_suffixes()?,
         policy.file_scanner_emit_files(),
         policy.file_scanner_classify_files(),
-    ) {
+    )? {
         let r = r?.to_memory()?;
 
         match r {

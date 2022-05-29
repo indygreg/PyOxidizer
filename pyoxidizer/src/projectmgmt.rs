@@ -217,7 +217,7 @@ pub fn find_resources(
                 &dist.python_module_suffixes()?,
                 emit_files,
                 classify_files,
-            ) {
+            )? {
                 print_resource(&resource?);
             }
         } else if path.is_file() {
@@ -647,7 +647,7 @@ pub fn generate_python_embedding_artifacts(
         &dist.python_module_suffixes()?,
         true,
         false,
-    ) {
+    )? {
         if let PythonResource::File(file) = resource? {
             m.add_file_entry(file.path(), file.entry())?;
         } else {

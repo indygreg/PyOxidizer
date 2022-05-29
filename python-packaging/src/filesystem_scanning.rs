@@ -21,7 +21,7 @@ use {
             PythonResource,
         },
     },
-    anyhow::Result,
+    anyhow::{Context, Result},
     std::{
         collections::HashSet,
         ffi::OsStr,
@@ -112,17 +112,17 @@ impl<'a> PythonResourceIterator<'a> {
         suffixes: &PythonModuleSuffixes,
         emit_files: bool,
         emit_non_files: bool,
-    ) -> PythonResourceIterator<'a> {
+    ) -> Result<PythonResourceIterator<'a>> {
         let res = walkdir::WalkDir::new(path).sort_by(|a, b| a.file_name().cmp(b.file_name()));
 
         let filtered = res
             .into_iter()
-            .filter_map(|entry| {
-                let entry = entry.expect("unable to get directory entry");
+            .map(|entry| {
+                let entry = entry.context("resolving directory entry")?;
 
                 let path = entry.path();
 
-                if path.is_dir() {
+                Ok(if path.is_dir() {
                     None
                 } else {
                     Some(PathEntry {
@@ -130,11 +130,14 @@ impl<'a> PythonResourceIterator<'a> {
                         file_emitted: false,
                         non_file_emitted: false,
                     })
-                }
+                })
             })
+            .collect::<Result<Vec<_>>>()?
+            .into_iter()
+            .filter_map(|x| x)
             .collect::<Vec<_>>();
 
-        PythonResourceIterator {
+        Ok(PythonResourceIterator {
             root_path: path.to_path_buf(),
             cache_tag: cache_tag.to_string(),
             suffixes: suffixes.clone(),
@@ -145,7 +148,7 @@ impl<'a> PythonResourceIterator<'a> {
             emit_files,
             emit_non_files,
             _phantom: std::marker::PhantomData,
-        }
+        })
     }
 
     /// Construct an instance from an iterable of `(File)`.
@@ -687,7 +690,7 @@ pub fn find_python_resources<'a>(
     suffixes: &PythonModuleSuffixes,
     emit_files: bool,
     emit_non_files: bool,
-) -> PythonResourceIterator<'a> {
+) -> Result<PythonResourceIterator<'a>> {
     PythonResourceIterator::new(root_path, cache_tag, suffixes, emit_files, emit_non_files)
 }
 
@@ -730,7 +733,7 @@ mod tests {
         write(acme_a_path.join("foo.py"), "# acme.foo")?;
 
         let resources =
-            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, true, true)
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, true, true)?
                 .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 8);
 
@@ -908,7 +911,7 @@ mod tests {
         write(acme_bar_pycache_path.join("foo.cpython-38.opt-2.pyc"), "")?;
 
         let resources =
-            PythonResourceIterator::new(tp, "cpython-38", &DEFAULT_SUFFIXES, false, true)
+            PythonResourceIterator::new(tp, "cpython-38", &DEFAULT_SUFFIXES, false, true)?
                 .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 18);
 
@@ -1112,7 +1115,7 @@ mod tests {
         write(acme_path.join("bar.py"), "")?;
 
         let resources =
-            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)?
                 .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 2);
 
@@ -1181,7 +1184,7 @@ mod tests {
             ],
         };
 
-        let resources = PythonResourceIterator::new(tp, "cpython-37", &suffixes, false, true)
+        let resources = PythonResourceIterator::new(tp, "cpython-37", &suffixes, false, true)?
             .collect::<Result<Vec<_>>>()?;
 
         assert_eq!(resources.len(), 5);
@@ -1293,7 +1296,7 @@ mod tests {
         write(&egg_path, "")?;
 
         let resources =
-            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)?
                 .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 1);
 
@@ -1329,7 +1332,7 @@ mod tests {
         write(package_path.join("bar.py"), "")?;
 
         let resources =
-            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)?
                 .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 2);
 
@@ -1374,7 +1377,7 @@ mod tests {
         write(&pth_path, "")?;
 
         let resources =
-            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)?
                 .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 1);
 
@@ -1400,11 +1403,15 @@ mod tests {
         let resource_path = tp.join("resource.txt");
         write(&resource_path, "content")?;
 
-        assert!(
-            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
-                .next()
-                .is_none()
-        );
+        assert!(PythonResourceIterator::new(
+            tp,
+            DEFAULT_CACHE_TAG,
+            &DEFAULT_SUFFIXES,
+            false,
+            true
+        )?
+        .next()
+        .is_none());
 
         Ok(())
     }
@@ -1425,7 +1432,7 @@ mod tests {
         write(&resource_path, "content")?;
 
         let resources =
-            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)?
                 .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 1);
 
@@ -1462,7 +1469,7 @@ mod tests {
         write(&resource_path, "content")?;
 
         let resources =
-            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)?
                 .collect::<Result<Vec<_>>>()?;
 
         assert_eq!(resources.len(), 2);
@@ -1511,7 +1518,7 @@ mod tests {
         write(&resource_path, "content")?;
 
         let resources =
-            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)?
                 .collect::<Result<Vec<_>>>()?;
 
         assert_eq!(resources.len(), 2);
@@ -1556,7 +1563,7 @@ mod tests {
         write(&resource, "content")?;
 
         let resources =
-            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)?
                 .collect::<Result<Vec<_>>>()?;
         assert!(resources.is_empty());
 
@@ -1579,7 +1586,7 @@ mod tests {
         write(&resource, "content")?;
 
         let resources =
-            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)?
                 .collect::<Result<Vec<_>>>()?;
         assert!(resources.is_empty());
 
@@ -1602,7 +1609,7 @@ mod tests {
         write(&resource, "content")?;
 
         let resources =
-            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)?
                 .collect::<Result<Vec<_>>>()?;
         assert!(resources.is_empty());
 
@@ -1630,7 +1637,7 @@ mod tests {
         write(&subdir_resource_path, "content")?;
 
         let resources =
-            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)?
                 .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 3);
 
@@ -1689,7 +1696,7 @@ mod tests {
         write(&resource_path, "content")?;
 
         let resources =
-            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)?
                 .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 2);
 
@@ -1739,7 +1746,7 @@ mod tests {
         write(&subdir_resource_path, "content")?;
 
         let resources =
-            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)?
                 .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 3);
 
@@ -1798,7 +1805,7 @@ mod tests {
         write(&resource_path, "content")?;
 
         let resources =
-            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)?
                 .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 2);
 

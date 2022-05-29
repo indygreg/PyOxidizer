@@ -63,7 +63,8 @@ pub(crate) fn find_resources_in_path<'p>(py: Python<'p>, path: &PyAny) -> PyResu
 
     let mut res: Vec<Py<PyAny>> = Vec::new();
 
-    let iter = find_python_resources(&path, &cache_tag, &suffixes, false, true);
+    let iter = find_python_resources(&path, &cache_tag, &suffixes, false, true)
+        .map_err(|e| PyValueError::new_err(format!("error scanning filesystem: {}", e)))?;
 
     for resource in iter {
         let resource = resource
