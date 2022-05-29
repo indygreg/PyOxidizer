@@ -181,6 +181,7 @@ pub fn cache_clear(env: &Environment) -> Result<()> {
 
 /// Find resources given a source path.
 pub fn find_resources(
+    env: &Environment,
     path: Option<&Path>,
     distributions_dir: Option<&Path>,
     scan_distribution: bool,
@@ -196,11 +197,7 @@ pub fn find_resources(
     let extract_path = if let Some(path) = distributions_dir {
         path
     } else {
-        temp_dir.replace(
-            tempfile::Builder::new()
-                .prefix("python-distribution")
-                .tempdir()?,
-        );
+        temp_dir.replace(env.temporary_directory("python-distribution")?);
         temp_dir.as_ref().unwrap().path()
     };
 
@@ -412,13 +409,11 @@ pub fn python_distribution_extract(
     Ok(())
 }
 
-pub fn python_distribution_info(dist_path: &str) -> Result<()> {
+pub fn python_distribution_info(env: &Environment, dist_path: &str) -> Result<()> {
     let fh = std::fs::File::open(Path::new(dist_path))?;
     let reader = std::io::BufReader::new(fh);
 
-    let temp_dir = tempfile::Builder::new()
-        .prefix("python-distribution")
-        .tempdir()?;
+    let temp_dir = env.temporary_directory("python-distribution")?;
     let temp_dir_path = temp_dir.path();
 
     let dist = StandaloneDistribution::from_tar_zst(reader, temp_dir_path)?;
@@ -493,13 +488,11 @@ pub fn python_distribution_info(dist_path: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn python_distribution_licenses(path: &str) -> Result<()> {
+pub fn python_distribution_licenses(env: &Environment, path: &str) -> Result<()> {
     let fh = std::fs::File::open(Path::new(path))?;
     let reader = std::io::BufReader::new(fh);
 
-    let temp_dir = tempfile::Builder::new()
-        .prefix("python-distribution")
-        .tempdir()?;
+    let temp_dir = env.temporary_directory("python-distribution")?;
     let temp_dir_path = temp_dir.path();
 
     let dist = StandaloneDistribution::from_tar_zst(reader, temp_dir_path)?;

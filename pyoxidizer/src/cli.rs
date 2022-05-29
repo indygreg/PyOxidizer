@@ -561,6 +561,7 @@ pub fn run_cli() -> Result<()> {
                 Err(anyhow!("must specify a path or --scan-distribution"))
             } else {
                 projectmgmt::find_resources(
+                    &env,
                     path,
                     distributions_dir,
                     scan_distribution,
@@ -636,13 +637,13 @@ pub fn run_cli() -> Result<()> {
         "python-distribution-info" => {
             let dist_path = args.value_of("path").unwrap();
 
-            projectmgmt::python_distribution_info(dist_path)
+            projectmgmt::python_distribution_info(&env, dist_path)
         }
 
         "python-distribution-licenses" => {
             let path = args.value_of("path").unwrap();
 
-            projectmgmt::python_distribution_licenses(path)
+            projectmgmt::python_distribution_licenses(&env, path)
         }
 
         "run-build-script" => {
