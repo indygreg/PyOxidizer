@@ -1,7 +1,10 @@
 # This PyOxidizer configuration file when built will emit files that will
 # enable us to link Python into a new binary.
 
+BUILD_PATH = VARS.get("BUILD_PATH", CWD + "/build")
 PYTHON_VERSION = VARS.get("PYTHON_VERSION", "3.9")
+
+set_build_path(BUILD_PATH)
 
 
 def make_resources():

@@ -80,10 +80,53 @@ actions-build-pyoxy-linux target_triple python_version:
     -v $(pwd):/pyoxidizer \
     -v /usr/local/bin/pyoxidizer:/usr/bin/pyoxidizer \
     pyoxidizer:build \
-    /pyoxidizer/ci/build-pyoxy-linux.sh {{target_triple}} {{python_version}}
+    /pyoxidizer/ci/build-pyoxy-linux.sh {{target_triple}} {{python_version}} build
 
   mkdir upload
-  cp target/{{target_triple}}/release/pyoxy upload/
+  cp pyoxy/build/{{target_triple}}/release/pyoxy upload/
+  cp pyoxy/build/{{target_triple}}/release/resources/COPYING.txt upload/COPYING
+
+# Build PyOxy binary on Linux (local dev mode).
+pyoxy-build-linux target_triple python_version:
+  #!/usr/bin/env bash
+  set -eo pipefail
+
+  (cd ci && docker build -f linux-portable-binary.Dockerfile -t linux-portable-binary:latest .)
+  cargo build --bin pyoxidizer --target x86_64-unknown-linux-musl
+
+  rm -rf target/docker
+  mkdir -p target/docker
+
+  docker run \
+    --rm \
+    -it \
+    -v $(pwd):/pyoxidizer \
+    -v $(pwd)/target/x86_64-unknown-linux-musl/debug/pyoxidizer:/usr/bin/pyoxidizer \
+    linux-portable-binary:latest \
+    /pyoxidizer/ci/build-pyoxy-linux.sh {{target_triple}} {{python_version}} ../target/docker
+
+pyoxy-build-linux-stage pyoxy_version triple python_version:
+  #!/usr/bin/env bash
+  set -eo pipefail
+
+  just pyoxy-build-linux {{triple}} {{python_version}}
+
+  DEST_DIR=dist/pyoxy-{{pyoxy_version}}-{{triple}}-python{{python_version}}
+  mkdir -p ${DEST_DIR}
+
+  cp target/docker/{{triple}}/release/pyoxy ${DEST_DIR}/
+  cp target/docker/{{triple}}/release/resources/COPYING.txt ${DEST_DIR}/COPYING
+
+# Build all PyOxy binaries for Linux.
+pyoxy-build-linux-all:
+  #!/usr/bin/env bash
+  set -eo pipefail
+
+  PYOXY_VERSION=$(cargo metadata --manifest-path pyoxy/Cargo.toml --no-deps | jq --raw-output '.packages[] | select(.name == "pyoxy") | .version')
+
+  just pyoxy-build-linux-stage ${PYOXY_VERSION} x86_64-unknown-linux-gnu 3.8
+  just pyoxy-build-linux-stage ${PYOXY_VERSION} x86_64-unknown-linux-gnu 3.9
+  just pyoxy-build-linux-stage ${PYOXY_VERSION} x86_64-unknown-linux-gnu 3.10
 
 actions-build-pyoxy-macos triple python_version:
   #!/usr/bin/env bash
