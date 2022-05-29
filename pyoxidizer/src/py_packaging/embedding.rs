@@ -358,6 +358,17 @@ impl<'a> EmbeddedPythonContext<'a> {
         Ok(())
     }
 
+    /// Write an aggregated licensing document, if enabled.
+    pub fn write_licensing(&self, dest_dir: impl AsRef<Path>) -> Result<()> {
+        if let Some(filename) = &self.licensing_filename {
+            let text = self.licensing.aggregate_license_document()?;
+
+            std::fs::write(dest_dir.as_ref().join(filename), text.as_bytes())?;
+        }
+
+        Ok(())
+    }
+
     /// Write out files needed to build a binary against our configuration.
     pub fn write_files(&self, dest_dir: &Path) -> Result<()> {
         self.write_packed_resources(&dest_dir)
@@ -368,6 +379,8 @@ impl<'a> EmbeddedPythonContext<'a> {
             .context("write_interpreter_config_rs()")?;
         self.write_pyo3_config(&dest_dir)
             .context("write_pyo3_config()")?;
+        self.write_licensing(&dest_dir)
+            .context("write_licensing()")?;
 
         Ok(())
     }
