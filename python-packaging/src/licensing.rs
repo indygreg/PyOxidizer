@@ -426,7 +426,7 @@ impl LicensedComponents {
     /// Missing top-level packages are added with an unknown license annotation.
     ///
     /// Modules that aren't top-level modules are removed.
-    pub fn normalize_python_modules<'a>(&self) -> Self {
+    pub fn normalize_python_modules(&self) -> Self {
         let distribution = self
             .components
             .values()
