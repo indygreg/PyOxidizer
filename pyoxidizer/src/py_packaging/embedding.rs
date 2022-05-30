@@ -361,7 +361,7 @@ impl<'a> EmbeddedPythonContext<'a> {
     /// Write an aggregated licensing document, if enabled.
     pub fn write_licensing(&self, dest_dir: impl AsRef<Path>) -> Result<()> {
         if let Some(filename) = &self.licensing_filename {
-            let text = self.licensing.aggregate_license_document()?;
+            let text = self.licensing.aggregate_license_document(false)?;
 
             std::fs::write(dest_dir.as_ref().join(filename), text.as_bytes())?;
         }
@@ -406,7 +406,7 @@ impl<'a> EmbeddedPythonContext<'a> {
             self.extra_files.add_file_entry(
                 filename,
                 FileEntry::new_from_data(
-                    self.licensing.aggregate_license_document()?.as_bytes(),
+                    self.licensing.aggregate_license_document(false)?.as_bytes(),
                     false,
                 ),
             )?;

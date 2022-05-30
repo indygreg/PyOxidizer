@@ -683,10 +683,10 @@ pub fn rust_project_licensing(
         true,
     )?;
 
-    log_licensing_info(&licensing);
-
     if unified_license {
-        println!("{}", licensing.aggregate_license_document()?);
+        println!("{}", licensing.aggregate_license_document(true)?);
+    } else {
+        log_licensing_info(&licensing);
     }
 
     Ok(())

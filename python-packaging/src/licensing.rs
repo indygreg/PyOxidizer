@@ -797,12 +797,20 @@ impl LicensedComponents {
 
     /// Generate a unified text document describing licensing info for the components within.
     #[cfg(feature = "spdx-text")]
-    pub fn aggregate_license_document(&self) -> Result<String> {
-        let mut lines = vec![
-            "Software Components".to_string(),
-            "===================".to_string(),
-            "".to_string(),
-        ];
+    pub fn aggregate_license_document(&self, emit_interesting: bool) -> Result<String> {
+        let mut lines = vec![self.license_summary()];
+        lines.push("".into());
+
+        if emit_interesting {
+            if let Some(value) = self.interesting_report() {
+                lines.push(value);
+                lines.push("".into());
+            }
+        }
+
+        lines.push("Software Components".to_string());
+        lines.push("===================".to_string());
+        lines.push("".into());
 
         for component in self.iter_components() {
             lines.push(component.flavor().to_string());
