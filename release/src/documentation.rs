@@ -8,7 +8,7 @@ use {
     anyhow::{anyhow, Result},
     pulldown_cmark::{Event as MarkdownEvent, LinkType, Parser as MarkdownParser, Tag},
     rustdoc_types::{Crate, GenericArg, GenericArgs, ItemEnum, ItemKind, Type},
-    std::path::Path,
+    std::{fmt::Write, path::Path},
 };
 
 fn resolve_type_name(typ: &Type) -> Result<String> {
@@ -72,14 +72,14 @@ fn docstring_to_rst(docs: &str) -> Result<Vec<String>> {
                 }
             },
             MarkdownEvent::Code(s) => {
-                line.push_str(&format!("``{}``", s));
+                write!(line, "``{}``", s)?;
             }
             MarkdownEvent::SoftBreak => {
                 lines.push(line.clone());
                 line = "".to_string();
             }
             MarkdownEvent::Start(Tag::Emphasis) | MarkdownEvent::End(Tag::Emphasis) => {
-                line.push_str("*");
+                line.push('*');
             }
 
             MarkdownEvent::Start(Tag::Link(LinkType::Autolink, ..)) => {}
