@@ -31,6 +31,13 @@ pub fn log_licensing_info(components: &LicensedComponents) {
     }
     warn!("");
 
+    if let Some(report) = components.interesting_report() {
+        for line in report.lines() {
+            warn!("{}", line);
+        }
+        warn!("");
+    }
+
     for line in components.spdx_license_breakdown().lines() {
         info!("{}", line);
     }

@@ -555,6 +555,7 @@ impl LicensedComponents {
         self.components.values().filter(|c| c.has_copyleft())
     }
 
+    /// Generate a text summary of licesning info.
     pub fn license_summary(&self) -> String {
         let mut lines = vec![
             "Software Licensing Summary".to_string(),
@@ -590,11 +591,19 @@ impl LicensedComponents {
             "All SPDX licenses: {}",
             self.all_spdx_license_names(false).join(", ")
         ));
-        lines.push("".to_string());
 
-        lines.push("Components of Interest".to_string());
-        lines.push("----------------------".to_string());
-        lines.push("".to_string());
+        lines.join("\n")
+    }
+
+    /// Generate a text report of noteworthy licensing info.
+    ///
+    /// This essentially emits license quirks that may warrant user attention.
+    pub fn interesting_report(&self) -> Option<String> {
+        let mut lines = vec![
+            "Noteworthy Licensing Info".to_string(),
+            "=========================".to_string(),
+            "".to_string(),
+        ];
 
         let mut have_interesting = false;
 
@@ -648,13 +657,14 @@ impl LicensedComponents {
             }
         }
 
-        if !have_interesting {
-            lines.push("No components had noteworthy licensing characteristics.".to_string());
+        if have_interesting {
+            Some(lines.join("\n"))
+        } else {
+            None
         }
-
-        lines.join("\n")
     }
 
+    /// Generate a summary of SPDX licenses in all components.
     pub fn spdx_license_breakdown(&self) -> String {
         let mut lines = vec![
             "SPDX License Breakdown".to_string(),
