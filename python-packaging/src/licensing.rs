@@ -514,6 +514,23 @@ impl LicensedComponents {
             .collect::<Vec<_>>()
     }
 
+    /// Obtain a mapping of all SPDX licenses to components having them.
+    pub fn spdx_licenses_with_components(
+        &self,
+    ) -> BTreeMap<(LicenseId, Option<ExceptionId>), BTreeSet<&LicensedComponent>> {
+        let mut res = BTreeMap::new();
+
+        for component in self.iter_components() {
+            for key in component.all_spdx_licenses() {
+                res.entry(key)
+                    .or_insert_with(BTreeSet::new)
+                    .insert(component);
+            }
+        }
+
+        res
+    }
+
     /// Obtain all components with valid SPDX license expressions.
     pub fn license_spdx_components(&self) -> impl Iterator<Item = &LicensedComponent> {
         self.components
@@ -587,10 +604,23 @@ impl LicensedComponents {
             "{} have copyleft licenses",
             self.license_copyleft_components().count()
         ));
-        lines.push(format!(
-            "All SPDX licenses: {}",
-            self.all_spdx_license_names(false).join(", ")
-        ));
+        let spdx_components = self.spdx_licenses_with_components();
+        if !spdx_components.is_empty() {
+            lines.push("".to_string());
+
+            lines.push("Count   OSI   FSF free   Copyleft   SPDX License".to_string());
+
+            for ((lid, exception), components) in spdx_components {
+                lines.push(format!(
+                    "{:>5}   [{}]     [{}]        [{}]      {}",
+                    components.len(),
+                    if lid.is_osi_approved() { "x" } else { " " },
+                    if lid.is_fsf_free_libre() { "x" } else { " " },
+                    if lid.is_copyleft() { "x" } else { " " },
+                    format_spdx(lid, exception, true)
+                ));
+            }
+        }
 
         lines.join("\n")
     }
