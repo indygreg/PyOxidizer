@@ -394,7 +394,7 @@ impl<'data> MachOSigner<'data> {
                 );
                 let cd = self.create_code_directory(&alt_settings, macho_data, macho)?;
 
-                builder.add_alternative_code_directory(cd.into())?;
+                builder.add_alternative_code_directory(cd)?;
             }
         }
 
