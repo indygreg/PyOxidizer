@@ -54,6 +54,7 @@ jobs:
       - uses: ./.github/actions/rust-bootstrap
         with:
           rust_toolchain: stable
+          rust_target: ${{ matrix.target.triple }}
 
       - name: Build
         run: |

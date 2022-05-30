@@ -18,13 +18,17 @@ jobs:
           # Remember to update MINIMUM_RUST_VERSION in pyoxidizer/src/environment.rs
           # and the `Installing Rust` documentation when this changes.
           - '1.60.0'
-        os:
-          - 'ubuntu-20.04'
-          - 'macos-10.15'
-          - 'macos-11.0'
-          - 'windows-2019'
+        target:
+          - os: 'ubuntu-20.04'
+            triple: 'x86_64-unknown-linux-gnu'
+          - os: 'macos-10.15'
+            triple: 'x86_64-apple-darwin'
+          - os: 'macos-11.0'
+            triple: 'x86_64-apple-darwin'
+          - os: 'windows-2019'
+            triple: 'x86_64-pc-windows-msvc'
     continue-on-error: ${{ matrix.rust_toolchain == 'nightly' }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.target.os }}
     env:
       IN_CI: '1'
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -48,6 +52,7 @@ jobs:
       - uses: ./.github/actions/rust-bootstrap
         with:
           rust_toolchain: ${{ matrix.rust_toolchain }}
+          rust_target: ${{ matrix.target.triple }}
 
       - name: Build Workspace
         env:

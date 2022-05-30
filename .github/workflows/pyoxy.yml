@@ -15,6 +15,7 @@ jobs:
       - uses: ./.github/actions/rust-bootstrap
         with:
           rust_toolchain: stable
+          rust_target: x86_64-unknown-linux-musl
 
       - name: Build pyoxidizer Executable
         run: |
@@ -34,6 +35,7 @@ jobs:
       - uses: ./.github/actions/rust-bootstrap
         with:
           rust_toolchain: stable
+          rust_target: x86_64-apple-darwin
 
       - name: Build pyoxidizer Executable
         run: |
@@ -66,6 +68,7 @@ jobs:
       - uses: ./.github/actions/rust-bootstrap
         with:
           rust_toolchain: stable
+          rust_target: ${{ matrix.target_triple }}
 
       - name: Download PyOxidizer Executable
         uses: actions/download-artifact@v3
@@ -140,6 +143,7 @@ jobs:
       - uses: ./.github/actions/rust-bootstrap
         with:
           rust_toolchain: stable
+          rust_target: ${{ matrix.target_triple }}
 
       - name: Download PyOxidizer Executable
         uses: actions/download-artifact@v3

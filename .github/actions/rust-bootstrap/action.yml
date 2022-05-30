@@ -5,6 +5,9 @@ inputs:
     description: rustup toolchain to install
     default: stable
     required: false
+  rust_target:
+    description: rust target triple to install
+    required: true
 runs:
   using: composite
   steps:
@@ -13,23 +16,10 @@ runs:
     - uses: actions-rs/toolchain@v1
       with:
         toolchain: ${{ inputs.rust_toolchain }}
+        target: ${{ inputs.rust_target }}
         default: true
         profile: minimal
         components: clippy
-
-    - uses: actions-rs/toolchain@v1
-      if: runner.os == 'Linux'
-      with:
-        toolchain: ${{ inputs.rust_toolchain }}
-        profile: minimal
-        target: x86_64-unknown-linux-musl
-
-    - uses: actions-rs/toolchain@v1
-      if: runner.os == 'macOS'
-      with:
-        toolchain: ${{ inputs.rust_toolchain }}
-        profile: minimal
-        target: aarch64-apple-darwin
 
     - name: Bootstrap Environment (Linux)
       if: runner.os == 'Linux'
