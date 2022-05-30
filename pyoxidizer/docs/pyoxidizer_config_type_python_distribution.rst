@@ -119,7 +119,7 @@
 ``default_python_distribution()``
 =================================
 
-.. py:function:: default_python_distribution(flavor: str = "standalone", build_target: str = BUILD_TARGET, python_version: str = "3.9") -> PythonDistribution
+.. py:function:: default_python_distribution(flavor: str = "standalone", build_target: str = BUILD_TARGET, python_version: str = "3.10") -> PythonDistribution
 
     Resolves the default :py:class:`PythonDistribution`.
 
