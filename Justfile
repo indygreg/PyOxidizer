@@ -49,10 +49,18 @@ actions-bootstrap-rust-macos: actions-install-sccache-macos
 actions-bootstrap-rust-windows: actions-install-sccache-windows
 
 actions-macos-universal exe:
+  #!/usr/bin/env bash
+  set -eo pipefail
+
   mkdir -p uploads
   lipo {{exe}}-x86-64/{{exe}} {{exe}}-aarch64/{{exe}} -create -output uploads/{{exe}}
   chmod +x uploads/{{exe}}
   lipo uploads/{{exe}} -info
+
+  # There might be a COPYING file with licensing info. If so, preserve it.
+  if [ -e "{{exe}}-aarch64/COPYING" ]; then
+    cp -v {{exe}}-aarch64/COPYING uploads/
+  fi
 
 actions-build-pyoxy-linux target_triple python_version:
   mkdir -p pyoxy/build target
@@ -121,6 +129,7 @@ actions-build-pyoxy-macos triple python_version:
 
   mkdir upload
   cp target/{{triple}}/release/pyoxy upload/
+  cp pyoxy/build/{{triple}}/release/resources/COPYING.txt upload/COPYING
   sccache --stop-server
 
 # Trigger a workflow on a branch.

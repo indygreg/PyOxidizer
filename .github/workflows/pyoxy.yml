@@ -108,7 +108,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: exe-pyoxy-${{ matrix.target_triple }}-${{ matrix.python_version }}
-          path: upload/pyoxy
+          path: upload/*
 
   # This is nearly identical to build-exe.yml and could likely be consolidated
   # with some additional parameters to that workflow.
@@ -164,7 +164,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: exe-pyoxy-${{ matrix.target_triple }}-${{ matrix.python_version }}
-          path: upload/pyoxy
+          path: upload/*
 
   macos-universal:
     needs:
@@ -203,4 +203,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: exe-pyoxy-macos-universal-${{ matrix.python_version }}
-          path: uploads/pyoxy
+          path: uploads/*
