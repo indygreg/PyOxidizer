@@ -30,7 +30,7 @@ jobs:
       - pyoxidizer-exes
     runs-on: 'ubuntu-20.04'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Download Executable
         uses: actions/download-artifact@v2
@@ -115,7 +115,7 @@ jobs:
       - pyoxidizer-exes
     runs-on: 'ubuntu-20.04'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Download Linux exe
         uses: actions/download-artifact@v3
@@ -177,7 +177,7 @@ jobs:
     env:
       IN_CI: '1'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Download CLI exes
         uses: actions/download-artifact@v3
@@ -209,7 +209,7 @@ jobs:
             wheel_target: 'wheel_windows_x86_64'
     runs-on: 'windows-2022'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Download Executable
         uses: actions/download-artifact@v3
@@ -270,7 +270,7 @@ jobs:
     env:
       IN_CI: '1'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Download Windows Executable
         uses: actions/download-artifact@v3
@@ -317,7 +317,7 @@ jobs:
         CARGO_HOME: /root/.cargo
         CFLAGS_armv7_unknown_linux_musleabihf: -mfpu=vfpv3-d16
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Build Wheels

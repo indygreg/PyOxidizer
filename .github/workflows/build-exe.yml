@@ -47,7 +47,7 @@ jobs:
       # repository for any Git references.
       PYOXIDIZER_BUILD_FORCE_GIT_SOURCE: '1'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -78,7 +78,7 @@ jobs:
       - build
     runs-on: 'macos-11'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
