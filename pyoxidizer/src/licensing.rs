@@ -19,7 +19,7 @@ use {
     },
     log::{info, warn},
     python_packaging::licensing::{
-        ComponentFlavor, LicenseFlavor, LicensedComponent, LicensedComponents,
+        ComponentFlavor, LicenseFlavor, LicensedComponent, LicensedComponents, SourceLocation,
     },
     std::{path::Path, sync::Arc},
 };
@@ -185,7 +185,7 @@ pub fn licenses_from_cargo_manifest<'a>(
 
         let flavor = ComponentFlavor::RustCrate(package.name().into());
 
-        let component = if let Some(expression) = package.license() {
+        let mut component = if let Some(expression) = package.license() {
             // `/` is sometimes used as a delimiter for some reason.
             let expression = expression.replace('/', " OR ");
 
@@ -193,6 +193,12 @@ pub fn licenses_from_cargo_manifest<'a>(
         } else {
             LicensedComponent::new(flavor, LicenseFlavor::None)
         };
+
+        let source_url = package.repository().or_else(|| package.homepage());
+
+        if let Some(url) = source_url {
+            component.set_source_location(SourceLocation::Url(url.to_string()));
+        }
 
         components.add_component(component);
     }

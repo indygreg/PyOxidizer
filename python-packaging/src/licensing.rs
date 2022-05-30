@@ -761,7 +761,6 @@ impl LicensedComponents {
                     if component.license_texts().is_empty() {
                         lines.push("".into());
                         lines.push("The license texts for this component are reproduced elsewhere in this document.".into());
-                        lines.push("".into());
                     }
 
                     for exception in component.all_spdx_exception_ids() {
