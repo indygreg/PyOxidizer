@@ -12,6 +12,8 @@
 
 on:
   push:
+    branches-ignore:
+      - 'ci-test'
   pull_request:
   schedule:
     - cron: '13 15 * * *'
