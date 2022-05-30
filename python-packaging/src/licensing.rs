@@ -508,8 +508,7 @@ impl LicensedComponents {
     /// Obtain all SPDX license names referenced by registered components.
     pub fn all_spdx_license_names(&self, full: bool) -> Vec<String> {
         self.iter_components()
-            .map(|c| c.all_spdx_license_names(full))
-            .flatten()
+            .flat_map(|c| c.all_spdx_license_names(full))
             .collect::<BTreeSet<_>>()
             .into_iter()
             .collect::<Vec<_>>()
