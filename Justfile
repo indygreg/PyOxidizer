@@ -123,6 +123,21 @@ actions-build-pyoxy-macos triple python_version:
   cp target/{{triple}}/release/pyoxy upload/
   sccache --stop-server
 
+# Trigger a workflow on a branch.
+ci-run workflow branch="ci-test":
+  gh workflow run {{workflow}} --ref {{branch}}
+
+# Trigger all workflows on a given branch.
+ci-run-all branch="ci-test":
+  just ci-run cargo_deny.yml {{branch}}
+  just ci-run oxidized_importer.yml {{branch}}
+  just ci-run pyoxy.yml {{branch}}
+  just ci-run rcodesign.yml {{branch}}
+  just ci-run release.yml {{branch}}
+  just ci-run sphinx.yml {{branch}}
+  just ci-run workspace.yml {{branch}}
+  just ci-run workspace-python.yml {{branch}}
+
 _remote-sign-exe ref workflow run_id artifact exe_name rcodesign_branch="main":
   gh workflow run sign-apple-exe.yml \
     --ref {{ref}} \
