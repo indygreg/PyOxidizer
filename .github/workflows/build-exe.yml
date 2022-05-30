@@ -7,6 +7,18 @@ on:
         description: Name of binary to build
         required: true
         type: string
+      extra_build_args_linux:
+        description: Extra argumnets to pass to `cargo build` on Linux
+        required: false
+        type: string
+      extra_build_args_macos:
+        description: Extra arguments to pass to `cargo build` on Windows
+        required: false
+        type: string
+      extra_build_args_windows:
+        description: Extra arguments to pass to `cargo build` on macOS
+        required: false
+        type: string
     secrets:
       AWS_ACCESS_KEY_ID:
         required: true
@@ -57,8 +69,33 @@ jobs:
           rust_target: ${{ matrix.target.triple }}
 
       - name: Build
+        shell: bash
         run: |
-          just actions-build-exe ${{ inputs.bin }} ${{ matrix.target.triple }}
+          if [ "${{ matrix.target.triple }}" = "aarch64-apple-darwin" ]; then
+            export MACOSX_DEPLOYMENT_TARGET=11.0
+          elif [ "${{ matrix.target.triple }}" = "x86_64-apple-darwin" ]; then
+            export MACOSX_DEPLOYMENT_TARGET=10.9
+          fi
+
+          case "${{ matrix.target.triple }}" in
+            *linux*)
+              EXTRA_BUILD_ARGS=${{ inputs.extra_build_args_linux }}
+              ;;
+            *apple-darwin*)
+              EXTRA_BUILD_ARGS=${{ inputs.extra_build_args_macos }}
+              ;;
+            *windows*)
+              EXTRA_BUILD_ARGS=${{ inputs.extra_build_args_windows }}
+              ;;
+            *)
+              ;;
+          esac
+
+          cargo build --release --bin ${{ inputs.bin }} --target ${{ matrix.target.triple }} ${EXTRA_BUILD_ARGS}
+
+          mkdir upload
+          cp target/${{ matrix.target.triple }}/release/${{ inputs.bin }}* upload/
+          sccache --stop-server
 
       - name: Upload (non-Windows)
         if: runner.os != 'Windows'

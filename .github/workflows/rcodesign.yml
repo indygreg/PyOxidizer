@@ -11,6 +11,8 @@ jobs:
     uses: ./.github/workflows/build-exe.yml
     with:
       bin: rcodesign
+      extra_build_args_macos: '--all-features'
+      extra_build_args_windows: '--all-features'
     secrets:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

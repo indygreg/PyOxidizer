@@ -13,14 +13,6 @@ macosx_deployment_target := if os() == "macos" {
   ""
 }
 
-rcodesign_extra_build_flags := if os() == "windows" {
-  "--all-features"
-} else if os() == "macos" {
-  "--all-features"
-} else {
-  ""
-}
-
 actions-install-sccache-linux:
   python3 scripts/secure_download.py \
     https://github.com/mozilla/sccache/releases/download/v0.3.0/sccache-v0.3.0-x86_64-unknown-linux-musl.tar.gz \
@@ -55,16 +47,6 @@ actions-bootstrap-rust-linux: actions-install-sccache-linux
 actions-bootstrap-rust-macos: actions-install-sccache-macos
 
 actions-bootstrap-rust-windows: actions-install-sccache-windows
-
-actions-build-exe bin triple:
-  #!/usr/bin/env bash
-  set -euxo pipefail
-
-  export MACOSX_DEPLOYMENT_TARGET={{macosx_deployment_target}}
-  cargo build --release --bin {{bin}} --target {{triple}} {{ if bin == "rcodesign" { rcodesign_extra_build_flags } else { "" } }}
-  mkdir upload
-  cp target/{{triple}}/release/{{bin}}{{exe_suffix}} upload/{{bin}}{{exe_suffix}}
-  sccache --stop-server
 
 actions-macos-universal exe:
   mkdir -p uploads
