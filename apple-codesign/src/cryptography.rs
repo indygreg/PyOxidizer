@@ -280,9 +280,7 @@ impl<'a> TryFrom<PrivateKeyInfo<'a>> for InMemoryPrivateKey {
                             secret_key,
                         }))
                     }
-                    _ => {
-                        return Err(pkcs8::Error::ParametersMalformed);
-                    }
+                    _ => Err(pkcs8::Error::ParametersMalformed),
                 }
             }
             x if x.as_bytes() == OID_SIG_ED25519.as_bytes() => {
