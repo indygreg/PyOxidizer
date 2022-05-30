@@ -3,6 +3,7 @@ on:
   pull_request:
   schedule:
     - cron: '13 15 * * *'
+  workflow_dispatch:
 jobs:
   exes:
     uses: ./.github/workflows/build-exe.yml

@@ -3,6 +3,7 @@ on:
   pull_request:
   schedule:
     - cron: '13 15 * * *'
+  workflow_dispatch:
 jobs:
   pyembed:
     runs-on: ubuntu-20.04
