@@ -134,7 +134,7 @@ impl<'a> PythonResourceIterator<'a> {
             })
             .collect::<Result<Vec<_>>>()?
             .into_iter()
-            .filter_map(|x| x)
+            .flatten()
             .collect::<Vec<_>>();
 
         Ok(PythonResourceIterator {
