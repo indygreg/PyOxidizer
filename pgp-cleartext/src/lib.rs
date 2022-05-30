@@ -200,7 +200,7 @@ impl<R: BufRead> CleartextSignatureReader<R> {
     }
 }
 
-impl<'a, R: BufRead> Read for CleartextSignatureReader<R> {
+impl<R: BufRead> Read for CleartextSignatureReader<R> {
     fn read(&mut self, dest: &mut [u8]) -> std::io::Result<usize> {
         loop {
             match &mut self.state {
