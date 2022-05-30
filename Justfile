@@ -156,5 +156,8 @@ _remote-sign-exe ref workflow run_id artifact exe_name rcodesign_branch="main":
     -f exe_name={{exe_name}} \
     -f rcodesign_branch={{rcodesign_branch}}
 
+# Trigger remote code signing workflow for pyoxy executable.
+remote-sign-pyoxy ref run_id rcodesign_branch="main": (_remote-sign-exe ref "rcodesign.yml" run_id "exe-pyoxy-macos-universal" "pyoxy" rcodesign_branch)
+
 # Trigger remote code signing workflow for rcodesign executable.
 remote-sign-rcodesign ref run_id rcodesign_branch="main": (_remote-sign-exe ref "rcodesign.yml" run_id "exe-rcodesign-macos-universal" "rcodesign" rcodesign_branch)
