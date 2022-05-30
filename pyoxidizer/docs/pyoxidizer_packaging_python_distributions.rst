@@ -28,6 +28,10 @@ Here are the built-in Python distributions:
 +---------+---------+--------------------+--------------+------------+
 | Source  | Version | Flavor             | Build Target              |
 +=========+=========+====================+===========================+
+| CPython |  3.9.13 | standalone_dynamic | aarch64-unknown-linux-gnu |
++---------+---------+--------------------+---------------------------+
+| CPython |  3.10.4 | standalone_dynamic | aarch64-unknown-linux-gnu |
++---------+---------+--------------------+---------------------------+
 | CPython |  3.8.13 | standalone_dynamic | x86_64-unknown-linux-gnu  |
 +---------+---------+--------------------+---------------------------+
 | CPython |  3.9.13 | standalone_dynamic | x86_64-unknown-linux-gnu  |

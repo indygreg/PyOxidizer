@@ -100,8 +100,13 @@ pub static MINIMUM_RUST_VERSION: Lazy<semver::Version> =
 pub const RUST_TOOLCHAIN_VERSION: &str = "1.61.0";
 
 /// Target triples for Linux.
-pub static LINUX_TARGET_TRIPLES: Lazy<Vec<&'static str>> =
-    Lazy::new(|| vec!["x86_64-unknown-linux-gnu", "x86_64-unknown-linux-musl"]);
+pub static LINUX_TARGET_TRIPLES: Lazy<Vec<&'static str>> = Lazy::new(|| {
+    vec![
+        "aarch64-unknown-linux-gnu",
+        "x86_64-unknown-linux-gnu",
+        "x86_64-unknown-linux-musl",
+    ]
+});
 
 /// Target triples for macOS.
 pub static MACOS_TARGET_TRIPLES: Lazy<Vec<&'static str>> =
@@ -141,6 +146,7 @@ pub fn default_target_triple() -> &'static str {
     match env!("TARGET") {
         // Release binaries are typically musl. But Linux GNU is a more
         // user friendly target to build for. So we perform this mapping.
+        "aarch64-unknown-linux-musl" => "aarch64-unknown-linux-gnu",
         "x86_64-unknown-linux-musl" => "x86_64-unknown-linux-gnu",
         v => v,
     }

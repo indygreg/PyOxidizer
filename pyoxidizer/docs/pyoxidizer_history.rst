@@ -76,6 +76,10 @@ New Features
   * A :py:meth:`PythonExecutable.add_cargo_manifest_licensing` Starlark method for
     registering the licensing information for a ``Cargo.toml`` Rust project. This can
     be used by Rust projects wishing to have their licensing information captured.
+* Initial support for ``aarch64-unknown-linux-gnu`` Python distributions. The
+  distributions are now defined and PyOxidizer should use them when appropriate.
+  However, the distributions aren't yet well tested. So feedback on their
+  operation via GitHub issues would be appreciated!
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

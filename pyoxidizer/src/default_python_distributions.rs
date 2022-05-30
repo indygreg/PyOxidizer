@@ -27,6 +27,15 @@ pub static PYTHON_DISTRIBUTIONS: Lazy<PythonDistributionCollection> = Lazy::new(
         PythonDistributionRecord {
             python_major_minor_version: "3.9".to_string(),
             location: PythonDistributionLocation::Url {
+                url: "https://github.com/indygreg/python-build-standalone/releases/download/20220528/cpython-3.9.13%2B20220528-aarch64-unknown-linux-gnu-noopt-full.tar.zst".to_string(),
+                sha256: "bf53216343a6a0189ac14a18ee4b36a1aa175ec2576fea004dcd84d7d11f1dbb".to_string(),
+            },
+            target_triple: "aarch64-unknown-linux-gnu".to_string(),
+            supports_prebuilt_extension_modules: true,
+        },
+        PythonDistributionRecord {
+            python_major_minor_version: "3.9".to_string(),
+            location: PythonDistributionLocation::Url {
                 url: "https://github.com/indygreg/python-build-standalone/releases/download/20220528/cpython-3.9.13%2B20220528-x86_64-unknown-linux-gnu-pgo-full.tar.zst".to_string(),
                 sha256: "f83976f1d9890d8022252638133f1bb156a202e46e73ab83e2a25339871b3ed5".to_string(),
             },
@@ -49,6 +58,15 @@ pub static PYTHON_DISTRIBUTIONS: Lazy<PythonDistributionCollection> = Lazy::new(
                 sha256: "9f86a2122efa495808c8bcdaef413e7f1394c30791cdff9112b874ff1ef366ec".to_string(),
             },
             target_triple: "x86_64_v3-unknown-linux-gnu".to_string(),
+            supports_prebuilt_extension_modules: true,
+        },
+        PythonDistributionRecord {
+            python_major_minor_version: "3.10".to_string(),
+            location: PythonDistributionLocation::Url {
+                url: "https://github.com/indygreg/python-build-standalone/releases/download/20220528/cpython-3.10.4%2B20220528-aarch64-unknown-linux-gnu-noopt-full.tar.zst".to_string(),
+                sha256: "136d4ba9a261075d1d3b0391258256ba9d2d565c5db11a085c424d0d665c261b".to_string(),
+            },
+            target_triple: "aarch64-unknown-linux-gnu".to_string(),
             supports_prebuilt_extension_modules: true,
         },
         PythonDistributionRecord {

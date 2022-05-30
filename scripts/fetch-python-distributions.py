@@ -125,9 +125,11 @@ def main():
     lines = [
         "// Linux glibc linked.",
         format_record(records["3.8-x86_64-unknown-linux-gnu-pgo"]),
+        format_record(records["3.9-aarch64-unknown-linux-gnu-noopt"]),
         format_record(records["3.9-x86_64-unknown-linux-gnu-pgo"]),
         format_record(records["3.9-x86_64_v2-unknown-linux-gnu-pgo"]),
         format_record(records["3.9-x86_64_v3-unknown-linux-gnu-pgo"]),
+        format_record(records["3.10-aarch64-unknown-linux-gnu-noopt"]),
         format_record(records["3.10-x86_64-unknown-linux-gnu-pgo"]),
         format_record(records["3.10-x86_64_v2-unknown-linux-gnu-pgo"]),
         format_record(records["3.10-x86_64_v3-unknown-linux-gnu-pgo"]),

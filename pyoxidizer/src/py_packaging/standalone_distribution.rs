@@ -1124,6 +1124,9 @@ impl PythonDistribution for StandaloneDistribution {
 
         res.extend(
             match self.target_triple() {
+                "aarch64-unknown-linux-gnu" => vec![],
+                // musl libc linked distributions run on GNU Linux.
+                "aarch64-unknown-linux-musl" => vec!["aarch64-unknown-linux-gnu"],
                 "x86_64-unknown-linux-gnu" => vec![],
                 // musl libc linked distributions run on GNU Linux.
                 "x86_64-unknown-linux-musl" => vec!["x86_64-unknown-linux-gnu"],
@@ -1210,6 +1213,7 @@ impl PythonDistribution for StandaloneDistribution {
         }
 
         match self.python_platform_tag.as_str() {
+            "linux-aarch64" => "manylinux2014_aarch64",
             "linux-x86_64" => "manylinux2014_x86_64",
             "linux-i686" => "manylinux2014_i686",
             "macosx-10.9-x86_64" => "macosx_10_9_x86_64",
@@ -1552,6 +1556,7 @@ pub mod tests {
                 dist.python_major_minor_version().as_str(),
                 dist.target_triple(),
             ) {
+                (_, "aarch64-unknown-linux-gnu") => (linux_dropped.clone(), linux_added.clone()),
                 (_, "x86_64-unknown-linux-gnu") => (linux_dropped.clone(), linux_added.clone()),
                 (_, "x86_64_v2-unknown-linux-gnu") => (linux_dropped.clone(), linux_added.clone()),
                 (_, "x86_64_v3-unknown-linux-gnu") => (linux_dropped.clone(), linux_added.clone()),
