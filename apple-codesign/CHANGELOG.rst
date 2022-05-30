@@ -2,6 +2,14 @@
 `apple-codesign` History
 ========================
 
+0.15.0
+======
+
+(Not yet released)
+
+* XAR files are now always signed through a temporary file in order to avoid
+  corruption of the XAR file.
+
 0.14.0
 ======
 

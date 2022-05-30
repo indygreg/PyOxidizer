@@ -176,10 +176,21 @@ impl<'key> UnifiedSigner<'key> {
     ) -> Result<(), AppleCodesignError> {
         let input_path = input_path.as_ref();
         let output_path = output_path.as_ref();
+
+        // The XAR can get corrupted if we sign into place. So we always go through a temporary
+        // file. We could potentially avoid the overhead if we're not signing in place...
+
+        let output_path_temp =
+            output_path.with_file_name(if let Some(file_name) = output_path.file_name() {
+                file_name.to_string_lossy().to_string() + ".tmp"
+            } else {
+                "xar.tmp".to_string()
+            });
+
         warn!(
             "signing XAR pkg installer at {} to {}",
             input_path.display(),
-            output_path.display()
+            output_path_temp.display()
         );
 
         let (signing_key, signing_cert) = self
@@ -187,17 +198,31 @@ impl<'key> UnifiedSigner<'key> {
             .signing_key()
             .ok_or(AppleCodesignError::XarNoAdhoc)?;
 
-        let reader = XarReader::new(File::open(input_path)?)?;
-        let mut signer = XarSigner::new(reader);
+        {
+            let reader = XarReader::new(File::open(input_path)?)?;
+            let mut signer = XarSigner::new(reader);
 
-        let mut fh = File::create(output_path)?;
-        signer.sign(
-            &mut fh,
-            signing_key,
-            signing_cert,
-            self.settings.time_stamp_url(),
-            self.settings.certificate_chain().iter().cloned(),
-        )?;
+            let mut fh = File::create(&output_path_temp)?;
+            signer.sign(
+                &mut fh,
+                signing_key,
+                signing_cert,
+                self.settings.time_stamp_url(),
+                self.settings.certificate_chain().iter().cloned(),
+            )?;
+        }
+
+        if output_path.exists() {
+            warn!("removing existing {}", output_path.display());
+            std::fs::remove_file(&output_path)?;
+        }
+
+        warn!(
+            "renaming {} -> {}",
+            output_path_temp.display(),
+            output_path.display()
+        );
+        std::fs::rename(&output_path_temp, &output_path)?;
 
         Ok(())
     }
