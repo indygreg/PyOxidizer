@@ -576,7 +576,7 @@ impl LicensedComponents {
     }
 
     /// Obtain a mapping of all SPDX licenses to components having them.
-    pub fn spdx_licenses_with_components(
+    pub fn components_by_spdx_license(
         &self,
     ) -> BTreeMap<(LicenseId, Option<ExceptionId>), BTreeSet<&LicensedComponent>> {
         let mut res = BTreeMap::new();
@@ -665,7 +665,7 @@ impl LicensedComponents {
             "{} have copyleft licenses",
             self.license_copyleft_components().count()
         ));
-        let spdx_components = self.spdx_licenses_with_components();
+        let spdx_components = self.components_by_spdx_license();
         if !spdx_components.is_empty() {
             lines.push("".to_string());
 
