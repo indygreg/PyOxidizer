@@ -55,15 +55,15 @@ impl From<u32> for XarChecksum {
     }
 }
 
-impl Into<u32> for XarChecksum {
-    fn into(self) -> u32 {
-        match self {
-            Self::None => 0,
-            Self::Sha1 => 1,
-            Self::Md5 => 2,
-            Self::Sha256 => 3,
-            Self::Sha512 => 4,
-            Self::Other(v) => v,
+impl From<XarChecksum> for u32 {
+    fn from(checksum: XarChecksum) -> u32 {
+        match checksum {
+            XarChecksum::None => 0,
+            XarChecksum::Sha1 => 1,
+            XarChecksum::Md5 => 2,
+            XarChecksum::Sha256 => 3,
+            XarChecksum::Sha512 => 4,
+            XarChecksum::Other(v) => v,
         }
     }
 }
