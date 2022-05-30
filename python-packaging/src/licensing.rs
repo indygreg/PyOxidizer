@@ -202,6 +202,12 @@ pub struct LicensedComponent {
     /// Location where source code for this component can be obtained.
     source_location: SourceLocation,
 
+    /// Homepage for project.
+    homepage: Option<String>,
+
+    /// List of authors.
+    authors: Vec<String>,
+
     /// Specified license text for this component.
     ///
     /// If empty, license texts will be derived from SPDX identifiers, if available.
@@ -235,6 +241,8 @@ impl LicensedComponent {
             flavor,
             license,
             source_location: SourceLocation::NotSet,
+            homepage: None,
+            authors: vec![],
             license_texts: vec![],
         }
     }
@@ -249,12 +257,7 @@ impl LicensedComponent {
             LicenseFlavor::OtherExpression(spdx_expression)
         };
 
-        Ok(Self {
-            flavor,
-            license,
-            source_location: SourceLocation::NotSet,
-            license_texts: vec![],
-        })
+        Ok(Self::new(flavor, license))
     }
 
     /// The type of this component.
@@ -295,6 +298,26 @@ impl LicensedComponent {
     /// Define where source code for this component can be obtained from.
     pub fn set_source_location(&mut self, location: SourceLocation) {
         self.source_location = location;
+    }
+
+    /// Obtain the homepage / URL of this component.
+    pub fn homepage(&self) -> Option<&str> {
+        self.homepage.as_deref()
+    }
+
+    /// Set the homepage of this component.
+    pub fn set_homepage(&mut self, value: impl ToString) {
+        self.homepage = Some(value.to_string());
+    }
+
+    /// Obtain the annotated authors of this component.
+    pub fn authors(&self) -> &[String] {
+        &self.authors
+    }
+
+    /// Define an author of this component.
+    pub fn add_author(&mut self, value: impl ToString) {
+        self.authors.push(value.to_string());
     }
 
     /// Obtain the explicitly set license texts for this component.
@@ -374,6 +397,44 @@ impl LicensedComponent {
         } else {
             licenses.into_iter().all(|(id, _)| id.is_copyleft())
         }
+    }
+
+    /// Obtain a textual licensing summary of this component.
+    pub fn licensing_summary(&self) -> String {
+        let mut lines = vec![];
+
+        if !self.authors().is_empty() {
+            lines.push(format!("Authors: {}", self.authors().join(", ")));
+        }
+        if let Some(value) = self.homepage() {
+            lines.push(format!("Homepage: {}", value));
+        }
+        match self.source_location() {
+            SourceLocation::NotSet => {}
+            SourceLocation::Url(value) => {
+                lines.push(format!("Source location: {}", value));
+            }
+        }
+
+        match self.license() {
+            LicenseFlavor::None => {
+                lines.push("No licensing information available.".into());
+            }
+            LicenseFlavor::Spdx(expression) | LicenseFlavor::OtherExpression(expression) => {
+                lines.push(format!(
+                    "Licensed according to SPDX expression: {}",
+                    expression
+                ));
+            }
+            LicenseFlavor::PublicDomain => {
+                lines.push("Licensed to the public domain.".into());
+            }
+            LicenseFlavor::Unknown(terms) => {
+                lines.push(format!("Licensed according to {}", terms.join(", ")));
+            }
+        }
+
+        lines.join("\n")
     }
 }
 
@@ -748,52 +809,23 @@ impl LicensedComponents {
             lines.push("-".repeat(component.flavor().to_string().len()));
             lines.push("".into());
 
-            match component.license() {
-                LicenseFlavor::None => {
-                    lines.push("No licensing information available.".into());
-                }
-                LicenseFlavor::Spdx(expression) | LicenseFlavor::OtherExpression(expression) => {
-                    lines.push(format!(
-                        "Licensed according to SPDX expression: {}",
-                        expression
-                    ));
+            lines.push(component.licensing_summary());
+            lines.push("".into());
 
-                    if component.license_texts().is_empty() {
-                        lines.push("".into());
-                        lines.push("The license texts for this component are reproduced elsewhere in this document.".into());
-                    }
+            if component.spdx_expression().is_some() && component.license_texts.is_empty() {
+                lines.push("The license texts for this component are reproduced elsewhere in this document.".into());
+            }
 
-                    for exception in component.all_spdx_exception_ids() {
-                        lines.push(format!(
+            for exception in component.all_spdx_exception_ids() {
+                lines.push("".into());
+                lines.push(format!(
                         "In addition to the standard SPDX license, this component has the license exception: {}",
                         exception.name
                     ));
-                        lines.push("The text of that exception follows.".into());
-                        lines.push("".into());
-                        lines.push(exception.text().to_string());
-                        lines.push(format!("(end of exception text for {})", exception.name));
-                    }
-                }
-                LicenseFlavor::PublicDomain => {
-                    lines.push("Licensed to the public domain.".into());
-                }
-                LicenseFlavor::Unknown(terms) => {
-                    lines.push(format!("Licensed according to {}", terms.join(", ")));
-                }
-            }
-
-            match component.source_location() {
-                SourceLocation::NotSet => {}
-                SourceLocation::Url(url) => {
-                    lines.push("".into());
-                    lines.push(
-                        "The source code for this software is available at the following URL:"
-                            .to_string(),
-                    );
-                    lines.push("".into());
-                    lines.push(format!("    {}", url));
-                    lines.push("".into());
-                }
+                lines.push("The text of that exception follows.".into());
+                lines.push("".into());
+                lines.push(exception.text().to_string());
+                lines.push(format!("(end of exception text for {})", exception.name));
             }
 
             if !component.license_texts().is_empty() {
@@ -862,6 +894,12 @@ pub struct PackageLicenseInfo {
 
     /// Special annotation indicating if the license is in the public domain.
     pub is_public_domain: bool,
+
+    /// URL of project home.
+    pub homepage: Option<String>,
+
+    /// List of author strings.
+    pub authors: Vec<String>,
 }
 
 impl TryInto<LicensedComponent> for PackageLicenseInfo {
@@ -917,6 +955,13 @@ impl TryInto<LicensedComponent> for PackageLicenseInfo {
             .chain(self.notice_texts.into_iter())
         {
             component.add_license_text(text);
+        }
+
+        if let Some(value) = self.homepage {
+            component.set_homepage(value);
+        }
+        for value in self.authors {
+            component.add_author(value);
         }
 
         Ok(component)
@@ -975,6 +1020,16 @@ pub fn derive_package_license_infos<'a>(
         if resource.name == "METADATA" || resource.name == "PKG-INFO" {
             let metadata = PythonPackageMetadata::from_metadata(&resource.data.resolve_content()?)
                 .context("parsing package metadata")?;
+
+            if let Some(value) = metadata.find_first_header("Home-page") {
+                entry.homepage = Some(value.to_string());
+            }
+            for value in metadata.find_all_headers("Author") {
+                entry.authors.push(value.to_string());
+            }
+            for value in metadata.find_all_headers("Maintainer") {
+                entry.authors.push(value.to_string());
+            }
 
             for value in metadata.find_all_headers("License") {
                 entry.metadata_licenses.push(value.to_string());

@@ -194,10 +194,14 @@ pub fn licenses_from_cargo_manifest<'a>(
             LicensedComponent::new(flavor, LicenseFlavor::None)
         };
 
-        let source_url = package.repository().or_else(|| package.homepage());
-
-        if let Some(url) = source_url {
-            component.set_source_location(SourceLocation::Url(url.to_string()));
+        for author in package.authors() {
+            component.add_author(author);
+        }
+        if let Some(value) = package.homepage() {
+            component.set_homepage(value);
+        }
+        if let Some(value) = package.repository() {
+            component.set_source_location(SourceLocation::Url(value.to_string()));
         }
 
         components.add_component(component);
