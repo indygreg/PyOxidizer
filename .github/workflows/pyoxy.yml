@@ -20,6 +20,8 @@ jobs:
       - name: Build pyoxidizer Executable
         run: |
           cargo build --bin pyoxidizer --target x86_64-unknown-linux-musl
+          # The binary is a bit large so strip it.
+          strip target/x86_64-unknown-linux-musl/debug/pyoxidizer
 
       - name: Upload
         uses: actions/upload-artifact@v3
@@ -40,6 +42,8 @@ jobs:
       - name: Build pyoxidizer Executable
         run: |
           cargo build --bin pyoxidizer
+          # The binary is a bit large so strip it.
+          strip target/debug/pyoxidizer
 
       - name: Upload
         uses: actions/upload-artifact@v3
