@@ -1,0 +1,8 @@
+[build.env]
+
+passthrough = [
+    # Prevent pyoxidizer's build.rs from writing the filesystem path to the
+    # Git checkout in the built binary. This ensures references to other crates
+    # in the monorepo use public Git urls instead of filesystem paths.
+    "PYOXIDIZER_BUILD_FORCE_GIT_SOURCE"
+]

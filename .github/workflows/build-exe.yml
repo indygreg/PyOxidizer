@@ -32,6 +32,9 @@ jobs:
       matrix:
         target:
           - os: 'ubuntu-20.04'
+            triple: 'aarch64-unknown-linux-musl'
+            cross: true
+          - os: 'ubuntu-20.04'
             triple: 'x86_64-unknown-linux-musl'
           - os: 'macos-11.0'
             triple: 'aarch64-apple-darwin'
@@ -68,6 +71,12 @@ jobs:
           rust_toolchain: stable
           rust_target: ${{ matrix.target.triple }}
 
+      - uses: actions-rs/install@v0.1
+        if: matrix.target.cross
+        with:
+          crate: cross
+          version: latest
+
       - name: Build
         shell: bash
         run: |
@@ -75,6 +84,12 @@ jobs:
             export MACOSX_DEPLOYMENT_TARGET=11.0
           elif [ "${{ matrix.target.triple }}" = "x86_64-apple-darwin" ]; then
             export MACOSX_DEPLOYMENT_TARGET=10.9
+          fi
+
+          if [ -n "${{ matrix.target.cross }}" ]; then
+            CARGO=cross
+          else
+            CARGO=cargo
           fi
 
           case "${{ matrix.target.triple }}" in
@@ -91,7 +106,7 @@ jobs:
               ;;
           esac
 
-          cargo build --release --bin ${{ inputs.bin }} --target ${{ matrix.target.triple }} ${EXTRA_BUILD_ARGS}
+          $CARGO build --release --bin ${{ inputs.bin }} --target ${{ matrix.target.triple }} ${EXTRA_BUILD_ARGS}
 
           mkdir upload
           cp target/${{ matrix.target.triple }}/release/${{ inputs.bin }}* upload/
