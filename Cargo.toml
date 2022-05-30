@@ -34,3 +34,4 @@ members = [
     'tugger-wix',
     'x509-certificate',
 ]
+resolver = "2"
