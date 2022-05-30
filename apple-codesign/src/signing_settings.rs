@@ -738,7 +738,7 @@ impl<'key> SigningSettings<'key> {
         let mut res = vec![self.digest_type];
 
         if let Some(extra) = self.extra_digests(scope) {
-            res.extend(extra.into_iter());
+            res.extend(extra.iter());
         }
 
         res
