@@ -11,6 +11,9 @@ use {
 
 pub use crate::default_python_distributions::PYTHON_DISTRIBUTIONS;
 
+/// Default Python X.Y version to use.
+pub const DEFAULT_PYTHON_VERSION: &str = "3.10";
+
 /// A collection of available Python distributions.
 pub struct PythonDistributionCollection {
     pub(crate) dists: Vec<PythonDistributionRecord>,
@@ -29,7 +32,8 @@ impl PythonDistributionCollection {
         flavor: &DistributionFlavor,
         python_major_minor_version: Option<&str>,
     ) -> Option<PythonDistributionRecord> {
-        let python_major_minor_version = python_major_minor_version.unwrap_or("3.9");
+        let python_major_minor_version =
+            python_major_minor_version.unwrap_or(DEFAULT_PYTHON_VERSION);
 
         self.dists
             .iter()

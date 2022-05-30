@@ -50,6 +50,15 @@ work. These restrictions are typically a side-effect of limitations
 of the :ref:`Python distribution <packaging_python_distributions>` being
 used/targeted. These restrictions are documented in the sections below.
 
+Known Incompatibility with Cython
+---------------------------------
+
+PyOxidizer currently has a known incompatibility with Cython. Specifically,
+PyOxidizer fails to find object files that Cython builds. This can lead
+to missing symbols and build/link time errors.
+
+This is tracked by https://github.com/indygreg/PyOxidizer/issues/567.
+
 .. _packaging_extension_modules_musl:
 
 musl libc Linux Distributions Only Support Built-in Extension Modules

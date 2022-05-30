@@ -38,6 +38,7 @@ Backwards Compatibility Notes
 
 * The minimum Rust version has been changed from 1.56 to 1.60 to facilitate
   use of features required by some Rust crates.
+* The default Python version is 3.10 (instead of 3.9).
 
 Bug Fixes
 ^^^^^^^^^
@@ -59,6 +60,7 @@ New Features
   https://github.com/indygreg/python-build-standalone/releases/tag/20220318,
   https://github.com/indygreg/python-build-standalone/releases/tag/20220501,
   and https://github.com/indygreg/python-build-standalone/releases/tag/20220528.
+* The default Python version is now 3.10 (instead of 3.9).
 * The mechanism for handling software licenses has been overhauled.
 
   * The formatting of licenses during building has changed significantly.
