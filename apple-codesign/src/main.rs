@@ -1011,8 +1011,8 @@ fn handle_smartcard_sign_slot(
 #[cfg(not(feature = "yubikey"))]
 fn handle_smartcard_sign_slot(
     _slot: &str,
-    _private_keys: &mut Vec<Box<dyn PrivateKey>>,
-    _public_certificates: &mut Vec<CapturedX509Certificate>,
+    _private_keys: &mut [Box<dyn PrivateKey>],
+    _public_certificates: &mut [CapturedX509Certificate],
 ) -> Result<(), AppleCodesignError> {
     error!("smartcard support not available; ignoring --smartcard-slot");
 
@@ -1074,8 +1074,8 @@ fn find_certificates_in_keychain(
 #[cfg(not(target_os = "macos"))]
 fn find_certificates_in_keychain(
     args: &ArgMatches,
-    _private_keys: &mut Vec<Box<dyn PrivateKey>>,
-    _public_certificates: &mut Vec<CapturedX509Certificate>,
+    _private_keys: &mut [Box<dyn PrivateKey>],
+    _public_certificates: &mut [CapturedX509Certificate],
 ) -> Result<(), AppleCodesignError> {
     if args.occurrences_of("keychain") > 0 {
         error!(
