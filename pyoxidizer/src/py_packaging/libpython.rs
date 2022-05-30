@@ -17,6 +17,7 @@ use {
     log::warn,
     python_packaging::libpython::LibPythonBuildContext,
     std::{
+        collections::BTreeSet,
         ffi::OsStr,
         fs,
         fs::create_dir_all,
@@ -258,20 +259,20 @@ pub fn link_libpython(
 
     warn!("resolving inputs for custom Python library...");
 
-    let mut objects = vec![];
+    let mut objects = BTreeSet::new();
 
     // Link our custom config.c's object file.
-    objects.push(config_object_path);
+    objects.insert(config_object_path);
 
     for (i, location) in context.object_files.iter().enumerate() {
         match location {
             FileData::Memory(data) => {
                 let out_path = libpython_dir.join(format!("libpython.{}.o", i));
                 fs::write(&out_path, data)?;
-                objects.push(out_path);
+                objects.insert(out_path);
             }
             FileData::Path(p) => {
-                objects.push(p.clone());
+                objects.insert(p.clone());
             }
         }
     }
@@ -307,6 +308,8 @@ pub fn link_libpython(
     }
 
     warn!("linking customized Python library...");
+
+    let objects = objects.into_iter().collect::<Vec<_>>();
 
     let libpython_data = if target_triple.contains("-linux-") {
         assemble_archive_gnu(&objects, &libpython_dir)?
