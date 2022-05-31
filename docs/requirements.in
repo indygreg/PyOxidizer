@@ -1,1 +1,5 @@
 sphinx
+# We need these to force inclusion on modern Python, where they are optional.
+# (RTD runs an older Python 3.)
+importlib-metadata
+typing-extensions
