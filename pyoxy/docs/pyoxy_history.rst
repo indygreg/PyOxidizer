@@ -15,7 +15,7 @@ Changelog
 0.2.0
 -----
 
-Not yet released.
+Released on 2022-05-30.
 
 * Official release artifacts now contain Python 3.8 and 3.10 variants.
   Previously, only Python 3.9 was provided.
@@ -24,6 +24,10 @@ Not yet released.
   from the canonical Rust source code. This should make it easier to
   understand the fields in YAML configurations without having to consult
   Rust crate docs.
+* Release artifacts are now ``.tar.gz`` files and contain a ``COPYING``
+  file with licensing annotations.
+* The release mechanism for PyOxy is now streamlined, hopefully enabling
+  faster releases going forward.
 
 0.1.0
 -----
