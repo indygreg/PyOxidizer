@@ -233,7 +233,8 @@ pyoxy-release-upload commit tag:
     --prerelease \
     --target {{commit}} \
     --title 'PyOxy {{tag}}' \
-    --discussion-category general
+    --discussion-category general \
+    pyoxy/{{tag}}
   gh release upload --clobber pyoxy/{{tag}} dist/pyoxy/*
 
 # Perform a PyOxy release end-to-end.
