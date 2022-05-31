@@ -55,7 +55,7 @@ fn default_behavior() -> Result<()> {
             .child("python3.dll")
             .assert(predicates::path::is_file());
         temp_dir
-            .child("python39.dll")
+            .child("python310.dll")
             .assert(predicates::path::is_file());
     }
 
