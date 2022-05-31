@@ -12,6 +12,11 @@ Blog Posts
 Changelog
 =========
 
+0.3.0
+-----
+
+Not yet released.
+
 0.2.0
 -----
 
