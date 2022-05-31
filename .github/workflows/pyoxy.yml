@@ -125,10 +125,6 @@ jobs:
         target_triple:
           - 'aarch64-apple-darwin'
           - 'x86_64-apple-darwin'
-        # No 3.8 distribution available for aarch64.
-        exclude:
-          - python_version: '3.8'
-            target_triple: 'aarch64-apple-darwin'
     runs-on: 'macos-11'
     env:
       IN_CI: '1'
@@ -173,6 +169,7 @@ jobs:
       fail-fast: false
       matrix:
         python_version:
+          - '3.8'
           - '3.9'
           - '3.10'
     runs-on: 'macos-11'
