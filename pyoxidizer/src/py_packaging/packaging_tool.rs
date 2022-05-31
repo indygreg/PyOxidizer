@@ -401,7 +401,7 @@ mod tests {
             &policy,
             LibpythonLinkMode::Dynamic,
             false,
-            &["cffi==1.14.0".to_string()],
+            &["cffi==1.15.0".to_string()],
             &HashMap::new(),
         )?;
 
