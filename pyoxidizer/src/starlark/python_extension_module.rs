@@ -133,6 +133,14 @@ impl TypedValue for PythonExtensionModuleValue {
     }
 
     fn set_attr(&mut self, attribute: &str, value: Value) -> Result<(), ValueError> {
-        self.set_attr_add_collection_context(attribute, value)
+        if self.add_collection_context_attrs().contains(&attribute) {
+            self.set_attr_add_collection_context(attribute, value)
+        } else {
+            Err(ValueError::OperationNotSupported {
+                op: UnsupportedOperation::SetAttr(attribute.to_string()),
+                left: Self::TYPE.to_owned(),
+                right: None,
+            })
+        }
     }
 }

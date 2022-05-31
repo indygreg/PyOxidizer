@@ -160,6 +160,8 @@ pub trait ResourceCollectionContext {
         })
     }
 
+    // The caller should validate that the attribute is an add collection attribute
+    // before calling. Otherwise a panic can occur.
     fn set_attr_add_collection_context(
         &mut self,
         attribute: &str,

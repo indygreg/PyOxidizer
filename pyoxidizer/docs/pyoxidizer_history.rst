@@ -50,6 +50,9 @@ Bug Fixes
 * PyO3 Rust crates upgraded from 0.16.4 to 0.16.5. The upgrade fixes compatibility
   issues with Python 3.10 that could lead to runtime crashes or incorrect behavior
   in many configurations.
+* Fixed a runtime panic when incorrect attribute assignments were attempted on the
+  ``PythonExtensionModule``, ``PythonPackageDistributionResource``, and
+  ``PythonPackageResource`` Starlark types. (#561)
 
 New Features
 ^^^^^^^^^^^^
