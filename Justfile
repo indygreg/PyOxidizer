@@ -161,3 +161,92 @@ remote-sign-pyoxy ref run_id rcodesign_branch="main": (_remote-sign-exe ref "rco
 
 # Trigger remote code signing workflow for rcodesign executable.
 remote-sign-rcodesign ref run_id rcodesign_branch="main": (_remote-sign-exe ref "rcodesign.yml" run_id "exe-rcodesign-macos-universal" "rcodesign" rcodesign_branch)
+
+# Obtain built executables from GitHub Actions.
+assemble-exe-artifacts exe commit dest:
+  #!/usr/bin/env bash
+  set -exo pipefail
+
+  RUN_ID=$(gh run list \
+    --workflow {{exe}}.yml \
+    --json databaseId,headSha | \
+    jq --raw-output '.[] | select(.headSha=="{{commit}}") | .databaseId' | head -n 1)
+
+  echo "GitHub run ID: ${RUN_ID}"
+
+  gh run download --dir {{dest}} ${RUN_ID}
+
+# Prepare PyOxy release artifacts.
+pyoxy-release-prepare commit tag:
+  #!/usr/bin/env bash
+  set -exo pipefail
+
+  rm -rf dist
+  just assemble-exe-artifacts pyoxy {{commit}} dist/pyoxy-artifacts
+
+  for py in 3.8 3.9 3.10; do
+    for triple in aarch64-apple-darwin x86_64-apple-darwin x86_64-unknown-linux-gnu macos-universal; do
+      release_name=pyoxy-{{tag}}-${triple}-cpython${py}
+      source=dist/pyoxy-artifacts/exe-pyoxy-${triple}-${py}
+      dest=dist/pyoxy-stage/${release_name}
+      mkdir -p ${dest}
+      cp -a ${source}/pyoxy ${dest}/pyoxy
+      # GitHub Actions zip files don't preserve executable bit.
+      chmod +x ${dest}/pyoxy
+      cp -a ${source}/COPYING ${dest}/COPYING
+
+      case ${triple} in
+        *apple* | macos-universal)
+          rcodesign sign \
+            --remote-signer \
+            --remote-public-key-pem-file ci/developer-id-application.pem \
+            ${dest}/pyoxy
+          ;;
+        *)
+          ;;
+      esac
+
+      mkdir -p dist/pyoxy
+
+      tar \
+        --sort=name \
+        --owner=root:0 \
+        --group=root:0 \
+        --mtime="2022-01-01 00:00:00" \
+        -C dist/pyoxy-stage \
+        -cvzf dist/pyoxy/${release_name}.tar.gz \
+        ${release_name}/
+    done
+  done
+
+  (cd dist/pyoxy && shasum -a 256 *.tar.* > SHA256SUMS)
+
+  for p in dist/pyoxy/*.tar.gz; do
+    shasum -a 256 $p | awk '{print $1}' > ${p}.sha256
+  done
+
+# Upload PyOxy release artifacts to a new GitHub release.
+pyoxy-release-upload commit tag:
+  git tag -f pyoxy/{{tag}} {{commit}}
+  git push -f origin refs/tags/pyoxy/{{tag}}:refs/tags/pyoxy/{{tag}}
+  gh release create \
+    --prerelease \
+    --target {{commit}} \
+    --title 'PyOxy {{tag}}' \
+    --discussion-category general
+  gh release upload --clobber pyoxy/{{tag}} dist/pyoxy/*
+
+# Perform a PyOxy release end-to-end.
+pyoxy-release:
+  #!/usr/bin/env bash
+  set -exo pipefail
+
+  COMMIT=$(git rev-parse HEAD)
+  TAG=$(cargo metadata \
+    --manifest-path pyoxy/Cargo.toml \
+    --format-version 1 \
+    --no-deps | \
+      jq --raw-output '.packages[] | select(.name=="pyoxy") | .version')
+
+  just pyoxy-release-prepare ${COMMIT} ${TAG}
+  just pyoxy-release-upload ${COMMIT} ${TAG}
