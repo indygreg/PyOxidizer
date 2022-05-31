@@ -82,6 +82,9 @@ New Features
   distributions are now defined and PyOxidizer should use them when appropriate.
   However, the distributions aren't yet well tested. So feedback on their
   operation via GitHub issues would be appreciated!
+* ``aarch64-apple-darwin`` (Apple M1) now has a default Python 3.8 distribution.
+  This distribution is not very well tested and use of a newer distribution is
+  strongly preferred.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

@@ -167,6 +167,7 @@ def main():
         format_record(records["3.10-x86_64-pc-windows-msvc-static-noopt"]),
         "",
         "// macOS.",
+        format_record(records["3.8-aarch64-apple-darwin-pgo"]),
         format_record(records["3.9-aarch64-apple-darwin-pgo"]),
         format_record(records["3.10-aarch64-apple-darwin-pgo"]),
         format_record(records["3.8-x86_64-apple-darwin-pgo"]),

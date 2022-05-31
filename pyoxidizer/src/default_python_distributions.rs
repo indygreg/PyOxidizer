@@ -283,6 +283,15 @@ pub static PYTHON_DISTRIBUTIONS: Lazy<PythonDistributionCollection> = Lazy::new(
 
         // macOS.
         PythonDistributionRecord {
+            python_major_minor_version: "3.8".to_string(),
+            location: PythonDistributionLocation::Url {
+                url: "https://github.com/indygreg/python-build-standalone/releases/download/20220528/cpython-3.8.13%2B20220528-aarch64-apple-darwin-pgo-full.tar.zst".to_string(),
+                sha256: "ec4de5c16c073a167056824f5230e052c4cd252edd0558762d18b9fff585a042".to_string(),
+            },
+            target_triple: "aarch64-apple-darwin".to_string(),
+            supports_prebuilt_extension_modules: true,
+        },
+        PythonDistributionRecord {
             python_major_minor_version: "3.9".to_string(),
             location: PythonDistributionLocation::Url {
                 url: "https://github.com/indygreg/python-build-standalone/releases/download/20220528/cpython-3.9.13%2B20220528-aarch64-apple-darwin-pgo-full.tar.zst".to_string(),
