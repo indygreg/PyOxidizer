@@ -25,7 +25,7 @@ file to look something like the following:
         policy.extension_module_filter = "all"
         policy.include_distribution_resources = True
 
-        # Add resources to the filesytem, next to the built executable.
+        # Add resources to the filesystem, next to the built executable.
         # You can add resources to memory too. But this makes the install
         # layout somewhat consistent with what Python expects.
         policy.resources_location = "filesystem-relative:lib"

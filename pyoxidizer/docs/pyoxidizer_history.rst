@@ -1377,7 +1377,7 @@ Backwards Compatibility Notes
   for this change were to make code simpler and the justification for
   removing it was rather weak. Please file an issue if this feature loss
   affects you.
-* The ``PythonInterpreterConfig`` Starlark type now interally has most of
+* The ``PythonInterpreterConfig`` Starlark type now internally has most of
   its fields defined to ``None`` by default instead of their default values.
 * The following Starlark methods have been renamed:
   ``PythonExecutable.add_module_source()`` ->
