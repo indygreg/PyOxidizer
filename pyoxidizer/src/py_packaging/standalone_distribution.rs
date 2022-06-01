@@ -520,16 +520,15 @@ impl StandaloneDistribution {
             .with_context(|| format!("unable to open {}", path.display()))?;
 
         let reader = BufReader::new(fh);
-        warn!("reading data from Python distribution...");
 
-        Self::from_tar_zst(reader, extract_dir)
+        Self::from_tar_zst(reader, extract_dir).context("reading tar.zst distribution data")
     }
 
     /// Extract and analyze a standalone distribution from a zstd compressed tar stream.
     pub fn from_tar_zst<R: Read>(source: R, extract_dir: &Path) -> Result<Self> {
         let dctx = zstd::stream::Decoder::new(source)?;
 
-        Self::from_tar(dctx, extract_dir)
+        Self::from_tar(dctx, extract_dir).context("reading tar distribution data")
     }
 
     /// Extract and analyze a standalone distribution from a tar stream.
