@@ -15,7 +15,7 @@ use {
     crate::{environment::Environment, python_distributions::PYTHON_DISTRIBUTIONS},
     anyhow::{anyhow, Context, Result},
     fs2::FileExt,
-    log::warn,
+    log::{info, warn},
     python_packaging::{
         bytecode::PythonBytecodeCompiler, module_util::PythonModuleSuffixes,
         policy::PythonPackagingPolicy, resource::PythonResource,
@@ -418,9 +418,9 @@ pub fn resolve_python_distribution_from_location(
     location: &PythonDistributionLocation,
     distributions_dir: &Path,
 ) -> Result<(PathBuf, PathBuf)> {
-    warn!("resolving Python distribution {}", location);
+    info!("resolving Python distribution {}", location);
     let path = resolve_python_distribution_archive(location, distributions_dir)?;
-    warn!("Python distribution available at {}", path.display());
+    info!("Python distribution available at {}", path.display());
 
     let distribution_hash = match location {
         PythonDistributionLocation::Local { sha256, .. } => sha256,
