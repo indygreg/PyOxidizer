@@ -23,6 +23,7 @@ use {
     sha2::{Digest, Sha256},
     std::{
         collections::HashMap,
+        fmt::{Display, Formatter},
         fs,
         fs::{create_dir_all, File},
         io::Read,
@@ -449,6 +450,16 @@ pub enum DistributionFlavor {
 impl Default for DistributionFlavor {
     fn default() -> Self {
         DistributionFlavor::Standalone
+    }
+}
+
+impl Display for DistributionFlavor {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::Standalone => "standalone",
+            Self::StandaloneStatic => "standalone-static",
+            Self::StandaloneDynamic => "standalone-dynamic",
+        })
     }
 }
 

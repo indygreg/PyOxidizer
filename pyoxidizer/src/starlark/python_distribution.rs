@@ -18,7 +18,7 @@ use {
         },
     },
     anyhow::{anyhow, Result},
-    log::info,
+    log::{info, warn},
     python_packaging::{
         policy::PythonPackagingPolicy, resource::PythonResource,
         resource_collection::PythonResourceAddCollectionContext,
@@ -144,6 +144,11 @@ impl PythonDistributionValue {
                     label: "default_python_distribution()".to_string(),
                 })
             })?;
+
+        warn!(
+            "target Python distribution for {} resolves to: {}",
+            build_target, location
+        );
 
         Ok(Value::new(PythonDistributionValue::from_location(location)))
     }
@@ -289,8 +294,13 @@ impl PythonDistributionValue {
             .compatible_host_triples()
             .contains(&pyoxidizer_context.build_host_triple)
         {
+            warn!("reusing target Python distribution for host execution");
             Some(dist.clone())
         } else {
+            info!(
+                "searching for host Python {} distribution",
+                dist.python_major_minor_version()
+            );
             let host_dist = pyoxidizer_context
                 .distribution_cache
                 .host_distribution(
