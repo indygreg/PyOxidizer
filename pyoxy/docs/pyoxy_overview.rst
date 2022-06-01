@@ -8,10 +8,12 @@ The ``pyoxy`` Executable
 ========================
 
 PyOxy is distributed as a ``pyoxy`` compiled executable. This executable
-links against a Python implementation/distribution (i.e. ``libpython``). The
-Python implementation/distribution and any resources defined in its standard
+links against a Python implementation/distribution (i.e. ``libpython``).
+
+The Python implementation/distribution and any resources defined in its standard
 library *may* be compiled statically into the ``pyoxy`` executable. This
-enables ``pyoxy`` to function as a single file Python distribution.
+enables ``pyoxy`` to function as a single file Python distribution. (This is
+how official builds of ``pyoxy`` are distributed.)
 
 ``pyoxy``'s ``int main()`` is implemented in Rust. It simply parses the process
 arguments and executes a sub-command.
