@@ -75,7 +75,7 @@ pub struct PackageInfo {
     ///
     /// This is the version of the package itself, not the version of the application
     /// being installed.
-    pub version: u32,
+    pub version: String,
 
     // End of attributes. Beginning of elements.
     #[serde(default)]
@@ -135,7 +135,7 @@ impl Default for PackageInfo {
             preserve_xattr: None,
             relocatable: None,
             use_hfs_plus_compression: None,
-            version: 0,
+            version: "0".to_string(),
             atomic_update_bundle: vec![],
             bundle: vec![],
             bundle_version: vec![],
