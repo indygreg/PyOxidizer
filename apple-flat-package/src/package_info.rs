@@ -107,7 +107,7 @@ pub struct PackageInfo {
 
     /// Scripts to run before and after install.
     #[serde(default)]
-    pub scripts: Vec<Script>,
+    pub scripts: Option<Script>,
 
     #[serde(default)]
     pub strict_identifiers: Vec<BundleRef>,
@@ -144,7 +144,7 @@ impl Default for PackageInfo {
             patch: vec![],
             payload: None,
             relocate: vec![],
-            scripts: vec![],
+            scripts: None,
             strict_identifiers: vec![],
             update_bundle: vec![],
             upgrade_bundle: vec![],
@@ -198,12 +198,12 @@ pub struct BundleRef {
 
 /// An entry in <scripts>.
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub enum Script {
+pub struct Script {
     #[serde(rename = "preinstall")]
-    PreInstall(PreInstall),
+    pub preinstall: PreInstall,
 
     #[serde(rename = "postinstall")]
-    PostInstall(PostInstall),
+    pub postinstall: PostInstall,
 }
 
 /// A script to run before install.
