@@ -153,7 +153,7 @@ dependencies = [
  "tugger-apple",
  "tugger-file-manifest",
  "tungstenite",
- "uuid 1.1.0",
+ "uuid 1.1.1",
  "which",
  "x509",
  "x509-certificate",
@@ -995,7 +995,7 @@ checksum = "25f6cc832d96f9961bfe67da666f1fb96387305d385db5222cbb7bce21121016"
 dependencies = [
  "byteorder",
  "fnv",
- "uuid 1.1.0",
+ "uuid 1.1.1",
 ]
 
 [[package]]
@@ -3453,9 +3453,9 @@ checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
 
 [[package]]
 name = "miniz_oxide"
-version = "0.5.1"
+version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2b29bd4bc3f33391105ebee3589c19197c4271e3e5a9ec9bfe8127eeff8f082"
+checksum = "6f5c75688da582b8ffc1f1799e9db273f32133c49e048f614d22ec3256773ccc"
 dependencies = [
  "adler",
 ]
@@ -3493,7 +3493,7 @@ dependencies = [
  "byteorder",
  "cfb 0.7.0",
  "encoding",
- "uuid 1.1.0",
+ "uuid 1.1.1",
 ]
 
 [[package]]
@@ -3905,9 +3905,9 @@ checksum = "427c3892f9e783d91cc128285287e70a59e206ca452770ece88a76f7a3eddd72"
 
 [[package]]
 name = "parking_lot"
-version = "0.12.0"
+version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87f5ec2493a61ac0506c0f4199f99070cbe83857b0337006a30f3e6719b8ef58"
+checksum = "3742b2c103b9f06bc9fff0a37ff4912935851bee6d36f3c02bcc755bcfec228f"
 dependencies = [
  "lock_api",
  "parking_lot_core",
@@ -4569,7 +4569,7 @@ dependencies = [
  "tugger-windows",
  "tugger-wix",
  "url",
- "uuid 1.1.0",
+ "uuid 1.1.1",
  "version-compare",
  "walkdir",
  "which",
@@ -6593,7 +6593,7 @@ dependencies = [
  "tugger-windows",
  "tugger-windows-codesign",
  "url",
- "uuid 1.1.0",
+ "uuid 1.1.1",
  "xml-rs",
 ]
 
@@ -6764,9 +6764,9 @@ dependencies = [
 
 [[package]]
 name = "uuid"
-version = "1.1.0"
+version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93bbc61e655a4833cf400d0d15bf3649313422fa7572886ad6dab16d79886365"
+checksum = "c6d5d669b51467dcf7b2f1a796ce0f955f05f01cafda6c19d6e95f730df29238"
 dependencies = [
  "getrandom 0.2.6",
  "sha1_smol",
