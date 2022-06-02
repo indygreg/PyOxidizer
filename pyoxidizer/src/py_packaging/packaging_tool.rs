@@ -13,7 +13,7 @@ use {
     },
     crate::environment::Environment,
     anyhow::{anyhow, Context, Result},
-    duct::cmd,
+    duct::{cmd, ReaderHandle},
     log::warn,
     python_packaging::{
         filesystem_scanning::find_python_resources, policy::PythonPackagingPolicy,
@@ -26,6 +26,20 @@ use {
         path::{Path, PathBuf},
     },
 };
+
+fn log_command_output(handle: &ReaderHandle) {
+    let reader = BufReader::new(handle);
+    for line in reader.lines() {
+        match line {
+            Ok(line) => {
+                warn!("{}", line);
+            }
+            Err(err) => {
+                warn!("Error when reading output: {:?}", err);
+            }
+        }
+    }
+}
 
 /// Find resources installed as part of a packaging operation.
 pub fn find_resources<'a>(
@@ -138,14 +152,10 @@ pub fn pip_download<'a>(
 
     let command = cmd(host_dist.python_exe_path(), &pip_args)
         .stderr_to_stdout()
+        .unchecked()
         .reader()?;
 
-    {
-        let reader = BufReader::new(&command);
-        for line in reader.lines() {
-            warn!("{}", line?);
-        }
-    }
+    log_command_output(&command);
 
     let output = command
         .try_wait()?
@@ -230,13 +240,10 @@ pub fn pip_install<'a, S: BuildHasher>(
     let command = cmd(dist.python_exe_path(), &pip_args)
         .full_env(&env)
         .stderr_to_stdout()
+        .unchecked()
         .reader()?;
-    {
-        let reader = BufReader::new(&command);
-        for line in reader.lines() {
-            warn!("{}", line?);
-        }
-    }
+
+    log_command_output(&command);
 
     let output = command
         .try_wait()?
@@ -329,13 +336,10 @@ pub fn setup_py_install<'a, S: BuildHasher>(
         .dir(package_path)
         .full_env(&envs)
         .stderr_to_stdout()
+        .unchecked()
         .reader()?;
-    {
-        let reader = BufReader::new(&command);
-        for line in reader.lines() {
-            warn!("{}", line.unwrap());
-        }
-    }
+
+    log_command_output(&command);
 
     let output = command
         .try_wait()?

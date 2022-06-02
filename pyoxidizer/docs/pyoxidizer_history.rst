@@ -53,6 +53,10 @@ Bug Fixes
 * Fixed a runtime panic when incorrect attribute assignments were attempted on the
   ``PythonExtensionModule``, ``PythonPackageDistributionResource``, and
   ``PythonPackageResource`` Starlark types. (#561)
+* We no longer panic when encountering invalid UTF-8 when reading process output
+  of various ``python`` invocations. Previously, invocations of ``pip``,
+  ``setup.py``, and other processes could result in a panic if invalid UTF-8 was
+  emitted. (#579)
 
 New Features
 ^^^^^^^^^^^^

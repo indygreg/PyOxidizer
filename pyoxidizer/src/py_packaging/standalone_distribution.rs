@@ -350,7 +350,14 @@ pub fn invoke_python(python_paths: &PythonPaths, args: &[&str]) {
     {
         let reader = BufReader::new(&command);
         for line in reader.lines() {
-            warn!("{}", line.unwrap());
+            match line {
+                Ok(line) => {
+                    warn!("{}", line);
+                }
+                Err(err) => {
+                    warn!("Error when reading output: {:?}", err);
+                }
+            }
         }
     }
 }

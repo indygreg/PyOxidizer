@@ -331,6 +331,7 @@ pub fn build_executable_with_rust_project<'a>(
         .dir(&project_path)
         .full_env(&build_env.environment_vars)
         .stderr_to_stdout()
+        .unchecked()
         .reader()
         .context("invoking cargo command")?;
     {

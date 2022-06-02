@@ -80,6 +80,7 @@ fn create_ar_symbols_index(dest_dir: &Path, lib_data: &[u8]) -> Result<Vec<u8>> 
     warn!("invoking `ar s` to index archive symbols");
     let command = cmd("ar", &["s".to_string(), lib_path.display().to_string()])
         .stderr_to_stdout()
+        .unchecked()
         .reader()?;
     {
         let reader = BufReader::new(&command);
