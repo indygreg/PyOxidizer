@@ -93,6 +93,7 @@ pub struct PackageInfo {
     pub dont_obsolete: Vec<File>,
 
     /// Installs to process at next startup.
+    #[serde(default)]
     pub install_at_startup: Vec<File>,
 
     /// Files to be patched.
