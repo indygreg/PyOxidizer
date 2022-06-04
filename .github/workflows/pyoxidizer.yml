@@ -151,37 +151,3 @@ jobs:
           path: |
             *.exe
             *.msi
-
-  pyoxidizer-linux-wheels-cross:
-    strategy:
-      fail-fast: false
-      matrix:
-        platform: [
-          { manylinux: '2010', target: "i686-unknown-linux-musl", image_tag: "i686-musl" },
-          { manylinux: '2014', target: "aarch64-unknown-linux-musl", image_tag: "aarch64-musl" },
-          { manylinux: '2014', target: "armv7-unknown-linux-musleabihf", image_tag: "armv7-musleabihf" },
-        ]
-    runs-on: 'ubuntu-20.04'
-    container:
-      image: docker://messense/rust-musl-cross:${{ matrix.platform.image_tag }}
-      env:
-        RUSTUP_HOME: /root/.rustup
-        CARGO_HOME: /root/.cargo
-        CFLAGS_armv7_unknown_linux_musleabihf: -mfpu=vfpv3-d16
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - name: Build Wheels
-        env:
-          PYOXIDIZER_BUILD_FORCE_GIT_SOURCE: '1'
-        run: |
-          apt-get update
-          apt-get install -y python3-pip
-          pip3 install maturin==0.10.4
-          maturin build -m pyoxidizer/Cargo.toml -b bin --no-sdist --release -o dist --target ${{ matrix.platform.target }} --manylinux ${{ matrix.platform.manylinux }}
-      - name: Upload wheels
-        uses: actions/upload-artifact@v3
-        with:
-          name: pyoxidizer-wheels
-          path: dist
