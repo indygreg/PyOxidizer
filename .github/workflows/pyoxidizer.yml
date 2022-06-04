@@ -41,10 +41,9 @@ jobs:
           ./pyoxidizer init-config-file myapp
           ./pyoxidizer build --path myapp
 
-      # TODO disabled because of duplicate ffi_type_double, etc symbol failures.
-      #- name: Spot Test (musl Cross)
-      #  run: |
-      #    ./pyoxidizer build --path myapp --target-triple x86_64-unknown-linux-musl
+      - name: Spot Test (musl Cross)
+        run: |
+          ./pyoxidizer build --path myapp --target-triple x86_64-unknown-linux-musl
 
   pyoxidizer-macos-universal-exe-check:
     needs:
