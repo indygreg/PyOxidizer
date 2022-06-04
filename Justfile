@@ -182,7 +182,11 @@ assemble-exe-artifacts exe commit dest:
   gh run download --dir {{dest}} ${RUN_ID}
 
 _remote-sign in_path:
-  rcodesign sign --remote-signer --remote-public-key-pem-file ci/developer-id-application.pem {{in_path}}
+  rcodesign sign \
+    --remote-signer \
+    --remote-public-key-pem-file ci/developer-id-application.pem \
+    --code-signature-flags runtime \
+    {{in_path}}
 
 _tar_directory source_directory dir_name dest_dir:
   tar \
