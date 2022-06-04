@@ -1,11 +1,3 @@
-# PYOXIDIZER_BUILD_FORCE_GIT_SOURCE is set throughout this file to prevent
-# pyoxidizer's build.rs from writing the filesystem path to the Git checkout
-# in the built binary. With the filesystem path embedded in the binary,
-# pyoxidizer will probe for that path at run-time and will attempt to use
-# it for the location of the pyembed crate. With the filesystem path not
-# set, pyoxidizer will use the canonical github.com repository for any Git
-# references.
-#
 # For the spot tests, we purposefully perform these on separate jobs
 # because we don't want a Python or Rust install from the build environment
 # to impact the testing.
