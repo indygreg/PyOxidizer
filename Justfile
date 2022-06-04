@@ -172,16 +172,150 @@ assemble-exe-artifacts exe commit dest:
     --json databaseId,headSha | \
     jq --raw-output '.[] | select(.headSha=="{{commit}}") | .databaseId' | head -n 1)
 
+  if [ -z "${RUN_ID}" ]; then
+    echo "could not find GitHub Actions run with artifacts"
+    exit 1
+  fi
+
   echo "GitHub run ID: ${RUN_ID}"
 
   gh run download --dir {{dest}} ${RUN_ID}
+
+_remote-sign in_path:
+  rcodesign sign --remote-signer --remote-public-key-pem-file ci/developer-id-application.pem {{in_path}}
+
+_tar_directory source_directory dir_name dest_dir:
+  tar \
+    --sort=name \
+    --owner=root:0 \
+    --group=root:0 \
+    --mtime="2022-01-01 00:00:00" \
+    -C {{source_directory}} \
+    -cvzf {{dest_dir}}/{{dir_name}}.tar.gz \
+    {{dir_name}}/
+
+_zip_directory source_directory dir_name dest_dir:
+  #!/usr/bin/env bash
+  set -exo pipefail
+
+  here=$(pwd)
+
+  cd {{source_directory}}
+  zip -r ${here}/{{dest_dir}}/{{dir_name}}.zip {{dir_name}}
+
+_release_universal_binary project tag exe:
+  mkdir -p dist/{{project}}-stage/{{project}}-{{tag}}-macos-universal
+  llvm-lipo-14 \
+    -create \
+    -output dist/{{project}}-stage/{{project}}-{{tag}}-macos-universal/{{exe}} \
+    dist/{{project}}-stage/{{project}}-{{tag}}-aarch64-apple-darwin/{{exe}} \
+    dist/{{project}}-stage/{{project}}-{{tag}}-x86_64-apple-darwin/{{exe}}
+  cp dist/{{project}}-stage/{{project}}-{{tag}}-aarch64-apple-darwin/COPYING \
+    dist/{{project}}-stage/{{project}}-{{tag}}-macos-universal/COPYING
+
+_create_shasums dir:
+  #!/usr/bin/env bash
+  set -exo pipefail
+
+  (cd {{dir}} && shasum -a 256 *.* > SHA256SUMS)
+
+  for p in {{dir}}/*.*; do
+    if [[ "${p}" != *"SHA256SUMS" ]]; then
+      shasum -a 256 $p | awk '{print $1}' > ${p}.sha256
+    fi
+  done
+
+_upload_release name title_name commit tag:
+  git tag -f {{name}}//{{tag}} {{commit}}
+  git push -f origin refs/tags/{{name}}/{{tag}}:refs/tags/{{name}}/{{tag}}
+  gh release create \
+    --prerelease \
+    --target {{commit}} \
+    --title '{{title_name}} {{tag}}' \
+    --discussion-category general \
+    {{name}}/{{tag}}
+  gh release upload --clobber {{name}}/{{tag}} dist/{{name}}*
+
+_release name title_name:
+  #!/usr/bin/env bash
+  set -exo pipefail
+
+  COMMIT=$(git rev-parse HEAD)
+  TAG=$(cargo metadata \
+    --manifest-path {{name}}/Cargo.toml \
+    --format-version 1 \
+    --no-deps | \
+      jq --raw-output '.packages[] | select(.name=="{{name}}") | .version')
+
+  just {{name}}-release-prepare ${COMMIT} ${TAG}
+  just {{name}}-release-upload ${COMMIT} ${TAG}
+
+apple-codesign-release-prepare commit tag:
+  #!/usr/bin/env bash
+  set -exo pipefail
+
+  rm -rf dist/apple-codesign*
+  just assemble-exe-artifacts rcodesign {{commit}} dist/apple-codesign-artifacts
+
+  for triple in aarch64-apple-darwin aarch64-unknown-linux-musl i686-pc-windows-msvc x86_64-apple-darwin x86_64-pc-windows-msvc x86_64-unknown-linux-musl; do
+    release_name=apple-codesign-{{tag}}-${triple}
+    source=dist/apple-codesign-artifacts/exe-rcodesign-${triple}
+    dest=dist/apple-codesign-stage/${release_name}
+
+    exe=rcodesign
+    sign_command=
+    archive_action=_tar_directory
+
+    case ${triple} in
+      *apple*)
+        sign_command="just _remote-sign ${dest}/${exe}"
+        ;;
+      *windows*)
+        exe=rcodesign.exe
+        archive_action=_zip_directory
+        ;;
+      *)
+        ;;
+    esac
+
+    mkdir -p ${dest}
+    cp -a ${source}/${exe} ${dest}/${exe}
+    chmod +x ${dest}/${exe}
+
+    if [ -n "${sign_command}" ]; then
+      ${sign_command}
+    fi
+
+    cargo run --bin pyoxidizer -- rust-project-licensing \
+      --system-rust \
+      --target-triple ${triple} \
+      --all-features \
+      --unified-license \
+      apple-codesign > ${dest}/COPYING
+
+    mkdir -p dist/apple-codesign
+
+    just ${archive_action} dist/apple-codesign-stage ${release_name} dist/apple-codesign
+  done
+
+  # Create universal binary.
+  just _release_universal_binary apple-codesign {{tag}} rcodesign
+  just _tar_directory dist/apple-codesign-stage apple-codesign-{{tag}}-macos-universal dist/apple-codesign
+
+  just _create_shasums dist/apple-codesign
+
+apple-codesign-release-upload commit tag:
+  just _upload_release apple-codesign 'Apple Codesign' {{commit}} {{tag}}
+
+apple-codesign-release:
+  just _release apple-codesign 'Apple Codesign'
 
 # Prepare PyOxy release artifacts.
 pyoxy-release-prepare commit tag:
   #!/usr/bin/env bash
   set -exo pipefail
 
-  rm -rf dist
+  rm -rf dist/pyoxy*
   just assemble-exe-artifacts pyoxy {{commit}} dist/pyoxy-artifacts
 
   for py in 3.8 3.9 3.10; do
@@ -197,10 +331,7 @@ pyoxy-release-prepare commit tag:
 
       case ${triple} in
         *apple* | macos-universal)
-          rcodesign sign \
-            --remote-signer \
-            --remote-public-key-pem-file ci/developer-id-application.pem \
-            ${dest}/pyoxy
+          just _remote-sign ${dest}/pyoxy
           ;;
         *)
           ;;
@@ -208,46 +339,19 @@ pyoxy-release-prepare commit tag:
 
       mkdir -p dist/pyoxy
 
-      tar \
-        --sort=name \
-        --owner=root:0 \
-        --group=root:0 \
-        --mtime="2022-01-01 00:00:00" \
-        -C dist/pyoxy-stage \
-        -cvzf dist/pyoxy/${release_name}.tar.gz \
-        ${release_name}/
+      just _tar_directory \
+        dist/pyoxy-stage \
+        ${release_name} \
+        dist/pyoxy
     done
   done
 
-  (cd dist/pyoxy && shasum -a 256 *.tar.* > SHA256SUMS)
-
-  for p in dist/pyoxy/*.tar.gz; do
-    shasum -a 256 $p | awk '{print $1}' > ${p}.sha256
-  done
+  just _create_shasums dist/pyoxy
 
 # Upload PyOxy release artifacts to a new GitHub release.
 pyoxy-release-upload commit tag:
-  git tag -f pyoxy/{{tag}} {{commit}}
-  git push -f origin refs/tags/pyoxy/{{tag}}:refs/tags/pyoxy/{{tag}}
-  gh release create \
-    --prerelease \
-    --target {{commit}} \
-    --title 'PyOxy {{tag}}' \
-    --discussion-category general \
-    pyoxy/{{tag}}
-  gh release upload --clobber pyoxy/{{tag}} dist/pyoxy/*
+  just _upload_release pyoxy PyOxy {{commit}} {{tag}}
 
 # Perform a PyOxy release end-to-end.
 pyoxy-release:
-  #!/usr/bin/env bash
-  set -exo pipefail
-
-  COMMIT=$(git rev-parse HEAD)
-  TAG=$(cargo metadata \
-    --manifest-path pyoxy/Cargo.toml \
-    --format-version 1 \
-    --no-deps | \
-      jq --raw-output '.packages[] | select(.name=="pyoxy") | .version')
-
-  just pyoxy-release-prepare ${COMMIT} ${TAG}
-  just pyoxy-release-upload ${COMMIT} ${TAG}
+  just _release pyoxy PyOxy
