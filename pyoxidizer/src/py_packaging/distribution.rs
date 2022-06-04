@@ -15,7 +15,7 @@ use {
     crate::{environment::Environment, python_distributions::PYTHON_DISTRIBUTIONS},
     anyhow::{anyhow, Context, Result},
     fs2::FileExt,
-    log::{info, warn},
+    log::info,
     python_packaging::{
         bytecode::PythonBytecodeCompiler, module_util::PythonModuleSuffixes,
         policy::PythonPackagingPolicy, resource::PythonResource,
