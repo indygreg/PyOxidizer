@@ -29,32 +29,6 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-  pyoxidizer-linux-x86_64-wheel:
-    needs:
-      - pyoxidizer-exes
-    runs-on: 'ubuntu-20.04'
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Download Executable
-        uses: actions/download-artifact@v2
-        with:
-          name: exe-pyoxidizer-x86_64-unknown-linux-musl
-          path: target/x86_64-unknown-linux-musl/release/
-
-      - name: Build Wheel
-        run: |
-          chmod +x target/x86_64-unknown-linux-musl/release/pyoxidizer
-          target/x86_64-unknown-linux-musl/release/pyoxidizer build --release wheel_x86_64-unknown-linux-musl
-          mkdir -p wheelhouse
-          mv build/*/*/*/*.whl wheelhouse/
-
-      - name: Upload Wheel
-        uses: actions/upload-artifact@v2
-        with:
-          name: pyoxidizer-wheels
-          path: wheelhouse
-
   pyoxidizer-linux-x86_64-bin-check:
     needs:
       - pyoxidizer-exes
@@ -79,47 +53,6 @@ jobs:
       #- name: Spot Test (musl Cross)
       #  run: |
       #    ./pyoxidizer build --path myapp --target-triple x86_64-unknown-linux-musl
-
-  # We need a separate wheel job for macOS because we need a host pyoxidizer to generate
-  # the wheel for cross-compiles.
-  pyoxidizer-macos-wheel:
-    strategy:
-      fail-fast: false
-      matrix:
-        target_triple:
-          - 'aarch64-apple-darwin'
-          - 'x86_64-apple-darwin'
-    needs:
-      - pyoxidizer-exes
-    runs-on: 'ubuntu-20.04'
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Download Linux exe
-        uses: actions/download-artifact@v3
-        with:
-          name: exe-pyoxidizer-x86_64-unknown-linux-musl
-          path: dist
-
-      - name: Download macOS Exes
-        uses: actions/download-artifact@v3
-        with:
-          name: exe-pyoxidizer-${{ matrix.target_triple }}
-          path: target/${{ matrix.target_triple }}/release/
-
-      - name: Build Wheel
-        run: |
-          chmod +x dist/pyoxidizer
-          dist/pyoxidizer build --release ${{ matrix.target_triple }}
-
-          mkdir wheelhouse
-          mv build/*/*/*/*.whl wheelhouse/
-
-      - name: Upload Wheel
-        uses: actions/upload-artifact@v2
-        with:
-          name: pyoxidizer-wheels
-          path: wheelhouse
 
   pyoxidizer-macos-universal-exe-check:
     needs:
@@ -147,37 +80,6 @@ jobs:
           SDKROOT: /Applications/Xcode_12.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.1.sdk
         run: |
           ./pyoxidizer build --path myapp --target-triple aarch64-apple-darwin
-
-  pyoxidizer-windows-wheel:
-    needs:
-      - pyoxidizer-exes
-    strategy:
-      fail-fast: false
-      matrix:
-        target_triple:
-          - 'i686-pc-windows-msvc'
-          - 'x86_64-pc-windows-msvc'
-    runs-on: 'windows-2022'
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Download Executable
-        uses: actions/download-artifact@v3
-        with:
-          name: exe-pyoxidizer-${{ matrix.target_triple }}
-          path: target/${{ matrix.target_triple }}/release/
-
-      - name: Build Wheel
-        run: |
-          target/${{ matrix.target_triple }}/release/pyoxidizer.exe build --release ${{ matrix.target_triple }}
-          New-Item -ItemType "directory" -Name "wheelhouse"
-          move build/*/*/*/*.whl wheelhouse/
-
-      - name: Upload Wheel
-        uses: actions/upload-artifact@v3
-        with:
-          name: pyoxidizer-wheels
-          path: wheelhouse
 
   pyoxidizer-windows-exe-check:
     strategy:
