@@ -355,3 +355,23 @@ pyoxy-release-upload commit tag:
 # Perform a PyOxy release end-to-end.
 pyoxy-release:
   just _release pyoxy PyOxy
+
+oxidized_importer-release-prepare commit tag:
+  #!/usr/bin/env bash
+  set -exo pipefail
+
+  rm -rf dist/oxidized_importer*
+
+  just assemble-exe-artifacts oxidized_importer {{commit}} dist/oxidized_importer-artifacts
+  mkdir dist/oxidized_importer
+  cp dist/oxidized_importer-artifacts/wheels/*.whl dist/oxidized_importer
+
+  just _create_shasums dist/oxidized_importer
+
+oxidized_importer-release-upload commit tag:
+  just _upload_release oxidized_importer 'Oxidized Importer Python Extension' {{commit}} {{tag}}
+  twine upload dist/oxidized_importer/*.whl
+
+oxidized_importer-release commit tag:
+  just oxidized_importer-release-prepare {{commit}} {{tag}}
+  just oxidized_importer-release-upload {{commit}} {{tag}}
