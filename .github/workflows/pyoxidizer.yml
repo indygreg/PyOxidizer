@@ -45,7 +45,7 @@ jobs:
       - name: Build Wheel
         run: |
           chmod +x target/x86_64-unknown-linux-musl/release/pyoxidizer
-          target/x86_64-unknown-linux-musl/release/pyoxidizer build --release wheel_linux
+          target/x86_64-unknown-linux-musl/release/pyoxidizer build --release wheel_x86_64-unknown-linux-musl
           mkdir -p wheelhouse
           mv build/*/*/*/*.whl wheelhouse/
 
@@ -86,11 +86,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        config:
-          - target_triple: 'aarch64-apple-darwin'
-            wheel_target: 'wheel_macos_aarch64'
-          - target_triple: 'x86_64-apple-darwin'
-            wheel_target: 'wheel_macos_x86_64'
+        target_triple:
+          - 'aarch64-apple-darwin'
+          - 'x86_64-apple-darwin'
     needs:
       - pyoxidizer-exes
     runs-on: 'ubuntu-20.04'
@@ -106,13 +104,13 @@ jobs:
       - name: Download macOS Exes
         uses: actions/download-artifact@v3
         with:
-          name: exe-pyoxidizer-${{ matrix.config.target_triple }}
-          path: target/${{ matrix.config.target_triple }}/release/
+          name: exe-pyoxidizer-${{ matrix.target_triple }}
+          path: target/${{ matrix.target_triple }}/release/
 
       - name: Build Wheel
         run: |
           chmod +x dist/pyoxidizer
-          dist/pyoxidizer build --release ${{ matrix.config.wheel_target }}
+          dist/pyoxidizer build --release ${{ matrix.target_triple }}
 
           mkdir wheelhouse
           mv build/*/*/*/*.whl wheelhouse/
@@ -156,11 +154,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        config:
-          - target_triple: 'i686-pc-windows-msvc'
-            wheel_target: 'wheel_windows_x86'
-          - target_triple: 'x86_64-pc-windows-msvc'
-            wheel_target: 'wheel_windows_x86_64'
+        target_triple:
+          - 'i686-pc-windows-msvc'
+          - 'x86_64-pc-windows-msvc'
     runs-on: 'windows-2022'
     steps:
       - uses: actions/checkout@v3
@@ -168,12 +164,12 @@ jobs:
       - name: Download Executable
         uses: actions/download-artifact@v3
         with:
-          name: exe-pyoxidizer-${{ matrix.config.target_triple }}
-          path: target/${{ matrix.config.target_triple }}/release/
+          name: exe-pyoxidizer-${{ matrix.target_triple }}
+          path: target/${{ matrix.target_triple }}/release/
 
       - name: Build Wheel
         run: |
-          target/${{ matrix.config.target_triple }}/release/pyoxidizer.exe build --release ${{ matrix.config.wheel_target }}
+          target/${{ matrix.target_triple }}/release/pyoxidizer.exe build --release ${{ matrix.target_triple }}
           New-Item -ItemType "directory" -Name "wheelhouse"
           move build/*/*/*/*.whl wheelhouse/
 
