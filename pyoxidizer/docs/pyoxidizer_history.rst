@@ -105,7 +105,10 @@ Other Relevant Changes
   `apple-sdk <https://crates.io/crates/apple-sdk>`_ Rust crate. The new crate
   work similarly to how our custom logic was working before. But there may be
   subtle changes in behavior. If you see new build errors related to Apple SDKs
-  in this release, don't hesitate to create an issue.
+  in this release, don't hesitate to create an issue. One notable change is that
+  we will now look for SDKs in all ``/Applications/Xcode*.app`` directories. In
+  environments like GitHub Actions, this will result in finding and using the
+  newest installed SDK.
 * The jemalloc allocator in built binaries has been upgraded to version 5.3.
 * The auto-generated Rust project created during binary building is now explicitly
   licensed to the public domain.

@@ -7,7 +7,7 @@
 use {
     crate::{project_layout::PyembedLocation, py_packaging::distribution::AppleSdkInfo},
     anyhow::{anyhow, Context, Result},
-    apple_sdk::{AppleSdk, ParsedSdk, SdkSearch, SdkSorting},
+    apple_sdk::{AppleSdk, ParsedSdk, SdkSearch, SdkSearchLocation, SdkSorting},
     log::{info, warn},
     once_cell::sync::Lazy,
     std::{
@@ -467,6 +467,8 @@ impl Environment {
             .progress_callback(|event| {
                 info!("{}", event);
             })
+            // Search in all system Xcode paths by default to give best shot at finding modern SDK.
+            .location(SdkSearchLocation::SystemXcodes)
             .platform(platform.as_str().try_into()?)
             .minimum_version(minimum_version)
             .deployment_target(platform, deployment_target)
