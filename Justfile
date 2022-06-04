@@ -181,12 +181,26 @@ assemble-exe-artifacts exe commit dest:
 
   gh run download --dir {{dest}} ${RUN_ID}
 
-_remote-sign in_path:
+_codesign-exe in_path:
   rcodesign sign \
     --remote-signer \
     --remote-public-key-pem-file ci/developer-id-application.pem \
     --code-signature-flags runtime \
     {{in_path}}
+
+_codesign in_path out_path:
+  rcodesign sign \
+    --remote-signer \
+    --remote-public-key-pem-file ci/developer-id-application.pem \
+    {{in_path}} {{out_path}}
+
+# Notarize and staple a path.
+notarize path:
+  rcodesign notarize \
+    --api-issuer 254e4e96-2b8b-43c1-b385-286bdad51dba \
+    --api-key 8RXL6MN9WV \
+    --staple \
+    {{path}}
 
 _tar_directory source_directory dir_name dest_dir:
   tar \
@@ -272,7 +286,7 @@ apple-codesign-release-prepare commit tag:
 
     case ${triple} in
       *apple*)
-        sign_command="just _remote-sign ${dest}/${exe}"
+        sign_command="just _codesign-exe ${dest}/${exe}"
         ;;
       *windows*)
         exe=rcodesign.exe
@@ -335,7 +349,7 @@ pyoxy-release-prepare commit tag:
 
       case ${triple} in
         *apple* | macos-universal)
-          just _remote-sign ${dest}/pyoxy
+          just _codesign-exe ${dest}/pyoxy
           ;;
         *)
           ;;
@@ -379,3 +393,141 @@ oxidized_importer-release-upload commit tag:
 oxidized_importer-release commit tag:
   just oxidized_importer-release-prepare {{commit}} {{tag}}
   just oxidized_importer-release-upload {{commit}} {{tag}}
+
+# Create a .dmg for PyOxidizer
+pyoxidizer-create-dmg:
+  #!/usr/bin/env bash
+  set -exo pipefail
+
+  # Clear out old state.
+  rm -rf build dmg_root PyOxidizer.dmg dist/pyoxidizer*
+
+  if [ -d /Volumes/PyOxidizer ]; then
+    DEV_NAME=$(hdiutil info | egrep --color=never '^/dev/' | sed 1q | awk '{print $1}')
+    hdiutil detach "${DEV_NAME}"
+  fi
+
+  if [[ $(uname -m) == 'arm64' ]]; then
+    PYOXIDIZER=target/aarch64-apple-darwin/release/pyoxidizer
+  else
+    PYOXIDIZER=target/x86_64-apple-darwin/release/pyoxidizer
+  fi
+
+  $PYOXIDIZER build --release macos_app_bundle
+  just _codesign build/*/release/macos_app_bundle/PyOxidizer.app dist/pyoxidizer-stage/PyOxidizer.app
+
+  hdiutil create \
+    -srcfolder dist/pyoxidizer-stage \
+    -volname PyOxidizer \
+    -fs HFS+ \
+    -fsargs "-c c=64,a=16,e=16" \
+    -format UDRW \
+    PyOxidizer
+
+  # Mount it.
+  DEV_NAME=$(hdiutil attach -readwrite -noverify -noautoopen PyOxidizer.dmg | egrep --color=never '^/dev/' | sed 1q | awk '{print $1}')
+
+  # Create a symlink to /Applications for drag and drop.
+  ln -s /Applications /Volumes/PyOxidizer/Applications
+
+  # Run AppleScript to create the .DS_Store.
+  /usr/bin/osascript scripts/dmg.applescript PyOxidizer
+
+  # --openfolder not supported on ARM.
+  if [[ $(uname -m) == "arm64" ]]; then
+    bless --folder /Volumes/PyOxidizer
+  else
+    bless --folder /Volumes/PyOxidizer --openfolder /Volumes/PyOxidizer
+  fi
+
+  # Unmount.
+  hdiutil detach "${DEV_NAME}"
+
+  # Compress.
+  hdiutil convert PyOxidizer.dmg -format UDZO -imagekey zlib-level=9 -ov -o PyOxidizer.dmg
+  just _codesign PyOxidizer.dmg PyOxidizer.dmg
+  just notarize PyOxidizer.dmg
+
+# Prepare PyOxidizer release artifacts.
+pyoxidizer-release-prepare commit tag:
+  #!/usr/bin/env bash
+  set -exo pipefail
+
+  rm -rf dist/pyoxidizer*
+
+  just assemble-exe-artifacts pyoxidizer {{commit}} dist/pyoxidizer-artifacts
+
+  mkdir dist/pyoxidizer dist/pyoxidizer-stage
+
+  # Windows installers are easy.
+  cp -av dist/pyoxidizer-artifacts/pyoxidizer-windows_installers/*.{exe,msi} dist/pyoxidizer/
+
+  # Assemble plain executable releases.
+  for triple in aarch64-apple-darwin aarch64-unknown-linux-musl i686-pc-windows-msvc x86_64-apple-darwin x86_64-pc-windows-msvc x86_64-unknown-linux-musl; do
+    release_name=pyoxidizer-{{tag}}-${triple}
+    source=dist/pyoxidizer-artifacts/exe-pyoxidizer-${triple}
+    dest=dist/pyoxidizer-stage/${release_name}
+
+    exe=pyoxidizer
+    sign_command=
+    archive_action=_tar_directory
+
+    case ${triple} in
+      *apple*)
+        sign_command="just _codesign-exe ${dest}/${exe}"
+        ;;
+      *windows*)
+        exe=pyoxidizer.exe
+        archive_action=_zip_directory
+        ;;
+      *)
+        ;;
+    esac
+
+    mkdir -p ${dest}
+    cp -a ${source}/${exe} ${dest}/${exe}
+    chmod +x ${dest}/${exe}
+
+    if [ -n "${sign_command}" ]; then
+      ${sign_command}
+    fi
+
+    cargo run --bin pyoxidizer -- rust-project-licensing \
+      --system-rust \
+      --target-triple ${triple} \
+      --all-features \
+      --unified-license \
+      pyoxidizer > ${dest}/COPYING
+
+    just ${archive_action} dist/pyoxidizer-stage ${release_name} dist/pyoxidizer
+
+    # Wheels are built using the (signed) executables in the archives.
+    mkdir -p target/${triple}/release
+    cp ${dest}/${exe} target/${triple}/release/
+    cargo run --bin pyoxidizer -- build --release wheel_${triple}
+
+    cp build/*/release/wheel_${triple}/*.whl dist/pyoxidizer/
+  done
+
+  # Create universal binary from signed single arch Mach-O binaries.
+  just _release_universal_binary pyoxidizer {{tag}} pyoxidizer
+  just _tar_directory dist/pyoxidizer-stage pyoxidizer-{{tag}}-macos-universal dist/pyoxidizer
+
+  # The DMG is created using the signed binaries.
+  for triple in aarch64-apple-darwin x86_64-apple-darwin; do
+    ssh macmini mkdir -p /Users/gps/src/PyOxidizer/target/${triple}/release
+    scp dist/pyoxidizer-stage/pyoxidizer-{{tag}}-${triple}/pyoxidizer macmini:~/src/PyOxidizer/target/${triple}/release/
+  done
+  ssh macmini just -d /Users/gps/src/PyOxidizer -f /Users/gps/src/PyOxidizer/Justfile pyoxidizer-create-dmg
+  scp macmini:~/src/PyOxidizer/PyOxidizer.dmg dist/pyoxidizer/PyOxidizer-{{tag}}.dmg
+
+  just _create_shasums dist/pyoxidizer
+
+# Upload PyOxidizer release artifacts.
+pyoxidizer-release-upload commit tag:
+  just _upload_release pyoxidizer PyOxidizer {{commit}} {{tag}}
+  twine upload dist/pyoxidizer/*.whl
+
+# Perform release automation for PyOxidizer.
+pyoxidizer-release:
+  just _release pyoxidizer 'PyOxidizer'
