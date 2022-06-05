@@ -33,8 +33,8 @@ version = "0.10.0-pre"
 path = "../tugger-windows"
 
 [dependencies.tugger-file-manifest]
-version = "0.9.0-pre"
-path = "../tugger-file-manifest"
+version = "0.9.0"
+# path = "../tugger-file-manifest"
 
 [dev-dependencies]
 tempfile = "3.2"

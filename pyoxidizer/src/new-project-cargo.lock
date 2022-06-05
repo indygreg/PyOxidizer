@@ -523,7 +523,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-file-manifest"
-version = "0.9.0-pre"
+version = "0.9.0"
 
 [[package]]
 name = "unicode-ident"
