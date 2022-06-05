@@ -346,7 +346,9 @@ dependencies = [
 
 [[package]]
 name = "python-oxidized-importer"
-version = "0.6.0-pre"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dce7c4e8a9d44ea398c7b83239e1cfd9a15ccab932a311aee555fb71476957ab"
 dependencies = [
  "anyhow",
  "memmap2",
