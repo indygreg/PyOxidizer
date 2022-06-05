@@ -101,7 +101,7 @@ dependencies = [
  "anyhow",
  "apple-bundles 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "apple-flat-package 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "apple-xar 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "apple-xar 0.7.0-pre",
  "base64 0.13.0",
  "bcder",
  "bitflags",
@@ -177,7 +177,7 @@ dependencies = [
  "anyhow",
  "apple-bundles 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "apple-flat-package 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "apple-xar 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "apple-xar 0.6.0",
  "base64 0.13.0",
  "bcder",
  "bitflags",
@@ -247,7 +247,7 @@ dependencies = [
 name = "apple-flat-package"
 version = "0.6.0"
 dependencies = [
- "apple-xar 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "apple-xar 0.7.0-pre",
  "cpio-archive 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "flate2",
  "scroll",
@@ -262,7 +262,7 @@ version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "546deb64d33a1b8a436851c0615b8fe06ef9d189aaa00993ac311462fe4ae6db"
 dependencies = [
- "apple-xar 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "apple-xar 0.6.0",
  "cpio-archive 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "flate2",
  "scroll",
@@ -280,34 +280,6 @@ dependencies = [
  "plist",
  "serde",
  "serde_json",
-]
-
-[[package]]
-name = "apple-xar"
-version = "0.6.0"
-dependencies = [
- "base64 0.13.0",
- "bcder",
- "bzip2",
- "chrono",
- "cryptographic-message-syntax 0.17.0-pre",
- "digest 0.10.3",
- "flate2",
- "log",
- "md-5 0.10.1",
- "rand 0.8.5",
- "reqwest",
- "scroll",
- "serde",
- "serde-xml-rs",
- "sha1 0.10.1",
- "sha2 0.10.2",
- "signature",
- "thiserror",
- "url",
- "x509-certificate 0.14.0-pre",
- "xml-rs",
- "xz2",
 ]
 
 [[package]]
@@ -336,6 +308,34 @@ dependencies = [
  "thiserror",
  "url",
  "x509-certificate 0.13.0",
+ "xml-rs",
+ "xz2",
+]
+
+[[package]]
+name = "apple-xar"
+version = "0.7.0-pre"
+dependencies = [
+ "base64 0.13.0",
+ "bcder",
+ "bzip2",
+ "chrono",
+ "cryptographic-message-syntax 0.17.0-pre",
+ "digest 0.10.3",
+ "flate2",
+ "log",
+ "md-5 0.10.1",
+ "rand 0.8.5",
+ "reqwest",
+ "scroll",
+ "serde",
+ "serde-xml-rs",
+ "sha1 0.10.1",
+ "sha2 0.10.2",
+ "signature",
+ "thiserror",
+ "url",
+ "x509-certificate 0.14.0-pre",
  "xml-rs",
  "xz2",
 ]
