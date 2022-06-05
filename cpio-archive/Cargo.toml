@@ -16,5 +16,5 @@ is_executable = "1.0"
 thiserror = "1.0"
 
 [dependencies.tugger-file-manifest]
-path = "../tugger-file-manifest"
-version = "0.9.0-pre"
+# path = "../tugger-file-manifest"
+version = "0.9.0"

@@ -523,7 +523,9 @@ dependencies = [
 
 [[package]]
 name = "tugger-file-manifest"
-version = "0.9.0-pre"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c12f21631572a71998a7bbe5221a1960a2872faba99139bae943aed46467d45"
 
 [[package]]
 name = "unicode-ident"
