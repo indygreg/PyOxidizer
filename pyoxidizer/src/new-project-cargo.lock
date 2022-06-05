@@ -270,9 +270,7 @@ dependencies = [
 
 [[package]]
 name = "pyembed"
-version = "0.22.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e4c3b7ffc74f5ff16df38530eec8f2647dd00ab089206a4d06b7cffe959d5b1"
+version = "0.23.0-pre"
 dependencies = [
  "anyhow",
  "dunce",
@@ -348,9 +346,7 @@ dependencies = [
 
 [[package]]
 name = "python-oxidized-importer"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e99479365b1fc06c35d4cf6a9bd70c33208075b5a8facc96416d5622e2104de"
+version = "0.8.0-pre"
 dependencies = [
  "anyhow",
  "memmap2",
@@ -365,9 +361,7 @@ dependencies = [
 
 [[package]]
 name = "python-packaging"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c21ae1aaa871d94c6187d13a8509b2ebab8a19f63239a9aa5a7e33b9170e53f"
+version = "0.15.0-pre"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -384,9 +378,7 @@ dependencies = [
 
 [[package]]
 name = "python-packed-resources"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee1ab1ee52411428553c2b5c8f40ffaefcc8ce0f58d45415b38971ef11e1ea8a"
+version = "0.11.0-pre"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -531,9 +523,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-file-manifest"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c12f21631572a71998a7bbe5221a1960a2872faba99139bae943aed46467d45"
+version = "0.10.0-pre"
 
 [[package]]
 name = "unicode-ident"
