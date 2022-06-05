@@ -26,8 +26,8 @@ time = { version = "0.3", optional = true }
 walkdir = "2"
 
 [dependencies.python-packed-resources]
-version = "0.10.0-pre"
-path = "../python-packed-resources"
+version = "0.10.0"
+# path = "../python-packed-resources"
 
 [dependencies.tugger-file-manifest]
 version = "0.9.0"
