@@ -36,8 +36,8 @@ version = "0.14.0-pre"
 path = "../python-packaging"
 
 [dependencies.python-packed-resources]
-version = "0.10.0-pre"
-path = "../python-packed-resources"
+version = "0.10.0"
+# path = "../python-packed-resources"
 
 [dev-dependencies]
 criterion = "0.3"
