@@ -1596,7 +1596,7 @@ dependencies = [
 
 [[package]]
 name = "debian-repo-tool"
-version = "0.5.0-pre"
+version = "0.5.0"
 dependencies = [
  "clap 3.1.18",
  "debian-packaging 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
