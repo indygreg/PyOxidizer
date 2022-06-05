@@ -101,8 +101,8 @@ version = "0.11.0-pre"
 path = "../tugger-rust-toolchain"
 
 [dependencies.tugger-windows]
-version = "0.9.0"
-# path = "../tugger-windows"
+version = "0.10.0-pre"
+path = "../tugger-windows"
 
 [dependencies.tugger-wix]
 version = "0.14.0"
