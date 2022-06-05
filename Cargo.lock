@@ -5833,7 +5833,7 @@ checksum = "507e9898683b6c43a9aa55b64259b721b52ba226e0f3779137e50ad114a4c90b"
 
 [[package]]
 name = "text-stub-library"
-version = "0.8.0"
+version = "0.9.0-pre"
 dependencies = [
  "apple-sdk",
  "rand 0.8.5",
