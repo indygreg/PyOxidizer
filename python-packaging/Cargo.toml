@@ -1,6 +1,6 @@
 [package]
 name = "python-packaging"
-version = "0.13.0"
+version = "0.14.0-pre"
 authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"

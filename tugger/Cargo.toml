@@ -36,8 +36,8 @@ version = "0.16.0-pre"
 path = "../apple-codesign"
 
 [dependencies.python-packaging]
-version = "0.13.0"
-# path = "../python-packaging"
+version = "0.14.0-pre"
+path = "../python-packaging"
 
 [dependencies.starlark-dialect-build-targets]
 version = "0.8.0-pre"
