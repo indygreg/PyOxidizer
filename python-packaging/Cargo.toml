@@ -30,8 +30,8 @@ version = "0.10.0"
 # path = "../python-packed-resources"
 
 [dependencies.tugger-file-manifest]
-version = "0.9.0"
-# path = "../tugger-file-manifest"
+version = "0.10.0-pre"
+path = "../tugger-file-manifest"
 
 [dependencies.zip]
 version = "0.6"

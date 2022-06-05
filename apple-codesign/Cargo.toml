@@ -97,8 +97,8 @@ version = "0.17.0-pre"
 version = "0.7.0"
 
 [dependencies.tugger-file-manifest]
-# path = "../tugger-file-manifest"
-version = "0.9.0"
+path = "../tugger-file-manifest"
+version = "0.10.0-pre"
 
 [dependencies.x509-certificate]
 path = "../x509-certificate"
