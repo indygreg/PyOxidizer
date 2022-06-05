@@ -1,6 +1,6 @@
 [package]
 name = "python-packed-resources"
-version = "0.10.0"
+version = "0.11.0-pre"
 authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
