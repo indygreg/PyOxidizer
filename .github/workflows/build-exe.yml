@@ -61,6 +61,11 @@ jobs:
       # With the filesystem path not set, pyoxidizer will use the canonical github.com
       # repository for any Git references.
       PYOXIDIZER_BUILD_FORCE_GIT_SOURCE: '1'
+
+      # This forces the lzma-sys crate to link liblzma statically. Ideally we'd do
+      # this with a crate feature. But the xz2 crate didn't expose that feature at the
+      # time this workaround was introduced.
+      LZMA_API_STATIC: '1'
     steps:
       - uses: actions/checkout@v3
         with:

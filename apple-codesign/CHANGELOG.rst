@@ -5,7 +5,9 @@
 0.16.0
 ======
 
-(Not yet released)
+(Released 2022-06-05)
+
+* Distributed macOS binaries no longer dynamically link ``liblzma.5.dylib``.
 
 0.15.0
 ======

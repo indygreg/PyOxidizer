@@ -31,7 +31,12 @@ Version History
 0.22.0
 ------
 
-(Not yet released)
+Released June 5, 2022.
+
+Bug Fixes
+^^^^^^^^^
+
+* macOS binaries no longer dynamically link ``liblzma.5.dylib``.
 
 .. _version_0_21_0:
 
