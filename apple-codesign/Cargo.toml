@@ -93,8 +93,8 @@ version = "0.7.0"
 version = "0.16.0"
 
 [dependencies.tugger-apple]
-path = "../tugger-apple"
-version = "0.8.0-pre"
+# path = "../tugger-apple"
+version = "0.7.0"
 
 [dependencies.tugger-file-manifest]
 # path = "../tugger-file-manifest"
