@@ -4324,7 +4324,7 @@ dependencies = [
  "tugger-file-manifest 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-rust-toolchain 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tugger-wix",
+ "tugger-wix 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "url",
  "uuid 1.1.1",
  "version-compare",
@@ -6067,7 +6067,7 @@ dependencies = [
  "tugger-snapcraft 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows-codesign 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tugger-wix",
+ "tugger-wix 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "walkdir",
  "x509-certificate 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -6357,7 +6357,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-wix"
-version = "0.13.0-pre"
+version = "0.13.0"
 dependencies = [
  "anyhow",
  "duct",
@@ -6365,6 +6365,25 @@ dependencies = [
  "msi",
  "once_cell",
  "tempfile",
+ "tugger-common 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-file-manifest 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-windows 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-windows-codesign 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "url",
+ "uuid 1.1.1",
+ "xml-rs",
+]
+
+[[package]]
+name = "tugger-wix"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "85ab118dc64492c8fc3d623d25b6b02a1f2445eb8a26c11744b26a9bdf3a6319"
+dependencies = [
+ "anyhow",
+ "duct",
+ "log",
+ "once_cell",
  "tugger-common 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-file-manifest 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
