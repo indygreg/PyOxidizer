@@ -76,8 +76,8 @@ chrono = "0.4"
 tempfile = "3.2"
 
 [dev-dependencies.tugger-windows-codesign]
-version = "0.9.0-pre"
-path = "../tugger-windows-codesign"
+version = "0.8.0"
+# path = "../tugger-windows-codesign"
 
 [dev-dependencies.x509-certificate]
 version = "0.13.0"
