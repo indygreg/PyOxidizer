@@ -140,9 +140,9 @@ ci-run workflow branch="ci-test":
 ci-run-all branch="ci-test":
   just ci-run cargo_deny.yml {{branch}}
   just ci-run oxidized_importer.yml {{branch}}
+  just ci-run pyoxidizer.yml {{branch}}
   just ci-run pyoxy.yml {{branch}}
   just ci-run rcodesign.yml {{branch}}
-  just ci-run release.yml {{branch}}
   just ci-run sphinx.yml {{branch}}
   just ci-run workspace.yml {{branch}}
   just ci-run workspace-python.yml {{branch}}
