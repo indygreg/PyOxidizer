@@ -270,7 +270,9 @@ dependencies = [
 
 [[package]]
 name = "pyembed"
-version = "0.22.0-pre"
+version = "0.22.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4e4c3b7ffc74f5ff16df38530eec8f2647dd00ab089206a4d06b7cffe959d5b1"
 dependencies = [
  "anyhow",
  "dunce",
