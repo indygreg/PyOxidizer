@@ -154,7 +154,11 @@ def make_wheel(platform_tag, target_triple):
     return wheel
 
 
-def make_wheel_linux():
+def make_wheel_linux_aarch64():
+    return make_wheel("manylinux2014_aarch64", "aarch64-unknown-linux-musl")
+
+
+def make_wheel_linux_x86_64():
     return make_wheel("manylinux2010_x86_64", "x86_64-unknown-linux-musl")
 
 
@@ -191,8 +195,8 @@ register_target("msi_x86", make_msi_x86)
 register_target("msi_x86_64", make_msi_x86_64)
 register_target("exe_installer", make_exe_installer, default = True)
 register_target("macos_app_bundle", make_macos_app_bundle)
-register_target("wheel_aarch64-unknown-linux-musl", make_wheel_linux)
-register_target("wheel_x86_64-unknown-linux-musl", make_wheel_linux)
+register_target("wheel_aarch64-unknown-linux-musl", make_wheel_linux_aarch64)
+register_target("wheel_x86_64-unknown-linux-musl", make_wheel_linux_x86_64)
 register_target("wheel_aarch64-apple-darwin", make_wheel_macos_aarch64)
 register_target("wheel_x86_64-apple-darwin", make_wheel_macos_x86_64)
 register_target("wheel_i686-pc-windows-msvc", make_wheel_windows_x86)
