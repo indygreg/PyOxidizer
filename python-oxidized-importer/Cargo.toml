@@ -21,8 +21,8 @@ version = "0.10.0"
 # path = "../python-packed-resources"
 
 [dependencies.python-packaging]
-version = "0.14.0-pre"
-path = "../python-packaging"
+version = "0.14.0"
+# path = "../python-packaging"
 default-features = false
 
 [dependencies.pyo3]
