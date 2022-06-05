@@ -24,8 +24,8 @@ version = "0.9.0"
 # path = "../tugger-common"
 
 [dependencies.tugger-windows]
-version = "0.9.0-pre"
-path = "../tugger-windows"
+version = "0.9.0"
+# path = "../tugger-windows"
 
 [dev-dependencies]
 der-parser = "7.0"
