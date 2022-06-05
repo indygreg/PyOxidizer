@@ -7,7 +7,7 @@ on:
     branches-ignore:
       - 'ci-test'
     tags-ignore:
-      - '*'
+      - '**'
   pull_request:
   schedule:
     - cron: '13 15 * * *'
