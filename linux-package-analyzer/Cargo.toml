@@ -38,8 +38,8 @@ version = "0.14.0"
 # path = "../debian-packaging"
 
 [dependencies.rpm-repository]
-version = "0.2.0-pre"
-path = "../rpm-repository"
+version = "0.1.0"
+# path = "../rpm-repository"
 
 [dependencies.rpm-rs]
 git = "https://github.com/Richterrettich/rpm-rs"
