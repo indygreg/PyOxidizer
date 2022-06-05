@@ -88,7 +88,7 @@ version = "0.15.0-pre"
 dependencies = [
  "anyhow",
  "apple-bundles",
- "apple-flat-package",
+ "apple-flat-package 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "apple-xar 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "base64 0.13.0",
  "bcder",
@@ -158,7 +158,22 @@ dependencies = [
 
 [[package]]
 name = "apple-flat-package"
-version = "0.6.0-pre"
+version = "0.6.0"
+dependencies = [
+ "apple-xar 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cpio-archive 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "flate2",
+ "scroll",
+ "serde",
+ "serde-xml-rs",
+ "thiserror",
+]
+
+[[package]]
+name = "apple-flat-package"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "546deb64d33a1b8a436851c0615b8fe06ef9d189aaa00993ac311462fe4ae6db"
 dependencies = [
  "apple-xar 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cpio-archive 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
