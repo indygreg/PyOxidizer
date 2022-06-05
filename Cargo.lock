@@ -1628,7 +1628,7 @@ dependencies = [
 
 [[package]]
 name = "debian-repo-tool"
-version = "0.6.0"
+version = "0.7.0-pre"
 dependencies = [
  "clap 3.1.18",
  "debian-packaging",
