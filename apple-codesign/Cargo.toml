@@ -101,8 +101,8 @@ path = "../tugger-file-manifest"
 version = "0.8.0-pre"
 
 [dependencies.x509-certificate]
-path = "../x509-certificate"
-version = "0.14.0-pre"
+# path = "../x509-certificate"
+version = "0.13.0"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 security-framework = { version = "2.6", features = ["OSX_10_12"] }
