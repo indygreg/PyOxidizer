@@ -244,7 +244,7 @@ _create_shasums dir:
   done
 
 _upload_release name title_name commit tag:
-  git tag -f {{name}}//{{tag}} {{commit}}
+  git tag -f {{name}}/{{tag}} {{commit}}
   git push -f origin refs/tags/{{name}}/{{tag}}:refs/tags/{{name}}/{{tag}}
   gh release create \
     --prerelease \
@@ -252,7 +252,7 @@ _upload_release name title_name commit tag:
     --title '{{title_name}} {{tag}}' \
     --discussion-category general \
     {{name}}/{{tag}}
-  gh release upload --clobber {{name}}/{{tag}} dist/{{name}}*
+  gh release upload --clobber {{name}}/{{tag}} dist/{{name}}/*
 
 _release name title_name:
   #!/usr/bin/env bash
