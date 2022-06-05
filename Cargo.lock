@@ -4266,7 +4266,7 @@ dependencies = [
  "tugger-file-manifest 0.9.0-pre",
  "tugger-rust-toolchain 0.10.0-pre",
  "tugger-windows 0.10.0-pre",
- "tugger-wix 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-wix 0.14.0-pre",
  "url",
  "uuid 1.1.1",
  "version-compare",
@@ -4327,7 +4327,7 @@ dependencies = [
  "tugger-file-manifest 0.8.0",
  "tugger-rust-toolchain 0.9.0",
  "tugger-windows 0.9.0",
- "tugger-wix 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-wix 0.13.0",
  "url",
  "uuid 1.1.1",
  "version-compare",
@@ -6100,7 +6100,7 @@ dependencies = [
  "tugger-snapcraft 0.12.0-pre",
  "tugger-windows 0.10.0-pre",
  "tugger-windows-codesign 0.9.0-pre",
- "tugger-wix 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-wix 0.14.0-pre",
  "walkdir",
  "x509-certificate 0.14.0-pre",
 ]
@@ -6133,7 +6133,7 @@ dependencies = [
  "tugger-file-manifest 0.8.0",
  "tugger-snapcraft 0.11.0",
  "tugger-windows 0.9.0",
- "tugger-wix 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-wix 0.13.0",
  "walkdir",
 ]
 
@@ -6423,25 +6423,6 @@ dependencies = [
 [[package]]
 name = "tugger-wix"
 version = "0.13.0"
-dependencies = [
- "anyhow",
- "duct",
- "log",
- "msi",
- "once_cell",
- "tempfile",
- "tugger-common 0.10.0-pre",
- "tugger-file-manifest 0.9.0-pre",
- "tugger-windows 0.10.0-pre",
- "tugger-windows-codesign 0.9.0-pre",
- "url",
- "uuid 1.1.1",
- "xml-rs",
-]
-
-[[package]]
-name = "tugger-wix"
-version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "85ab118dc64492c8fc3d623d25b6b02a1f2445eb8a26c11744b26a9bdf3a6319"
 dependencies = [
@@ -6453,6 +6434,25 @@ dependencies = [
  "tugger-file-manifest 0.8.0",
  "tugger-windows 0.9.0",
  "tugger-windows-codesign 0.8.0",
+ "url",
+ "uuid 1.1.1",
+ "xml-rs",
+]
+
+[[package]]
+name = "tugger-wix"
+version = "0.14.0-pre"
+dependencies = [
+ "anyhow",
+ "duct",
+ "log",
+ "msi",
+ "once_cell",
+ "tempfile",
+ "tugger-common 0.10.0-pre",
+ "tugger-file-manifest 0.9.0-pre",
+ "tugger-windows 0.10.0-pre",
+ "tugger-windows-codesign 0.9.0-pre",
  "url",
  "uuid 1.1.1",
  "xml-rs",
