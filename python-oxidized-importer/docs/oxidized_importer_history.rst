@@ -12,7 +12,7 @@ Changelog
 0.6.0
 -----
 
-(Not yet released)
+Released on June 6, 2022.
 
 * Added missing API docs for :py:class:`OxidizedDistribution`.
 * ``OxidizedDistribution.metadata`` now returns an

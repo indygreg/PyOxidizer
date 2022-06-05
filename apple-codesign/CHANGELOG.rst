@@ -5,7 +5,7 @@
 0.15.0
 ======
 
-(Not yet released)
+(Released 2022-06-04)
 
 * XAR files are now always signed through a temporary file in order to avoid
   corruption of the XAR file.
