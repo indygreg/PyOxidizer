@@ -3,7 +3,7 @@ name = "pyembed"
 # Remember to keep this version string in sync with the PYEMBED_CRATE_VERSION
 # constant in pyoxidizer's environment.rs. The release automation should do
 # this automatically.
-version = "0.21.0"
+version = "0.22.0-pre"
 authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
 edition = "2021"
 license = "Python-2.0 OR MPL-2.0"
