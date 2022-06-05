@@ -1,6 +1,6 @@
 [package]
 name = "pgp-cleartext"
-version = "0.2.0"
+version = "0.3.0-pre"
 edition = "2021"
 authors = ["Gregory Szorc <gregory.szorc@gmail.com"]
 license = "MPL-2.0"
