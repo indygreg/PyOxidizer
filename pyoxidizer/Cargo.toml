@@ -73,8 +73,8 @@ path = "../python-packaging"
 features = ["spdx-text"]
 
 [dependencies.python-packed-resources]
-version = "0.9.0-pre"
-path = "../python-packed-resources"
+version = "0.9.0"
+# path = "../python-packed-resources"
 
 [dependencies.starlark-dialect-build-targets]
 version = "0.7.0"
