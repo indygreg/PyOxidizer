@@ -4261,7 +4261,7 @@ dependencies = [
  "tempfile",
  "tugger 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-binary-analysis 0.6.0-pre",
- "tugger-code-signing 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-code-signing 0.9.0-pre",
  "tugger-common 0.10.0-pre",
  "tugger-file-manifest 0.10.0-pre",
  "tugger-rust-toolchain 0.11.0-pre",
@@ -4322,7 +4322,7 @@ dependencies = [
  "tempfile",
  "tugger 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-binary-analysis 0.5.0",
- "tugger-code-signing 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-code-signing 0.8.0",
  "tugger-common 0.9.0",
  "tugger-file-manifest 0.9.0",
  "tugger-rust-toolchain 0.10.0",
@@ -6094,7 +6094,7 @@ dependencies = [
  "tempfile",
  "time 0.3.9",
  "tugger-apple 0.8.0-pre",
- "tugger-code-signing 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-code-signing 0.9.0-pre",
  "tugger-common 0.10.0-pre",
  "tugger-file-manifest 0.10.0-pre",
  "tugger-snapcraft 0.13.0-pre",
@@ -6128,7 +6128,7 @@ dependencies = [
  "tempfile",
  "time 0.3.9",
  "tugger-apple 0.7.0",
- "tugger-code-signing 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-code-signing 0.8.0",
  "tugger-common 0.9.0",
  "tugger-file-manifest 0.9.0",
  "tugger-snapcraft 0.12.0",
@@ -6186,27 +6186,6 @@ dependencies = [
 [[package]]
 name = "tugger-code-signing"
 version = "0.8.0"
-dependencies = [
- "anyhow",
- "apple-bundles 0.13.0-pre",
- "apple-codesign 0.17.0-pre",
- "bcder",
- "cryptographic-message-syntax 0.17.0-pre",
- "goblin",
- "log",
- "p12",
- "reqwest",
- "tempfile",
- "thiserror",
- "tugger-file-manifest 0.10.0-pre",
- "tugger-windows-codesign 0.9.0-pre",
- "x509-certificate 0.14.0-pre",
- "yasna",
-]
-
-[[package]]
-name = "tugger-code-signing"
-version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8e95a596ca1a29ec3dc868f750a43910f6de7203187f4706154534046ac9407c"
 dependencies = [
@@ -6224,6 +6203,27 @@ dependencies = [
  "tugger-file-manifest 0.9.0",
  "tugger-windows-codesign 0.8.0",
  "x509-certificate 0.13.0",
+ "yasna",
+]
+
+[[package]]
+name = "tugger-code-signing"
+version = "0.9.0-pre"
+dependencies = [
+ "anyhow",
+ "apple-bundles 0.13.0-pre",
+ "apple-codesign 0.17.0-pre",
+ "bcder",
+ "cryptographic-message-syntax 0.17.0-pre",
+ "goblin",
+ "log",
+ "p12",
+ "reqwest",
+ "tempfile",
+ "thiserror",
+ "tugger-file-manifest 0.10.0-pre",
+ "tugger-windows-codesign 0.9.0-pre",
+ "x509-certificate 0.14.0-pre",
  "yasna",
 ]
 

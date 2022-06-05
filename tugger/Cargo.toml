@@ -48,8 +48,8 @@ version = "0.8.0-pre"
 path = "../tugger-apple"
 
 [dependencies.tugger-code-signing]
-version = "0.8.0"
-# path = "../tugger-code-signing"
+version = "0.9.0-pre"
+path = "../tugger-code-signing"
 
 [dependencies.tugger-common]
 version = "0.10.0-pre"
