@@ -49,8 +49,9 @@ Rust and people may not even know because they never see a `libpython`,
 :house: The official home of the `PyOxidizer` project is
 https://github.com/indygreg/PyOxidizer.
 
-:notebook_with_decorative_cover: Documentation (generated from the `docs/` directory) is available
-at https://pyoxidizer.readthedocs.io/en/latest/index.html.
+:notebook_with_decorative_cover: Documentation (generated from the `docs/` and
+`pyoxidizer/docs/` directories) is available at
+https://pyoxidizer.readthedocs.io/en/latest/index.html.
 
 :speech_balloon: The [pyoxidizer-users](https://groups.google.com/forum/#!forum/pyoxidizer-users)
 mailing list is a forum for users to discuss all things PyOxidizer.
