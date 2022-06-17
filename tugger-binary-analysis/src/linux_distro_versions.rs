@@ -30,10 +30,17 @@ pub static GLIBC_VERSIONS_BY_DISTRO: Lazy<BTreeMap<&'static str, DistroVersion>>
                 ("30", "2.29"),
                 ("31", "2.30"),
                 ("32", "2.31"),
+                ("33", "2.32"),
+                ("34", "2.33"),
+                ("35", "2.34"),
+                ("36", "2.35"),
             ],
         );
 
-        res.insert("RHEL", vec![("6", "2.12"), ("7", "2.17"), ("8", "2.28")]);
+        res.insert(
+            "RHEL",
+            vec![("6", "2.12"), ("7", "2.17"), ("8", "2.28"), ("9", "2.34")],
+        );
 
         res.insert(
             "OpenSUSE",
@@ -49,6 +56,9 @@ pub static GLIBC_VERSIONS_BY_DISTRO: Lazy<BTreeMap<&'static str, DistroVersion>>
                 ("42.3", "2.22"),
                 ("15.0", "2.26"),
                 ("15.1", "2.26"),
+                ("15.2", "2.26"),
+                ("15.3", "2.31"),
+                ("15.4", "2.31"),
             ],
         );
 
@@ -60,6 +70,7 @@ pub static GLIBC_VERSIONS_BY_DISTRO: Lazy<BTreeMap<&'static str, DistroVersion>>
                 ("8", "2.19"),
                 ("9", "2.24"),
                 ("10", "2.28"),
+                ("11", "2.31"),
             ],
         );
 
@@ -75,6 +86,7 @@ pub static GLIBC_VERSIONS_BY_DISTRO: Lazy<BTreeMap<&'static str, DistroVersion>>
                 ("19.10", "2.30"),
                 ("20.04", "2.31"),
                 ("20.10", "2.32"),
+                ("22.04", "2.35"),
             ],
         );
 
@@ -103,10 +115,17 @@ pub static GCC_VERSIONS_BY_DISTRO: Lazy<BTreeMap<&'static str, DistroVersion>> =
             ("30", "9.0.1"),
             ("31", "9.2.1"),
             ("32", "10.0.1"),
+            ("33", "10.3.1"),
+            ("34", "11.2.1"),
+            ("35", "11.2.1"),
+            ("36", "12.0.1"),
         ],
     );
 
-    res.insert("RHEL", vec![("6", "4.4"), ("7", "4.8"), ("8", "8.3.1")]);
+    res.insert(
+        "RHEL",
+        vec![("6", "4.4"), ("7", "4.8"), ("8", "8.3.1"), ("9", "11.2.1")],
+    );
 
     res.insert(
         "OpenSUSE",
@@ -121,6 +140,10 @@ pub static GCC_VERSIONS_BY_DISTRO: Lazy<BTreeMap<&'static str, DistroVersion>> =
             ("42.2", "4.8.5"),
             ("42.3", "4.8.5"),
             ("15.0", "7.3.1"),
+            ("15.1", "10.2.1"),
+            ("15.2", "10.2.1"),
+            ("15.3", "11.3.0"),
+            ("15.4", "11.3.0"),
         ],
     );
 
@@ -132,6 +155,7 @@ pub static GCC_VERSIONS_BY_DISTRO: Lazy<BTreeMap<&'static str, DistroVersion>> =
             ("8", "4.8"),
             ("9", "6.3"),
             ("10", "8.3"),
+            ("11", "10.2.1"),
         ],
     );
 
@@ -144,6 +168,7 @@ pub static GCC_VERSIONS_BY_DISTRO: Lazy<BTreeMap<&'static str, DistroVersion>> =
             ("18.04", "7.3"),
             ("20.04", "9.3"),
             ("20.10", "10.2"),
+            ("22.04", "12"),
         ],
     );
 
