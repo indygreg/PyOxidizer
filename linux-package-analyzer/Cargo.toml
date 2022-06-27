@@ -30,7 +30,7 @@ rusqlite = { version = "0.27", features = ["bundled"] }
 symbolic-demangle = "8.5"
 tokio = { version = "1.15", features = ["full"] }
 url = "2.2"
-xz2 = "0.1"
+xz2 = { version = "0.1", features = ["static"] }
 zstd = "0.9"
 
 [dependencies.debian-packaging]

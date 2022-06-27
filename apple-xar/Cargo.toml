@@ -30,9 +30,7 @@ signature = "1.3"
 thiserror = "1.0"
 url = "2.2"
 xml-rs = "0.8"
-# TODO use static feature once new crate version is released and undo
-# LZMA_API_STATIC hack in CI.
-xz2 = "0.1"
+xz2 = { version = "0.1", features = ["static"] }
 
 [dependencies.cryptographic-message-syntax]
 path = "../cryptographic-message-syntax"
