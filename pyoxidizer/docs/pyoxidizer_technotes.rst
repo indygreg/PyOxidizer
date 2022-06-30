@@ -556,3 +556,28 @@ operations like ``stat()``) so we can plumb in a custom I/O implementation.
 PEP 578 almost does this with ``PyFile_SetOpenCodeHook()`` and the
 ``io.open_code()`` mechanism. But ``io.open_code()`` is only for a limited
 use case and isn't generally usable.
+
+``sys.executable`` is a String Instead of List
+----------------------------------------------
+
+Python applications often want to invoke a new Python interpreter process.
+Generally, you use ``sys.executable`` to find the filesystem path to
+``python`` then run that executable.
+
+This is all fine for traditional Python interpreter install layouts that have
+a ``python`` executable. However, in embedded contexts, there may not be
+a ``python`` executable. Rather, the application embedding Python may provide
+a more advanced way to invoke a Python interpreter. e.g. ``myapp python
+<interpreter arguments>``.
+
+Since ``sys.executable`` is a string and is often fed directly into ``exec()``,
+it isn't possible to express a multi-argument *run a Python interpreter* value
+through ``sys.executable``.
+
+To do this robustly while maintaining backwards compatibility, we need a new
+attribute somewhere that defines a list of arguments for invoking a Python
+interpreter. In traditional Python install environments, this would be
+``[sys.executable]``.
+
+This idea was proposed at
+https://mail.python.org/archives/list/python-ideas@python.org/thread/O66N56PB4U6AGICGBSRFD2OWA5JWMFC6/#O66N56PB4U6AGICGBSRFD2OWA5JWMFC6.
