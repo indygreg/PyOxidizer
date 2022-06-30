@@ -24,8 +24,8 @@ data structure is then consulted by a Python interpreter to e.g. power
 the module `import` mechanism.
 
 This crate is developed primarily for
-[PyOxidizer](https://pyoxidizer.readthedocs.io/en/stable/). But it can
-be used outside the PyOxidizer project. See the aforementioned docs
+[PyOxidizer](https://gregoryszorc.com/docs/pyoxidizer/stable/pyoxidizer.html). But
+it can be used outside the PyOxidizer project. See the aforementioned docs
 for the canonical specification of this format.
 */
 

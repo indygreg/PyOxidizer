@@ -79,7 +79,7 @@
 //!
 //! The end-user documentation is maintained as a Sphinx docs tree in the `docs`
 //! directory. The latest version of the documentation is published at
-//! <https://pyoxidizer.readthedocs.io/en/latest/apple_codesign.html>.
+//! <https://gregoryszorc.com/docs/apple-codesign/main/>.
 //!
 //! # Getting Started
 //!

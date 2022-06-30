@@ -5,8 +5,8 @@ useful to the execution of a Python interpreter. We call this data format
 *Python packed resources.* See the crate's documentation for more.
 
 This crate is developed primarily for
-[PyOxidizer](https://pyoxidizer.readthedocs.io/en/stable/). But it can
-be used outside the PyOxidizer project.
+[PyOxidizer](https://gregoryszorc.com/docs/pyoxidizer/stable/pyoxidizer.html).
+But it can be used outside the PyOxidizer project.
 
 # Getting Started
 

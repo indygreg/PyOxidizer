@@ -408,7 +408,7 @@ ways:
 * Arguments beginning with --remote activate *remote signing mode* and can
   be used to delegate cryptographic signing operations to a separate machine.
   It is strongly advised to read the user documentation on remote signing
-  mode at https://pyoxidizer.readthedocs.io/en/latest/apple_codesign.html.
+  mode at https://gregoryszorc.com/docs/apple-codesign/main/.
 
 If you export a code signing certificate from the macOS keychain via the
 `Keychain Access` application as a .p12 file, we should be able to read these
@@ -2452,7 +2452,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
     let app = Command::new("Cross platform Apple code signing in pure Rust")
         .version(env!("CARGO_PKG_VERSION"))
         .author("Gregory Szorc <gregory.szorc@gmail.com>")
-        .about("Sign and notarize Apple programs. See https://pyoxidizer.readthedocs.io/en/latest/apple_codesign.html for more docs.")
+        .about("Sign and notarize Apple programs. See https://gregoryszorc.com/docs/apple-codesign/main/ for more docs.")
         .arg_required_else_help(true)
         .arg(
             Arg::new("verbose")

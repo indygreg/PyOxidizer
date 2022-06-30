@@ -6,8 +6,8 @@ and performing packaging-like mechanisms without the involvement of
 Python.
 
 This crate is developed as part of the
-[PyOxidizer](https://pyoxidizer.readthedocs.io/en/stable/) project. But
-it can be used without PyOxidizer.
+[PyOxidizer](https://gregoryszorc.com/docs/pyoxidizer/stable/pyoxidizer.html)
+project. But it can be used without PyOxidizer.
 
 # Getting Started
 

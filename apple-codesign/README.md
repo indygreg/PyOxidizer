@@ -23,7 +23,7 @@ from Linux and Windows without needing access to proprietary Apple software.
 
 See the crate documentation at https://docs.rs/apple-codesign/latest/apple_codesign/
 and the end-user documentation at
-https://pyoxidizer.readthedocs.io/en/latest/apple_codesign.html for more.
+https://gregoryszorc.com/docs/apple-codesign/main/ for more.
 
 # `rcodesign` CLI
 

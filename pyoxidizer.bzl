@@ -15,9 +15,12 @@ AUTHOR = "Gregory Szorc"
 # Whether we are running in CI.
 IN_CI = VARS.get("IN_CI", False)
 CODE_SIGNING_ENABLE = VARS.get("CODE_SIGNING_ENABLE", False)
-TIME_STAMP_SERVER_URL = VARS.get("TIME_STAMP_SERVER_URL", "http://timestamp.digicert.com")
+TIME_STAMP_SERVER_URL = VARS.get(
+    "TIME_STAMP_SERVER_URL", "http://timestamp.digicert.com"
+)
 
-WHEEL_METADATA = """Metadata-Version: 2.1
+WHEEL_METADATA = (
+    """Metadata-Version: 2.1
 Name: pyoxidizer
 Version: %s
 Summary: Package self-contained Python applications
@@ -31,7 +34,9 @@ Description-Content-Type: text/markdown; charset=UTF-8; variant=GFM
 PyOxidizer is a utility for producing distributable Python applications.
 
 See the docs at https://pyoxidizer.readthedocs.org/ for more.
-""" % PYOXIDIZER_VERSION
+"""
+    % PYOXIDIZER_VERSION
+)
 
 
 def make_msi(target_triple, add_vc_redist):
@@ -43,19 +48,19 @@ def make_msi(target_triple, add_vc_redist):
         arch = "unknown"
 
     msi = WiXMSIBuilder(
-        id_prefix = "pyoxidizer",
-        product_name = "PyOxidizer",
-        product_version = PYOXIDIZER_VERSION,
-        product_manufacturer = AUTHOR,
-        arch = arch,
+        id_prefix="pyoxidizer",
+        product_name="PyOxidizer",
+        product_version=PYOXIDIZER_VERSION,
+        product_manufacturer=AUTHOR,
+        arch=arch,
     )
-    msi.help_url = "https://pyoxidizer.readthedocs.io/"
+    msi.help_url = "https://gregoryszorc.com/docs/pyoxidizer/stable/"
     msi.license_path = CWD + "/LICENSE"
 
     msi.msi_filename = "PyOxidizer-" + PYOXIDIZER_VERSION + "-" + arch + ".msi"
 
     if add_vc_redist:
-        msi.add_visual_cpp_redistributable(redist_version = "14", platform = arch)
+        msi.add_visual_cpp_redistributable(redist_version="14", platform=arch)
 
     m = FileManifest()
 
@@ -65,8 +70,8 @@ def make_msi(target_triple, add_vc_redist):
         exe_prefix = "target/" + target_triple + "/release/"
 
     m.add_path(
-        path = exe_prefix + "pyoxidizer.exe",
-        strip_prefix = exe_prefix,
+        path=exe_prefix + "pyoxidizer.exe",
+        strip_prefix=exe_prefix,
     )
 
     msi.add_program_files_manifest(m)
@@ -84,24 +89,24 @@ def make_msi_x86_64():
 
 def make_exe_installer():
     bundle = WiXBundleBuilder(
-        id_prefix = "pyoxidizer",
-        name = "PyOxidizer",
-        version = PYOXIDIZER_VERSION,
-        manufacturer = AUTHOR,
+        id_prefix="pyoxidizer",
+        name="PyOxidizer",
+        version=PYOXIDIZER_VERSION,
+        manufacturer=AUTHOR,
     )
 
     bundle.add_vc_redistributable("x86")
     bundle.add_vc_redistributable("x64")
 
     bundle.add_wix_msi_builder(
-        builder = make_msi("i686-pc-windows-msvc", False),
-        display_internal_ui = True,
-        install_condition = "Not VersionNT64",
+        builder=make_msi("i686-pc-windows-msvc", False),
+        display_internal_ui=True,
+        install_condition="Not VersionNT64",
     )
     bundle.add_wix_msi_builder(
-        builder = make_msi("x86_64-pc-windows-msvc", False),
-        display_internal_ui = True,
-        install_condition = "VersionNT64",
+        builder=make_msi("x86_64-pc-windows-msvc", False),
+        display_internal_ui=True,
+        install_condition="VersionNT64",
     )
 
     return bundle
@@ -112,11 +117,11 @@ def make_macos_app_bundle():
 
     bundle = MacOsApplicationBundleBuilder("PyOxidizer")
     bundle.set_info_plist_required_keys(
-        display_name = "PyOxidizer",
-        identifier = "com.gregoryszorc.pyox",
-        version = PYOXIDIZER_VERSION,
-        signature = "pyox",
-        executable = "pyoxidizer",
+        display_name="PyOxidizer",
+        identifier="com.gregoryszorc.pyox",
+        version=PYOXIDIZER_VERSION,
+        signature="pyox",
+        executable="pyoxidizer",
     )
 
     universal = AppleUniversalBinary("pyoxidizer")
@@ -142,14 +147,14 @@ def make_wheel(platform_tag, target_triple):
     wheel.generator = "PyOxidizer (%s)" % PYOXIDIZER_VERSION
     wheel.tag = "py3-none-%s" % platform_tag
 
-    wheel.add_file_dist_info(FileContent(filename = "METADATA", content = WHEEL_METADATA))
+    wheel.add_file_dist_info(FileContent(filename="METADATA", content=WHEEL_METADATA))
 
     path = "target/%s/release/pyoxidizer" % target_triple
 
     if "-windows-" in target_triple:
         path = "%s.exe" % path
 
-    wheel.add_file_data("scripts", FileContent(path = path, executable = True))
+    wheel.add_file_data("scripts", FileContent(path=path, executable=True))
 
     return wheel
 
@@ -193,7 +198,7 @@ register_code_signers()
 
 register_target("msi_x86", make_msi_x86)
 register_target("msi_x86_64", make_msi_x86_64)
-register_target("exe_installer", make_exe_installer, default = True)
+register_target("exe_installer", make_exe_installer, default=True)
 register_target("macos_app_bundle", make_macos_app_bundle)
 register_target("wheel_aarch64-unknown-linux-musl", make_wheel_linux_aarch64)
 register_target("wheel_x86_64-unknown-linux-musl", make_wheel_linux_x86_64)

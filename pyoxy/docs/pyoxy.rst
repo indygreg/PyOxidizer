@@ -16,8 +16,8 @@ PyOxy is:
 * Part of the PyOxidizer umbrella project.
 
 The official home of PyOxy is https://github.com/indygreg/PyOxidizer/. Read the
-(`stable <https://pyoxidizer.readthedocs.io/en/stable/pyoxy.html>`_ |
-`latest <https://pyoxidizer.readthedocs.io/en/latest/pyoxy.html>`_) docs online.
+(`stable <https://gregoryszorc.com/docs/pyoxy/stable/>`_ |
+`latest <https://gregoryszorc.com/docs/pyoxy/main/>`_) docs online.
 
 Releases can be found at https://github.com/indygreg/PyOxidizer/releases.
 

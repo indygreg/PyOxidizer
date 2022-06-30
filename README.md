@@ -50,7 +50,7 @@ Rust and people may not even know because they never see a `libpython`,
 https://github.com/indygreg/PyOxidizer.
 
 :notebook_with_decorative_cover: Documentation (generated from the `docs/` directory) is available
-at https://pyoxidizer.readthedocs.io/en/latest/index.html.
+at https://gregoryszorc.com/docs/pyoxidizer/main/.
 
 :speech_balloon: The [pyoxidizer-users](https://groups.google.com/forum/#!forum/pyoxidizer-users)
 mailing list is a forum for users to discuss all things PyOxidizer.

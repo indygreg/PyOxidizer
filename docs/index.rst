@@ -8,9 +8,9 @@ of libraries and tools attempting to improve ergonomics around packaging
 and distributing [Python] applications.
 
 The official home of the project is https://github.com/indygreg/PyOxidizer.
-Official documentation lives on Read the Docs
-(`unreleased/latest commit <https://pyoxidizer.readthedocs.io/en/latest/index.html>`_,
-`last release <https://pyoxidizer.readthedocs.io/en/stable/index.html>`_).
+Official documentation lives on gregoryszorc.com
+(`unreleased/latest commit <https://gregoryszorc.com/docs/pyoxidizer/main/>`_,
+`last release <https://gregoryszorc.com/docs/pyoxidizer/stable/>`_).
 
 The `pyoxidizer-users <https://groups.google.com/forum/#!forum/pyoxidizer-users>`_
 mailing list is a forum for users to discuss all things PyOxidizer.

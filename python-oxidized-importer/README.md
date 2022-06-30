@@ -12,4 +12,4 @@ available Python resources.
 This project is part of the
 [PyOxidizer](https://github.com/indygreg/PyOxidizer) project. For more,
 see the documentation in the `docs/` directory, rendered online at
-https://pyoxidizer.readthedocs.io/en/latest/oxidized_importer.html.
+https://gregoryszorc.com/docs/python-oxidized-importer/main/.
