@@ -29,6 +29,6 @@ html_theme = "alabaster"
 master_doc = "index"
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
-    "setuptools": ("https://setuptools.readthedocs.io/en/latest", None),
+    "setuptools": ("https://setuptools.pypa.io/en/latest", None),
 }
 tags.add("apple_codesign")
