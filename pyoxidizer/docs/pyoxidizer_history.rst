@@ -28,6 +28,24 @@ Version History
 
 .. _version_0_22_0:
 
+0.23.0
+------
+
+(Not yet released.)
+
+Bug Fixes
+^^^^^^^^^
+
+* Default macOS Python distributions should no longer crash when running
+  tkinter. This fixes a regression introduced in the 0.20 release.
+
+Changes
+^^^^^^^
+
+* Default CPython distributions upgraded. CPython 3.10.4 upgraded to 3.10.5.
+  See https://github.com/indygreg/python-build-standalone/releases/tag/20220630
+  for additional changes.
+
 0.22.0
 ------
 
