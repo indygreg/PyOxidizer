@@ -20,7 +20,6 @@ members = [
     'release',
     'rpm-repository',
     'starlark-dialect-build-targets',
-    'text-stub-library',
     'tugger',
     'tugger-apple',
     'tugger-binary-analysis',
