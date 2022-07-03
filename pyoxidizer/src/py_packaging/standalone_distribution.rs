@@ -274,7 +274,7 @@ pub struct PythonPaths {
 }
 
 /// Resolve the location of Python modules given a base install path.
-pub fn resolve_python_paths(base: &Path, python_version: &str) -> PythonPaths {
+pub fn resolve_python_paths(base: &Path, python_major_minor_version: &str) -> PythonPaths {
     let prefix = base.to_path_buf();
 
     let p = prefix.clone();
@@ -296,7 +296,7 @@ pub fn resolve_python_paths(base: &Path, python_version: &str) -> PythonPaths {
 
     let unix_lib_dir = p
         .join("lib")
-        .join(format!("python{}", &python_version));
+        .join(format!("python{}", &python_major_minor_version));
 
     let stdlib = if unix_lib_dir.exists() {
         unix_lib_dir
@@ -1044,7 +1044,7 @@ impl StandaloneDistribution {
             );
         }
 
-        let python_paths = resolve_python_paths(&venv_base, &self.version);
+        let python_paths = resolve_python_paths(&venv_base, &self.python_major_minor_version());
 
         invoke_python(&python_paths, &["-m", "ensurepip"]);
 
@@ -1068,7 +1068,7 @@ impl StandaloneDistribution {
             invoke_python(&python_paths, &["-m", "venv", venv_dir_s.as_str()]);
         }
 
-        resolve_python_paths(path, &self.version)
+        resolve_python_paths(path, &self.python_major_minor_version())
     }
 
     /// Create or re-use an existing venv
@@ -1377,7 +1377,7 @@ impl PythonDistribution for StandaloneDistribution {
     /// Ensure pip is available to run in the distribution.
     fn ensure_pip(&self) -> Result<PathBuf> {
         let dist_prefix = self.base_dir.join("python").join("install");
-        let python_paths = resolve_python_paths(&dist_prefix, &self.version);
+        let python_paths = resolve_python_paths(&dist_prefix, &self.python_major_minor_version());
 
         let pip_path = python_paths.bin_dir.join(PIP_EXE_BASENAME);
 
