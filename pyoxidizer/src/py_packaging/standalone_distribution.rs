@@ -296,7 +296,7 @@ pub fn resolve_python_paths(base: &Path, python_version: &str) -> PythonPaths {
 
     let unix_lib_dir = p
         .join("lib")
-        .join(format!("python{}", &python_version[0..3]));
+        .join(format!("python{}", &python_version));
 
     let stdlib = if unix_lib_dir.exists() {
         unix_lib_dir
