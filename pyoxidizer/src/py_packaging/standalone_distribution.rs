@@ -1632,4 +1632,31 @@ pub mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_parse_python_major_minor_version() {
+        let version_expectations = [
+            ("3.7.1", "3.7"), ("3.10.1", "3.10"), ("1.2.3.4.5", "1.2"), ("1", "1.0")
+        ];
+        for (version, expected) in version_expectations {
+            assert_eq!(parse_python_major_minor_version(version), expected);
+        }
+    }
+
+    #[test]
+    fn test_resolve_python_paths_site_packages() -> Result<()> {
+        let python_paths = resolve_python_paths(
+            Path::new("/test/dir"), "3.10.4",
+        );
+        assert_eq!(
+            python_paths.site_packages.to_str().unwrap(), "/test/dir/lib/python3.10/site-packages"
+        );
+        let python_paths = resolve_python_paths(
+            Path::new("/test/dir"), "3.9.1"
+        );
+        assert_eq!(
+            python_paths.site_packages.to_str().unwrap(), "/test/dir/lib/python3.9/site-packages"
+        );
+        Ok(())
+    }
 }
