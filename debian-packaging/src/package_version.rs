@@ -39,7 +39,7 @@ use {
 ///
 /// assert!(v < PackageVersion::parse("1:4.7.0+dfsg1-3").unwrap());
 /// ```
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct PackageVersion {
     epoch: Option<u32>,
     upstream_version: String,
