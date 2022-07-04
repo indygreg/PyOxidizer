@@ -256,6 +256,16 @@ fn parse_python_json_from_distribution(dist_dir: &Path) -> Result<PythonJsonMain
     parse_python_json(&python_json_path)
 }
 
+fn parse_python_major_minor_version(version: &str) -> String {
+    let mut at_least_minor_version = String::from(version);
+    if !version.contains(".") {
+        at_least_minor_version.push_str(".0");
+    }
+    at_least_minor_version.split('.').take(2)
+        .collect::<Vec<&str>>()
+        .join(".")
+}
+
 /// Resolve the path to a `python` executable in a Python distribution.
 pub fn python_exe_path(dist_dir: &Path) -> Result<PathBuf> {
     let pi = parse_python_json_from_distribution(dist_dir)?;
@@ -296,7 +306,7 @@ pub fn resolve_python_paths(base: &Path, python_version: &str) -> PythonPaths {
 
     let unix_lib_dir = p
         .join("lib")
-        .join(format!("python{}", &python_version));
+        .join(format!("python{}", parse_python_major_minor_version(&python_version)));
 
     let stdlib = if unix_lib_dir.exists() {
         unix_lib_dir
@@ -1171,8 +1181,7 @@ impl PythonDistribution for StandaloneDistribution {
     }
 
     fn python_major_minor_version(&self) -> String {
-        let parts = self.version.split('.').take(2).collect::<Vec<_>>();
-        parts.join(".")
+        parse_python_major_minor_version(&self.version)
     }
 
     fn python_implementation(&self) -> &str {
