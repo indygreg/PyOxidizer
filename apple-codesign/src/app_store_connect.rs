@@ -216,6 +216,156 @@ pub struct MoreInfo {
     pub hash: Option<String>,
 }
 
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NewSubmissionRequestNotification {
+    pub channel: String,
+    pub target: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NewSubmissionRequest {
+    pub notifications: Vec<NewSubmissionRequestNotification>,
+    pub sha256: String,
+    pub submission_name: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NewSubmissionResponseDataAttributes {
+    pub aws_access_key_id: String,
+    pub aws_secret_access_key: String,
+    pub aws_session_token: String,
+    pub bucket: String,
+    pub object: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NewSubmissionResponseData {
+    pub attributes: NewSubmissionResponseDataAttributes,
+    pub id: String,
+    pub r#type: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NewSubmissionResponse {
+    pub data: NewSubmissionResponseData,
+    pub meta: Value,
+}
+
+const APPLE_NOTARY_SUBMIT_SOFTWARE_URL: &str = "https://appstoreconnect.apple.com/notary/v2/submissions";
+
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "PascalCase")]
+pub enum SubmissionResponseStatus {
+    Accepted,
+    #[serde(rename = "In Progress")]
+    InProgress,
+    Invalid,
+    Rejected,
+    #[serde(other)]
+    Unknown,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubmissionResponseDataAttributes {
+    pub created_date: String,
+    pub name: String,
+    pub status: SubmissionResponseStatus,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubmissionResponseData {
+    pub attributes: SubmissionResponseDataAttributes,
+    pub id: String,
+    pub r#type: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubmissionResponse {
+    pub data: SubmissionResponseData,
+    pub meta: Value,
+}
+
+impl SubmissionResponse {
+    /// Convert the instance into a [Result].
+    ///
+    /// Will yield [Err] if the notarization/upload was not successful.
+    pub fn into_result(self) -> Result<Self, AppleCodesignError> {
+        match self.data.attributes.status {
+            SubmissionResponseStatus::Accepted => Ok(self),
+            SubmissionResponseStatus::InProgress => Err(AppleCodesignError::NotarizeIncomplete),
+            SubmissionResponseStatus::Invalid => Err(AppleCodesignError::NotarizeInvalid),
+            SubmissionResponseStatus::Rejected => Err(AppleCodesignError::NotarizeRejected(0, "Notarization error".into())),
+            SubmissionResponseStatus::Unknown => Err(AppleCodesignError::NotarizeInvalid),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubmissionLogResponseDataAttributes {
+    developer_log_url: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubmissionLogResponseData {
+    pub attributes: SubmissionLogResponseDataAttributes,
+    pub id: String,
+    pub r#type: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubmissionLogResponse {
+    pub data: SubmissionLogResponseData,
+    pub meta: Value,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Issue {
+    pub architecture: String,
+    pub code: Option<u64>,
+    pub doc_url: Option<String>,
+    pub message: String,
+    pub path: String,
+    pub severity: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TicketContent {
+    pub arch: String,
+    pub cdhash: String,
+    pub digest_algorithm: String,
+    pub path: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NotarizationLogs {
+    pub archive_filename: String,
+    #[serde(default)]
+    pub issues: Vec<Issue>,
+    pub job_id: String,
+    pub log_format_version: u64,
+    pub sha256: String,
+    pub status: SubmissionResponseStatus,
+    pub status_code: u64,
+    pub status_summary: String,
+    #[serde(default)]
+    pub ticket_contents: Vec<TicketContent>,
+    pub upload_date: String,
+}
+
 /// A client for App Store Connect API.
 ///
 /// The client isn't generic. Don't get any ideas.
@@ -284,5 +434,82 @@ impl AppStoreConnectClient {
         let dev_id_response = serde_json::from_value::<DevIdPlusInfoResponse>(rpc_response.result)?;
 
         Ok(dev_id_response)
+    }
+
+    pub fn create_submission(&self, sha256: &str, submission_name: &str) -> Result<NewSubmissionResponse, AppleCodesignError> {
+        let token = {
+            let mut token = self.token.lock().unwrap();
+
+            if token.is_none() {
+                token.replace(self.connect_token.new_token(300)?);
+            }
+
+            token.as_ref().unwrap().clone()
+        };
+
+        let body = NewSubmissionRequest {
+            notifications: Vec::new(),
+            sha256: sha256.to_string(),
+            submission_name: submission_name.to_string(),
+        };
+        let req = self.client.post(APPLE_NOTARY_SUBMIT_SOFTWARE_URL)
+            .bearer_auth(token)
+            .header("Accept", "application/json")
+            .header("Content-Type", "application/json")
+            .json(&body);
+
+        let response = req.send()?;
+
+        let res_data = response.json::<NewSubmissionResponse>()?;
+
+        Ok(res_data)
+    }
+
+    pub fn get_submission(&self, submission_id: &str) -> Result<SubmissionResponse, AppleCodesignError> {
+        let token = {
+            let mut token = self.token.lock().unwrap();
+
+            if token.is_none() {
+                token.replace(self.connect_token.new_token(300)?);
+            }
+
+            token.as_ref().unwrap().clone()
+        };
+
+        let req = self.client.get(format!("https://appstoreconnect.apple.com/notary/v2/submissions/{}", submission_id))
+            .bearer_auth(token)
+            .header("Accept", "application/json");
+
+        let response = req.send()?;
+
+        let res_data = response.json::<SubmissionResponse>()?;
+
+        Ok(res_data)
+    }
+
+    pub fn get_submission_log(&self, submission_id: &str) -> Result<Value, AppleCodesignError> {
+        let token = {
+            let mut token = self.token.lock().unwrap();
+
+            if token.is_none() {
+                token.replace(self.connect_token.new_token(300)?);
+            }
+
+            token.as_ref().unwrap().clone()
+        };
+
+        let req = self.client.get(format!("https://appstoreconnect.apple.com/notary/v2/submissions/{}/logs", submission_id))
+            .bearer_auth(token)
+            .header("Accept", "application/json");
+
+        let response = req.send()?;
+
+        let res_data = response.json::<SubmissionLogResponse>()?;
+
+        let url = res_data.data.attributes.developer_log_url;
+
+        let logs = self.client.get(url).send()?.json::<Value>()?;
+
+        Ok(logs)
     }
 }

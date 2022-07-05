@@ -16,6 +16,9 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0"
+aws-config = "0.13.0"
+aws-sdk-s3 = "0.13.0"
+aws-smithy-http = "0.43.0"
 base64 = "0.13"
 bcder = "0.7"
 bitflags = "1.2"
@@ -65,6 +68,7 @@ spki = { version = "0.5", features = ["pem"] }
 subtle = "2.4"
 tempfile = "3.3"
 thiserror = "1.0"
+tokio = { version = "1.19", features = ["rt"] }
 tungstenite = { version = "0.17", features = ["rustls-tls-native-roots"] }
 uuid = { version = "1.1", features = ["v4"] }
 which = "4.2"
