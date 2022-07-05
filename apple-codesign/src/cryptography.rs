@@ -25,7 +25,7 @@ use {
     },
     ring::signature::{EcdsaKeyPair, Ed25519KeyPair, KeyPair, RsaKeyPair},
     rsa::{
-        algorithms::mgf1_xor, pkcs1::FromRsaPrivateKey, BigUint, PaddingScheme,
+        algorithms::mgf1_xor, pkcs1::DecodeRsaPrivateKey, BigUint, PaddingScheme,
         RsaPrivateKey as RsaConstructedKey,
     },
     signature::Signer,
