@@ -34,3 +34,6 @@ members = [
     'x509-certificate',
 ]
 resolver = "2"
+
+[patch.crates-io]
+rpm-rs = { git = "https://github.com/roblabla/rpm-rs", branch = "update-packages" }
