@@ -12,11 +12,8 @@ readme = "README.md"
 
 [dependencies]
 anyhow = "1.0"
+rpm-rs = "0.8"
 
 [dependencies.tugger-file-manifest]
 version = "0.5.0"
 # path = "../tugger-file-manifest"
-
-[target.'cfg(target_family = "unix")'.dependencies]
-# Crate doesn't build on Windows. https://github.com/Richterrettich/rpm-rs/pull/30 fixes.
-rpm-rs = "0.6"
