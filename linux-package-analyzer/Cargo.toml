@@ -31,7 +31,7 @@ symbolic-demangle = "8.5"
 tokio = { version = "1.15", features = ["full"] }
 url = "2.2"
 xz2 = { version = "0.1", features = ["static"] }
-zstd = "0.9"
+zstd = "0.11"
 
 [dependencies.debian-packaging]
 version = "0.15.0-pre"
@@ -42,5 +42,5 @@ version = "0.2.0-pre"
 path = "../rpm-repository"
 
 [dependencies.rpm-rs]
-git = "https://github.com/Richterrettich/rpm-rs"
-rev = "faa1b1ea7dd3f034c4fbc47bc43fc1fbe319a3c3"
+git = "https://github.com/indygreg/rpm-rs"
+rev = "d6623c68a85e3a14f4260c2161c348fa697131c0"
