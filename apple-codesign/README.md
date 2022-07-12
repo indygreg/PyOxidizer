@@ -36,7 +36,7 @@ $ cargo run --bin rcodesign -- --help
 $ cargo install --bin rcodesign
 
 # Remote install.
-$ cargo install --git https://github.com/indygreg/PyOxidizer --branch main rcodesign
+$ cargo install --git https://github.com/indygreg/PyOxidizer --branch main --bin rcodesign apple-codesign
 ```
 
 # Project Relationship
