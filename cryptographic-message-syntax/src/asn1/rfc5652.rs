@@ -652,10 +652,18 @@ impl SignedAttributes {
     /// Obtain an instance where the attributes are sorted according to DER
     /// rules. See the comment in [SignerInfo::signed_attributes_digested_content].
     pub fn as_sorted(&self) -> Result<Self, std::io::Error> {
-        // The official rules say you sort by the first element in the container.
-        // That's an Oid, which implements comparisons. So our job is easy.
         let mut res = self.0.clone();
-        res.sort_by(|a, b| a.typ.as_ref().cmp(b.typ.as_ref()));
+        // Ordering on the encoded bytes.
+        // Following: https://stackoverflow.com/a/72492744/2037998
+        res.sort_by_cached_key(|a| {
+            let mut a_encoded = Vec::new();
+            let a_values = a.clone().encode();
+            a_values.write_encoded(Mode::Der, &mut a_encoded).unwrap();
+            a_encoded
+        });
+        // PREVIOUS METHOD: The official rules say you sort by the first element in the container.
+        // That's an Oid, which implements comparisons. So our job is easy.
+        // res.sort_by(|a, b| a.typ.as_ref().cmp(b.typ.as_ref()));
 
         Ok(Self(res))
     }

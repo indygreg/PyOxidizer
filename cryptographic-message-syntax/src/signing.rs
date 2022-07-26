@@ -21,7 +21,7 @@ use {
     },
     bcder::{
         encode::{PrimitiveContent, Values},
-        Captured, Mode, OctetString, Oid,
+        Captured, Mode, Oid,
     },
     bytes::Bytes,
     reqwest::IntoUrl,
@@ -256,15 +256,6 @@ impl<'a> SignedDataBuilder<'a> {
 
             let mut signed_attributes = SignedAttributes::default();
 
-            // The content-type field is mandatory.
-            signed_attributes.push(Attribute {
-                typ: Oid(Bytes::copy_from_slice(OID_CONTENT_TYPE.as_ref())),
-                values: vec![AttributeValue::new(Captured::from_values(
-                    Mode::Der,
-                    signer.content_type.encode_ref(),
-                ))],
-            });
-
             // The message digest attribute is mandatory.
             //
             // Message digest is computed from override content on the signer
@@ -276,12 +267,23 @@ impl<'a> SignedDataBuilder<'a> {
             } else if let Some(content) = &self.signed_content {
                 hasher.update(content);
             }
+            let digest = hasher.finish();
 
+            // The content-type field is mandatory.
+            signed_attributes.push(Attribute {
+                typ: Oid(Bytes::copy_from_slice(OID_CONTENT_TYPE.as_ref())),
+                values: vec![AttributeValue::new(Captured::from_values(
+                    Mode::Der,
+                    signer.content_type.encode_ref(),
+                ))],
+            });
+
+            // Set `messageDigest` field
             signed_attributes.push(Attribute {
                 typ: Oid(Bytes::copy_from_slice(OID_MESSAGE_DIGEST.as_ref())),
                 values: vec![AttributeValue::new(Captured::from_values(
                     Mode::Der,
-                    hasher.finish().as_ref().encode(),
+                    digest.as_ref().encode(),
                 ))],
             });
 
@@ -391,6 +393,9 @@ impl<'a> SignedDataBuilder<'a> {
             digest_algorithms,
             content_info: EncapsulatedContentInfo {
                 content_type: self.content_type.clone(),
+                #[cfg(feature = "no_content")]
+                content: None,
+                #[cfg(not(feature = "no_content"))]
                 content: self
                     .signed_content
                     .as_ref()

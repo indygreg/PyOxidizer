@@ -78,6 +78,8 @@ mod time_stamp_protocol;
 pub use {
     signing::{SignedDataBuilder, SignerBuilder},
     time_stamp_protocol::{time_stamp_message_http, time_stamp_request_http, TimeStampError},
+    bytes::Bytes,
+    bcder::Oid,
 };
 
 use {
@@ -88,7 +90,7 @@ use {
             OID_SIGNING_TIME,
         },
     },
-    bcder::{Integer, OctetString, Oid},
+    bcder::{Integer, OctetString},
     pem::PemError,
     ring::{digest::Digest, signature::UnparsedPublicKey},
     std::{
