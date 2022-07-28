@@ -21,7 +21,7 @@ use {
     },
     bcder::{
         encode::{PrimitiveContent, Values},
-        Captured, Mode, Oid,
+        Captured, Mode, OctetString, Oid,
     },
     bytes::Bytes,
     reqwest::IntoUrl,
@@ -147,7 +147,7 @@ impl<'a> SignerBuilder<'a> {
 /// Use this type for generating an RFC 5652 payload for signed data.
 pub struct SignedDataBuilder<'a> {
     /// Encapsulated content to sign.
-    signed_content: Option<Vec<u8>>,
+    signed_content: SignedContent,
 
     /// Entities who will generated signatures.
     signers: Vec<SignerBuilder<'a>>,
@@ -163,10 +163,22 @@ pub struct SignedDataBuilder<'a> {
     content_type: Oid,
 }
 
+/// Encapsulated content to sign.
+pub enum SignedContent {
+    /// No content is being signed.
+    None,
+    
+    /// Signed content will be embedded in the signature.
+    Inline(Vec<u8>),
+
+    /// Signed content is external. Only digest (not the content) is captured in signature.
+    External(Vec<u8>),
+}
+
 impl<'a> Default for SignedDataBuilder<'a> {
     fn default() -> Self {
         Self {
-            signed_content: None,
+            signed_content: SignedContent::None,
             signers: vec![],
             certificates: vec![],
             content_type: Oid(OID_ID_SIGNED_DATA.as_ref().into()),
@@ -177,10 +189,11 @@ impl<'a> Default for SignedDataBuilder<'a> {
 impl<'a> SignedDataBuilder<'a> {
     /// Define the content to sign.
     ///
-    /// This content will be embedded in the generated payload.
+    /// `SignedContent::Inline` will embedded in the generated payload.
+    /// `SignedContent::External` but will only include the digest in the signature.
     #[must_use]
-    pub fn signed_content(mut self, data: Vec<u8>) -> Self {
-        self.signed_content = Some(data);
+    pub fn signed_content(mut self, data: SignedContent) -> Self {
+        self.signed_content = data;
         self
     }
 
@@ -264,8 +277,13 @@ impl<'a> SignedDataBuilder<'a> {
             let mut hasher = signer.digest_algorithm.digester();
             if let Some(content) = &signer.message_id_content {
                 hasher.update(content);
-            } else if let Some(content) = &self.signed_content {
-                hasher.update(content);
+            } else {
+                match &self.signed_content {
+                    SignedContent::None => {}
+                    SignedContent::Inline(content) | SignedContent::External(content) => {
+                        hasher.update(content)
+                    }
+                }
             }
             let digest = hasher.finish();
 
@@ -393,13 +411,12 @@ impl<'a> SignedDataBuilder<'a> {
             digest_algorithms,
             content_info: EncapsulatedContentInfo {
                 content_type: self.content_type.clone(),
-                #[cfg(feature = "no_content")]
-                content: None,
-                #[cfg(not(feature = "no_content"))]
-                content: self
-                    .signed_content
-                    .as_ref()
-                    .map(|content| OctetString::new(Bytes::copy_from_slice(content))),
+                content: match &self.signed_content {
+                    SignedContent::None | SignedContent::External(_) => None,
+                    SignedContent::Inline(content) => {
+                        Some(OctetString::new(Bytes::copy_from_slice(content)))
+                    }
+                },
             },
             certificates: if certificates.is_empty() {
                 None
@@ -437,7 +454,7 @@ mod tests {
         let signer = SignerBuilder::new(&key, cert);
 
         let ber = SignedDataBuilder::default()
-            .signed_content(vec![42])
+            .signed_content(SignedContent::Inline(vec![42]))
             .signer(signer)
             .build_der()
             .unwrap();
@@ -466,7 +483,7 @@ mod tests {
             .unwrap();
 
         let ber = SignedDataBuilder::default()
-            .signed_content(vec![42])
+            .signed_content(SignedContent::Inline(vec![42]))
             .signer(signer)
             .build_der()
             .unwrap();
@@ -498,7 +515,7 @@ mod tests {
             let (cert, key) = self_signed_ecdsa_key_pair(Some(*curve));
 
             let cms = SignedDataBuilder::default()
-                .signed_content("hello world".as_bytes().to_vec())
+                .signed_content(SignedContent::Inline("hello world".as_bytes().to_vec()))
                 .certificate(cert.clone())
                 .signer(SignerBuilder::new(&key, cert))
                 .build_der()
@@ -519,7 +536,7 @@ mod tests {
         let (cert, key) = self_signed_ed25519_key_pair();
 
         let cms = SignedDataBuilder::default()
-            .signed_content("hello world".as_bytes().to_vec())
+            .signed_content(SignedContent::Inline("hello world".as_bytes().to_vec()))
             .certificate(cert.clone())
             .signer(SignerBuilder::new(&key, cert))
             .build_der()

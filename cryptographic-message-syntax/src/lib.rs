@@ -78,7 +78,7 @@ mod time_stamp_protocol;
 pub use {
     bcder::Oid,
     bytes::Bytes,
-    signing::{SignedDataBuilder, SignerBuilder},
+    signing::{SignedContent, SignedDataBuilder, SignerBuilder},
     time_stamp_protocol::{time_stamp_message_http, time_stamp_request_http, TimeStampError},
 };
 
