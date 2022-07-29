@@ -29,7 +29,7 @@ git2 = { version = "0.14", default-features = false }
 anyhow = "1.0"
 apple-sdk = "0.1"
 ar = "0.9"
-cargo-lock = "7.0"
+cargo-lock = "8.0"
 cargo_metadata = "0.14"
 cargo_toml = "0.11"
 cc = "1.0"

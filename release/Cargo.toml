@@ -10,7 +10,7 @@ repository = "https://github.com/indygreg/PyOxidizer.git"
 
 [dependencies]
 anyhow = "1"
-cargo-lock = "7"
+cargo-lock = "8"
 cargo_toml = "0"
 clap = "3"
 duct = "0"

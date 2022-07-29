@@ -229,7 +229,7 @@ pub fn write_new_cargo_lock(
                 package.source = Some(
                     cargo_lock::SourceId::for_git(
                         &url::Url::from_str(url).context("parsing Git url")?,
-                        cargo_lock::package::source::GitReference::Rev(commit.clone()),
+                        cargo_lock::package::GitReference::Rev(commit.clone()),
                     )
                     .context("constructing Cargo.lock Git source")?,
                 );
