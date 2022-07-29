@@ -4031,7 +4031,6 @@ dependencies = [
  "assert_cmd",
  "assert_fs",
  "cargo-lock",
- "cargo_metadata",
  "cargo_toml",
  "cc",
  "clap 3.2.15",
