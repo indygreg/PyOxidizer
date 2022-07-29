@@ -191,25 +191,25 @@ fn derive_aead_keys(
 
 fn encode_sjs(
     scheme: &str,
-    payload: impl Encode,
+    payload: impl Encode<()>,
 ) -> ::std::result::Result<Vec<u8>, minicbor::encode::Error<std::io::Error>> {
     let mut encoder = Encoder::new(std::io::Cursor::new(Vec::<u8>::new()));
 
     {
         let encoder = encoder.array(2)?;
         encoder.str(scheme)?;
-        payload.encode(encoder)?;
+        payload.encode(encoder, &mut ())?;
         encoder.end()?;
     }
 
-    Ok(encoder.into_inner().into_inner())
+    Ok(encoder.into_writer().into_inner())
 }
 
 /// Common behaviors for a session join string.
 ///
 /// Implementations must also implement [Encode], which will emit the CBOR
 /// encoding of the instance to an encoder.
-pub trait SessionJoinString<'de>: Decode<'de> + Encode {
+pub trait SessionJoinString<'de>: Decode<'de, ()> + Encode<()> {
     /// The scheme / name for this SJS implementation.
     ///
     /// This is advertised as the first component in the encoded SJS.
@@ -228,8 +228,11 @@ struct PublicKeySessionJoinString {
     message_ciphertext: Vec<u8>,
 }
 
-impl<'de> Decode<'de> for PublicKeySessionJoinString {
-    fn decode(d: &mut Decoder<'de>) -> std::result::Result<Self, minicbor::decode::Error> {
+impl<'de, C> Decode<'de, C> for PublicKeySessionJoinString {
+    fn decode(
+        d: &mut Decoder<'de>,
+        _ctx: &mut C,
+    ) -> std::result::Result<Self, minicbor::decode::Error> {
         if !matches!(d.array()?, Some(3)) {
             return Err(minicbor::decode::Error::message(
                 "not an array of 3 elements",
@@ -248,10 +251,11 @@ impl<'de> Decode<'de> for PublicKeySessionJoinString {
     }
 }
 
-impl Encode for PublicKeySessionJoinString {
+impl<C> Encode<C> for PublicKeySessionJoinString {
     fn encode<W: Write>(
         &self,
         e: &mut Encoder<W>,
+        _ctx: &mut C,
     ) -> ::std::result::Result<(), minicbor::encode::Error<W::Error>> {
         e.array(3)?;
         e.bytes(&self.aes_ciphertext)?;
@@ -275,8 +279,11 @@ struct SharedSecretSessionJoinString {
     role_a_init_message: Vec<u8>,
 }
 
-impl<'de> Decode<'de> for SharedSecretSessionJoinString {
-    fn decode(d: &mut Decoder<'de>) -> std::result::Result<Self, minicbor::decode::Error> {
+impl<'de, C> Decode<'de, C> for SharedSecretSessionJoinString {
+    fn decode(
+        d: &mut Decoder<'de>,
+        _ctx: &mut C,
+    ) -> std::result::Result<Self, minicbor::decode::Error> {
         if !matches!(d.array()?, Some(3)) {
             return Err(minicbor::decode::Error::message(
                 "not an array of 3 elements",
@@ -295,10 +302,11 @@ impl<'de> Decode<'de> for SharedSecretSessionJoinString {
     }
 }
 
-impl Encode for SharedSecretSessionJoinString {
+impl<C> Encode<C> for SharedSecretSessionJoinString {
     fn encode<W: Write>(
         &self,
         e: &mut Encoder<W>,
+        _ctx: &mut C,
     ) -> ::std::result::Result<(), minicbor::encode::Error<W::Error>> {
         e.array(3)?;
         e.str(&self.session_id)?;
@@ -868,16 +876,17 @@ pub fn create_session_joiner(
 
     match scheme {
         _ if scheme == PublicKeySessionJoinString::scheme() => {
-            let sjs = PublicKeySessionJoinString::decode(&mut decoder).map_err(|e| {
+            let sjs = PublicKeySessionJoinString::decode(&mut decoder, &mut ()).map_err(|e| {
                 RemoteSignError::SessionJoinString(format!("error decoding payload: {}", e))
             })?;
 
             Ok(Box::new(PublicKeyPeerPreJoined::new(sjs)?) as Box<dyn SessionJoinPeerPreJoin>)
         }
         _ if scheme == SharedSecretSessionJoinString::scheme() => {
-            let sjs = SharedSecretSessionJoinString::decode(&mut decoder).map_err(|e| {
-                RemoteSignError::SessionJoinString(format!("error decoding payload: {}", e))
-            })?;
+            let sjs =
+                SharedSecretSessionJoinString::decode(&mut decoder, &mut ()).map_err(|e| {
+                    RemoteSignError::SessionJoinString(format!("error decoding payload: {}", e))
+                })?;
 
             Ok(Box::new(SharedSecretPeerPreJoined::new(sjs)?) as Box<dyn SessionJoinPeerPreJoin>)
         }

@@ -2,6 +2,14 @@
 `apple-codesign` History
 ========================
 
+0.17.0
+======
+
+(Not yet released)
+
+* minicbor crate upgraded from version 0.15. This created API differences in
+  remote signing code.
+
 0.16.0
 ======
 
