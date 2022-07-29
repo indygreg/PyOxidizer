@@ -1051,7 +1051,7 @@ mod test {
 
         let client =
             debian_packaging::repository::reader_from_str("http://us.archive.ubuntu.com/ubuntu")?;
-        let release = client.release_reader("impish").await?;
+        let release = client.release_reader("jammy").await?;
 
         let libc = release
             .resolve_packages("main", "amd64", false)
@@ -1085,12 +1085,12 @@ mod test {
         let urls = db.package_urls().context("package_urls")?;
         assert_eq!(urls.len(), 1);
 
-        assert_eq!(db.elf_file_count()?, 275);
+        assert_eq!(db.elf_file_count()?, 274);
 
         let counts = db.elf_file_section_counts_global()?;
         assert_eq!(counts.len(), 79);
-        assert_eq!(counts[0], ("".to_string(), 275));
-        assert_eq!(counts[1], (".bss".to_string(), 275));
+        assert_eq!(counts[0], ("".to_string(), 274));
+        assert_eq!(counts[1], (".bss".to_string(), 274));
 
         let ifuncs = db.elf_file_ifuncs()?;
 
@@ -1104,9 +1104,9 @@ mod test {
         let importing = db
             .elf_files_importing_symbol("malloc")
             .context("elf_files_importing_symbol")?;
-        assert_eq!(importing.len(), 10);
+        assert_eq!(importing.len(), 9);
         assert_eq!(importing[0].0, "libc6");
-        assert_eq!(importing[0].2, "lib/x86_64-linux-gnu/libSegFault.so");
+        assert_eq!(importing[0].2, "lib/x86_64-linux-gnu/libnsl.so.1");
 
         db.elf_files_defining_symbol("memcpy")
             .context("file_files_defining_symbol")?;
