@@ -23,7 +23,7 @@ test = false
 [build-dependencies]
 # We don't need network functionality. So disable default features which
 # pull it in.
-git2 = { version = "0.14", default-features = false }
+git2 = { version = "0.15", default-features = false }
 
 [dependencies]
 anyhow = "1.0"
