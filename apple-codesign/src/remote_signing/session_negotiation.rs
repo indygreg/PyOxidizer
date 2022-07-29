@@ -192,8 +192,8 @@ fn derive_aead_keys(
 fn encode_sjs(
     scheme: &str,
     payload: impl Encode<()>,
-) -> ::std::result::Result<Vec<u8>, minicbor::encode::Error<std::io::Error>> {
-    let mut encoder = Encoder::new(std::io::Cursor::new(Vec::<u8>::new()));
+) -> ::std::result::Result<Vec<u8>, minicbor::encode::Error<std::convert::Infallible>> {
+    let mut encoder = Encoder::new(Vec::<u8>::new());
 
     {
         let encoder = encoder.array(2)?;
@@ -202,7 +202,7 @@ fn encode_sjs(
         encoder.end()?;
     }
 
-    Ok(encoder.into_writer().into_inner())
+    Ok(encoder.into_writer())
 }
 
 /// Common behaviors for a session join string.
