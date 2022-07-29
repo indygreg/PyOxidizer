@@ -27,7 +27,7 @@ object = "0.29"
 once_cell = "1.9"
 pbr = "1.0"
 rusqlite = { version = "0.28", features = ["bundled"] }
-symbolic-demangle = "8.5"
+symbolic-demangle = "9.0"
 tokio = { version = "1.15", features = ["full"] }
 url = "2.2"
 xz2 = { version = "0.1", features = ["static"] }
