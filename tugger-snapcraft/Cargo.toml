@@ -15,7 +15,7 @@ anyhow = "1.0"
 duct = "0.13"
 log = "0.4"
 remove_dir_all = "0.7"
-serde_yaml = "0.8"
+serde_yaml = "0.9"
 serde = { version = "1.0", features = ["derive"] }
 
 [dependencies.tugger-common]

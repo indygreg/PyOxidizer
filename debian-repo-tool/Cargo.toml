@@ -18,7 +18,7 @@ path = "src/main.rs"
 clap = "3.1"
 num_cpus = "1.13"
 pbr = "1.0"
-serde_yaml = "0.8"
+serde_yaml = "0.9"
 thiserror = "1.0"
 tokio = { version = "1.15", features = ["full"] }
 
