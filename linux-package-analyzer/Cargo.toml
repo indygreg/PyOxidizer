@@ -23,7 +23,7 @@ futures-util = "0.3"
 iced-x86 = "1.15"
 indoc = "1.0"
 num_cpus = "1.13"
-object = "0.28"
+object = "0.29"
 once_cell = "1.9"
 pbr = "1.0"
 rusqlite = { version = "0.27", features = ["bundled"] }
