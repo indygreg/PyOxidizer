@@ -7,7 +7,7 @@
 use {
     crate::rfc5480::EcParameters,
     bcder::{
-        decode::{Constructed, Source},
+        decode::{Constructed, DecodeError, Source},
         encode::{self, PrimitiveContent, Values},
         BitString, ConstOid, Integer, OctetString, Oid, Tag,
     },
@@ -37,7 +37,7 @@ pub struct EcPrivateKey {
 }
 
 impl EcPrivateKey {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         cons.take_sequence(|cons| {
             let version = Integer::take_from(cons)?;
             let private_key = OctetString::take_from(cons)?;

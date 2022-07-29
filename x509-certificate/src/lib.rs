@@ -116,7 +116,7 @@ pub enum X509CertificateError {
     PrivateKeyRejected(&'static str),
 
     #[error("error when decoding ASN.1 data: {0}")]
-    Asn1Parse(bcder::decode::Error),
+    Asn1Parse(bcder::decode::DecodeError<std::convert::Infallible>),
 
     #[error("I/O error occurred: {0}")]
     Io(#[from] std::io::Error),
@@ -152,8 +152,8 @@ impl From<ring::error::KeyRejected> for X509CertificateError {
     }
 }
 
-impl From<bcder::decode::Error> for X509CertificateError {
-    fn from(e: bcder::decode::Error) -> Self {
+impl From<bcder::decode::DecodeError<std::convert::Infallible>> for X509CertificateError {
+    fn from(e: bcder::decode::DecodeError<std::convert::Infallible>) -> Self {
         Self::Asn1Parse(e)
     }
 }

@@ -5,7 +5,7 @@
 //! ASN.1 types defined by RFC 4210.
 
 use bcder::{
-    decode::{Constructed, Source},
+    decode::{Constructed, DecodeError, Source},
     encode::{self, Values},
     Tag, Utf8String,
 };
@@ -19,15 +19,19 @@ use bcder::{
 pub struct PkiFreeText(Vec<Utf8String>);
 
 impl PkiFreeText {
-    pub fn take_opt_from<S: Source>(cons: &mut Constructed<S>) -> Result<Option<Self>, S::Err> {
+    pub fn take_opt_from<S: Source>(
+        cons: &mut Constructed<S>,
+    ) -> Result<Option<Self>, DecodeError<S::Error>> {
         cons.take_opt_sequence(|cons| Self::from_sequence(cons))
     }
 
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         cons.take_sequence(|cons| Self::from_sequence(cons))
     }
 
-    pub fn from_sequence<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn from_sequence<S: Source>(
+        cons: &mut Constructed<S>,
+    ) -> Result<Self, DecodeError<S::Error>> {
         let mut res = vec![];
 
         while let Some(s) = cons.take_opt_value_if(Tag::UTF8_STRING, |content| {

@@ -15,7 +15,7 @@ this crate relies on for certificate parsing functionality.
 use {
     crate::asn1::rfc3281::AttributeCertificate,
     bcder::{
-        decode::{Constructed, Malformed, Source, Unimplemented},
+        decode::{Constructed, DecodeError, Source},
         encode,
         encode::{PrimitiveContent, Values},
         BitString, Captured, ConstOid, Integer, Mode, OctetString, Oid, Tag,
@@ -103,11 +103,15 @@ impl PartialEq for ContentInfo {
 impl Eq for ContentInfo {}
 
 impl ContentInfo {
-    pub fn take_opt_from<S: Source>(cons: &mut Constructed<S>) -> Result<Option<Self>, S::Err> {
+    pub fn take_opt_from<S: Source>(
+        cons: &mut Constructed<S>,
+    ) -> Result<Option<Self>, DecodeError<S::Error>> {
         cons.take_opt_sequence(|cons| Self::from_sequence(cons))
     }
 
-    pub fn from_sequence<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn from_sequence<S: Source>(
+        cons: &mut Constructed<S>,
+    ) -> Result<Self, DecodeError<S::Error>> {
         let content_type = ContentType::take_from(cons)?;
         let content = cons.take_constructed_if(Tag::CTX_0, |cons| cons.capture_all())?;
 
@@ -154,23 +158,23 @@ pub struct SignedData {
 
 impl SignedData {
     /// Attempt to decode BER encoded bytes to a parsed data structure.
-    pub fn decode_ber(data: &[u8]) -> Result<Self, bcder::decode::Error> {
+    pub fn decode_ber(data: &[u8]) -> Result<Self, DecodeError<std::convert::Infallible>> {
         Constructed::decode(data, bcder::Mode::Ber, |cons| Self::decode(cons))
     }
 
-    pub fn decode<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn decode<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         cons.take_sequence(|cons| {
             let oid = Oid::take_from(cons)?;
 
             if oid != OID_ID_SIGNED_DATA {
-                return Err(Malformed.into());
+                return Err(cons.content_err("expected signed data OID"));
             }
 
             cons.take_constructed_if(Tag::CTX_0, Self::take_from)
         })
     }
 
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         cons.take_sequence(|cons| {
             let version = CmsVersion::take_from(cons)?;
             let digest_algorithms = DigestAlgorithmIdentifiers::take_from(cons)?;
@@ -236,7 +240,7 @@ impl DerefMut for DigestAlgorithmIdentifiers {
 }
 
 impl DigestAlgorithmIdentifiers {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         cons.take_set(|cons| {
             let mut identifiers = Vec::new();
 
@@ -278,7 +282,7 @@ impl DerefMut for SignerInfos {
 }
 
 impl SignerInfos {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         cons.take_set(|cons| {
             let mut infos = Vec::new();
 
@@ -326,7 +330,7 @@ impl Debug for EncapsulatedContentInfo {
 }
 
 impl EncapsulatedContentInfo {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         cons.take_sequence(|cons| {
             let content_type = ContentType::take_from(cons)?;
             let content =
@@ -378,11 +382,15 @@ pub struct SignerInfo {
 }
 
 impl SignerInfo {
-    pub fn take_opt_from<S: Source>(cons: &mut Constructed<S>) -> Result<Option<Self>, S::Err> {
+    pub fn take_opt_from<S: Source>(
+        cons: &mut Constructed<S>,
+    ) -> Result<Option<Self>, DecodeError<S::Error>> {
         cons.take_opt_sequence(|cons| Self::from_sequence(cons))
     }
 
-    pub fn from_sequence<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn from_sequence<S: Source>(
+        cons: &mut Constructed<S>,
+    ) -> Result<Self, DecodeError<S::Error>> {
         let version = CmsVersion::take_from(cons)?;
         let sid = SignerIdentifier::take_from(cons)?;
         let digest_algorithm = DigestAlgorithmIdentifier::take_from(cons)?;
@@ -402,7 +410,8 @@ impl SignerInfo {
             Ok((
                 Constructed::decode(der.as_slice(), bcder::Mode::Der, |cons| {
                     SignedAttributes::take_from_set(cons)
-                })?,
+                })
+                .map_err(|e| e.convert())?,
                 der_data,
             ))
         })?;
@@ -581,7 +590,7 @@ pub enum SignerIdentifier {
 }
 
 impl SignerIdentifier {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         if let Some(identifier) =
             cons.take_opt_constructed_if(Tag::CTX_0, |cons| SubjectKeyIdentifier::take_from(cons))?
         {
@@ -635,11 +644,13 @@ impl DerefMut for SignedAttributes {
 }
 
 impl SignedAttributes {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         cons.take_set(|cons| Self::take_from_set(cons))
     }
 
-    pub fn take_from_set<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from_set<S: Source>(
+        cons: &mut Constructed<S>,
+    ) -> Result<Self, DecodeError<S::Error>> {
         let mut attributes = Vec::new();
 
         while let Some(attribute) = Attribute::take_opt_from(cons)? {
@@ -729,11 +740,13 @@ impl DerefMut for UnsignedAttributes {
 }
 
 impl UnsignedAttributes {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         cons.take_set(|cons| Self::take_from_set(cons))
     }
 
-    pub fn take_from_set<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from_set<S: Source>(
+        cons: &mut Constructed<S>,
+    ) -> Result<Self, DecodeError<S::Error>> {
         let mut attributes = Vec::new();
 
         while let Some(attribute) = Attribute::take_opt_from(cons)? {
@@ -1090,8 +1103,8 @@ pub type KeyDerivationAlgorithmIdentifier = AlgorithmIdentifier;
 pub struct RevocationInfoChoices(Vec<RevocationInfoChoice>);
 
 impl RevocationInfoChoices {
-    pub fn take_from<S: Source>(_cons: &mut Constructed<S>) -> Result<Self, S::Err> {
-        Err(Unimplemented.into())
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
+        Err(cons.content_err("RevocationInfoChoices parsing not implemented"))
     }
 }
 
@@ -1142,12 +1155,14 @@ pub enum CertificateChoices {
 }
 
 impl CertificateChoices {
-    pub fn take_opt_from<S: Source>(cons: &mut Constructed<S>) -> Result<Option<Self>, S::Err> {
-        cons.take_opt_constructed_if(Tag::CTX_0, |_cons| -> Result<(), S::Err> {
-            Err(Unimplemented.into())
+    pub fn take_opt_from<S: Source>(
+        cons: &mut Constructed<S>,
+    ) -> Result<Option<Self>, DecodeError<S::Error>> {
+        cons.take_opt_constructed_if(Tag::CTX_0, |cons| -> Result<(), DecodeError<S::Error>> {
+            Err(cons.content_err("ExtendedCertificate parsing not implemented"))
         })?;
-        cons.take_opt_constructed_if(Tag::CTX_1, |_cons| -> Result<(), S::Err> {
-            Err(Unimplemented.into())
+        cons.take_opt_constructed_if(Tag::CTX_1, |cons| -> Result<(), DecodeError<S::Error>> {
+            Err(cons.content_err("AttributeCertificateV1 parsing not implemented"))
         })?;
 
         // TODO these first 2 need methods that parse an already entered SEQUENCE.
@@ -1202,8 +1217,8 @@ pub struct OtherCertificateFormat {
 }
 
 impl OtherCertificateFormat {
-    pub fn take_from<S: Source>(_cons: &mut Constructed<S>) -> Result<Self, S::Err> {
-        Err(Unimplemented.into())
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
+        Err(cons.content_err("OtherCertificateFormat parsing not implemented"))
     }
 }
 
@@ -1225,7 +1240,7 @@ impl DerefMut for CertificateSet {
 }
 
 impl CertificateSet {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         let mut certs = Vec::new();
 
         while let Some(cert) = CertificateChoices::take_opt_from(cons)? {
@@ -1254,7 +1269,7 @@ pub struct IssuerAndSerialNumber {
 }
 
 impl IssuerAndSerialNumber {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         cons.take_sequence(|cons| {
             let issuer = Name::take_from(cons)?;
             let serial_number = Integer::take_from(cons)?;
@@ -1290,7 +1305,7 @@ pub enum CmsVersion {
 }
 
 impl CmsVersion {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         match cons.take_primitive_if(Tag::INTEGER, Integer::i8_from_primitive)? {
             0 => Ok(Self::V0),
             1 => Ok(Self::V1),
@@ -1298,7 +1313,7 @@ impl CmsVersion {
             3 => Ok(Self::V3),
             4 => Ok(Self::V4),
             5 => Ok(Self::V5),
-            _ => Err(Malformed.into()),
+            _ => Err(cons.content_err("unexpected CMSVersion")),
         }
     }
 
@@ -1356,7 +1371,7 @@ pub enum Time {
 }
 
 impl Time {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         if let Some(utc) =
             cons.take_opt_primitive_if(Tag::UTC_TIME, |prim| UtcTime::from_primitive(prim))?
         {
@@ -1368,7 +1383,7 @@ impl Time {
         {
             Ok(Self::GeneralizedTime(generalized))
         } else {
-            Err(Malformed.into())
+            Err(cons.content_err("invalid Time value"))
         }
     }
 }

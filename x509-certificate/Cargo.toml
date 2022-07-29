@@ -14,7 +14,7 @@ readme = "README.md"
 test = []
 
 [dependencies]
-bcder = "0.6"
+bcder = "0.7"
 bytes = "1.0"
 chrono = "0.4"
 der = "0.5"

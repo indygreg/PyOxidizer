@@ -5,7 +5,7 @@
 //! ASN.1 primitives defined by RFC 8017.
 
 use bcder::{
-    decode::{Constructed, Source},
+    decode::{Constructed, DecodeError, Source},
     encode::{self, PrimitiveContent, Values},
     Unsigned,
 };
@@ -25,7 +25,7 @@ pub struct RsaPublicKey {
 }
 
 impl RsaPublicKey {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         cons.take_sequence(|cons| {
             let modulus = Unsigned::take_from(cons)?;
             let public_exponent = Unsigned::take_from(cons)?;

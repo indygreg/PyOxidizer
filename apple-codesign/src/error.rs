@@ -57,7 +57,7 @@ pub enum AppleCodesignError {
     CertificateGeneric(String),
 
     #[error("certificate decode error: {0}")]
-    CertificateDecode(bcder::decode::Error),
+    CertificateDecode(bcder::decode::DecodeError<std::convert::Infallible>),
 
     #[error("PEM error: {0}")]
     CertificatePem(pem::PemError),

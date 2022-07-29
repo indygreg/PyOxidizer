@@ -7,7 +7,7 @@
 use {
     crate::{asn1time::*, rfc3280::*},
     bcder::{
-        decode::{Constructed, Malformed, Source, Unimplemented},
+        decode::{BytesSource, Constructed, DecodeError, IntoSource, Source},
         encode,
         encode::{PrimitiveContent, Values},
         BitString, Captured, Integer, Mode, OctetString, Oid, Tag,
@@ -43,15 +43,17 @@ impl Debug for AlgorithmIdentifier {
 }
 
 impl AlgorithmIdentifier {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         cons.take_sequence(|cons| Self::take_sequence(cons))
     }
 
-    pub fn take_opt_from<S: Source>(cons: &mut Constructed<S>) -> Result<Option<Self>, S::Err> {
+    pub fn take_opt_from<S: Source>(
+        cons: &mut Constructed<S>,
+    ) -> Result<Option<Self>, DecodeError<S::Error>> {
         cons.take_opt_sequence(|cons| Self::take_sequence(cons))
     }
 
-    fn take_sequence<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    fn take_sequence<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         let algorithm = Oid::take_from(cons)?;
         let parameters = cons.capture_all()?;
 
@@ -108,12 +110,10 @@ impl AlgorithmParameter {
     }
 
     /// Attempt to decode a single OID from the captured value.
-    pub fn decode_oid(&self) -> Result<Oid, bcder::decode::Error> {
-        Constructed::decode(
-            Bytes::copy_from_slice(self.0.as_slice()),
-            Mode::Der,
-            |cons| Oid::take_from(cons),
-        )
+    pub fn decode_oid(&self) -> Result<Oid, DecodeError<<BytesSource as Source>::Error>> {
+        let source = BytesSource::new(Bytes::copy_from_slice(self.0.as_slice()));
+
+        Constructed::decode(source, Mode::Der, |cons| Oid::take_from(cons))
     }
 }
 
@@ -184,11 +184,13 @@ impl Debug for Certificate {
 }
 
 impl Certificate {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         cons.take_sequence(|cons| Self::from_sequence(cons))
     }
 
-    pub fn from_sequence<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn from_sequence<S: Source>(
+        cons: &mut Constructed<S>,
+    ) -> Result<Self, DecodeError<S::Error>> {
         let tbs_certificate = TbsCertificate::take_from(cons)?;
         let signature_algorithm = AlgorithmIdentifier::take_from(cons)?;
         let signature = BitString::take_from(cons)?;
@@ -278,7 +280,7 @@ impl Debug for TbsCertificate {
 }
 
 impl TbsCertificate {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         // The TbsCertificate data is what's signed by the issuing certificate. To
         // facilitate signature verification, we stash away the raw data so they
         // can be accessed later.
@@ -358,12 +360,12 @@ pub enum Version {
 }
 
 impl Version {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         match cons.take_primitive_if(Tag::INTEGER, Integer::i8_from_primitive)? {
             0 => Ok(Self::V1),
             1 => Ok(Self::V2),
             2 => Ok(Self::V3),
-            _ => Err(Malformed.into()),
+            _ => Err(cons.content_err("unexpected Version value")),
         }
     }
 
@@ -391,7 +393,7 @@ pub struct Validity {
 }
 
 impl Validity {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         cons.take_sequence(|cons| {
             let not_before = Time::take_from(cons)?;
             let not_after = Time::take_from(cons)?;
@@ -440,7 +442,7 @@ impl Debug for SubjectPublicKeyInfo {
 }
 
 impl SubjectPublicKeyInfo {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         cons.take_sequence(|cons| {
             let algorithm = AlgorithmIdentifier::take_from(cons)?;
             let subject_public_key = BitString::take_from(cons)?;
@@ -466,15 +468,19 @@ impl SubjectPublicKeyInfo {
 pub struct Extensions(Vec<Extension>);
 
 impl Extensions {
-    pub fn take_opt_from<S: Source>(cons: &mut Constructed<S>) -> Result<Option<Self>, S::Err> {
+    pub fn take_opt_from<S: Source>(
+        cons: &mut Constructed<S>,
+    ) -> Result<Option<Self>, DecodeError<S::Error>> {
         cons.take_opt_sequence(|cons| Self::from_sequence(cons))
     }
 
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         cons.take_sequence(|cons| Self::from_sequence(cons))
     }
 
-    pub fn from_sequence<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn from_sequence<S: Source>(
+        cons: &mut Constructed<S>,
+    ) -> Result<Self, DecodeError<S::Error>> {
         let mut extensions = Vec::new();
 
         while let Some(extension) = Extension::take_opt_from(cons)? {
@@ -540,15 +546,17 @@ impl Debug for Extension {
 }
 
 impl Extension {
-    pub fn take_opt_from<S: Source>(cons: &mut Constructed<S>) -> Result<Option<Self>, S::Err> {
+    pub fn take_opt_from<S: Source>(
+        cons: &mut Constructed<S>,
+    ) -> Result<Option<Self>, DecodeError<S::Error>> {
         cons.take_opt_sequence(|cons| Self::from_sequence(cons))
     }
 
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         cons.take_sequence(|cons| Self::from_sequence(cons))
     }
 
-    fn from_sequence<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    fn from_sequence<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         let id = Oid::take_from(cons)?;
         let critical = cons.take_opt_bool()?;
         let value = OctetString::take_from(cons)?;
@@ -576,7 +584,7 @@ impl Extension {
     ///
     /// If this works, we return Some. Else None.
     pub fn try_decode_sequence_single_oid(&self) -> Option<Oid> {
-        Constructed::decode(self.value.to_source(), Mode::Der, |cons| {
+        Constructed::decode(self.value.clone().into_source(), Mode::Der, |cons| {
             cons.take_sequence(|cons| Oid::take_from(cons))
         })
         .ok()
@@ -609,7 +617,7 @@ pub struct CertificateList {
 }
 
 impl CertificateList {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         let tbs_cert_list = TbsCertList::take_from(cons)?;
         let signature_algorithm = AlgorithmIdentifier::take_from(cons)?;
         let signature = BitString::take_from(cons)?;
@@ -653,7 +661,7 @@ pub struct TbsCertList {
 }
 
 impl TbsCertList {
-    pub fn take_from<S: Source>(_cons: &mut Constructed<S>) -> Result<Self, S::Err> {
-        Err(Unimplemented.into())
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
+        Err(cons.content_err("parsing of TBSCertList not implemented"))
     }
 }

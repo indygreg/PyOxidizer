@@ -12,7 +12,7 @@ readme = "README.md"
 
 [dependencies]
 anyhow = "1.0"
-bcder = "0.6"
+bcder = "0.7"
 goblin = "0.5"
 log = "0.4"
 p12 = "0.6"

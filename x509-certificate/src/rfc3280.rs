@@ -10,7 +10,7 @@ use {
         OID_ORGANIZATION_NAME, OID_STATE_PROVINCE_NAME,
     },
     bcder::{
-        decode::{Constructed, Error::Malformed, Error::Unimplemented, Source},
+        decode::{BytesSource, Constructed, DecodeError, Source},
         encode,
         encode::{PrimitiveContent, Values},
         string::{Ia5String, PrintableString, Utf8String},
@@ -54,7 +54,7 @@ pub enum GeneralName {
 }
 
 impl GeneralName {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         if let Some(name) =
             cons.take_opt_constructed_if(Tag::CTX_0, |cons| AnotherName::take_from(cons))?
         {
@@ -92,7 +92,7 @@ impl GeneralName {
         {
             Ok(Self::RegisteredId(name))
         } else {
-            Err(Malformed.into())
+            Err(cons.content_err("unexpected GeneralName variant"))
         }
     }
 
@@ -207,7 +207,7 @@ impl PartialEq for AnotherName {
 impl Eq for AnotherName {}
 
 impl AnotherName {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         cons.take_sequence(|cons| {
             let type_id = Oid::take_from(cons)?;
             let value = cons.take_constructed_if(Tag::CTX_0, |cons| cons.capture_all())?;
@@ -241,7 +241,7 @@ pub struct EdiPartyName {
 }
 
 impl EdiPartyName {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         cons.take_sequence(|cons| {
             let name_assigner =
                 cons.take_opt_constructed_if(Tag::CTX_0, |cons| DirectoryString::take_from(cons))?;
@@ -300,7 +300,7 @@ pub enum DirectoryString {
 }
 
 impl DirectoryString {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         cons.take_value(|tag, content| {
             if tag == Tag::PRINTABLE_STRING {
                 Ok(Self::PrintableString(PrintableString::from_content(
@@ -309,7 +309,8 @@ impl DirectoryString {
             } else if tag == Tag::UTF8_STRING {
                 Ok(Self::Utf8String(Utf8String::from_content(content)?))
             } else {
-                Err(Unimplemented.into())
+                Err(content
+                    .content_err("only decoding of PrintableString and UTF8String is implemented"))
             }
         })
     }
@@ -349,7 +350,7 @@ pub enum Name {
 }
 
 impl Name {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         Ok(Self::RdnSequence(RdnSequence::take_from(cons)?))
     }
 
@@ -432,7 +433,7 @@ impl Name {
     pub fn find_first_attribute_string(
         &self,
         oid: Oid,
-    ) -> Result<Option<String>, bcder::decode::Error> {
+    ) -> Result<Option<String>, DecodeError<<BytesSource as Source>::Error>> {
         if let Some(atv) = self.find_attribute(oid) {
             Ok(Some(atv.to_string()?))
         } else {
@@ -447,7 +448,7 @@ impl Name {
     ///
     /// Not all attributes are printed. Do not compare the output of this
     /// function to test equality.
-    pub fn user_friendly_str(&self) -> Result<String, bcder::decode::Error> {
+    pub fn user_friendly_str(&self) -> Result<String, DecodeError<<BytesSource as Source>::Error>> {
         let mut fields = vec![];
 
         for cn in self.iter_common_name() {
@@ -577,7 +578,7 @@ impl DerefMut for RdnSequence {
 }
 
 impl RdnSequence {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         cons.take_sequence(|cons| {
             let mut values = Vec::new();
 
@@ -624,7 +625,9 @@ impl DerefMut for RelativeDistinguishedName {
 }
 
 impl RelativeDistinguishedName {
-    pub fn take_opt_from<S: Source>(cons: &mut Constructed<S>) -> Result<Option<Self>, S::Err> {
+    pub fn take_opt_from<S: Source>(
+        cons: &mut Constructed<S>,
+    ) -> Result<Option<Self>, DecodeError<S::Error>> {
         cons.take_opt_set(|cons| {
             let mut values = Vec::new();
 
@@ -655,8 +658,8 @@ impl Values for RelativeDistinguishedName {
 pub struct OrAddress {}
 
 impl OrAddress {
-    pub fn take_from<S: Source>(_: &mut Constructed<S>) -> Result<Self, S::Err> {
-        Err(Unimplemented.into())
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
+        Err(cons.content_err("parsing of OrAddress not implemented"))
     }
 }
 
@@ -683,7 +686,9 @@ impl Debug for AttributeTypeAndValue {
 }
 
 impl AttributeTypeAndValue {
-    pub fn take_opt_from<S: Source>(cons: &mut Constructed<S>) -> Result<Option<Self>, S::Err> {
+    pub fn take_opt_from<S: Source>(
+        cons: &mut Constructed<S>,
+    ) -> Result<Option<Self>, DecodeError<S::Error>> {
         cons.take_opt_sequence(|cons| {
             let typ = AttributeType::take_from(cons)?;
             let value = cons.capture_all()?;
@@ -700,7 +705,7 @@ impl AttributeTypeAndValue {
     }
 
     /// Attempt to coerce the stored value to a Rust string.
-    pub fn to_string(&self) -> Result<String, bcder::decode::Error> {
+    pub fn to_string(&self) -> Result<String, DecodeError<<BytesSource as Source>::Error>> {
         self.value.to_string()
     }
 
@@ -780,7 +785,7 @@ impl AttributeValue {
     /// a lot of them and hopefully yield a working result.
     ///
     /// If the inner type isn't a known string, a decoding error occurs.
-    pub fn to_string(&self) -> Result<String, bcder::decode::Error> {
+    pub fn to_string(&self) -> Result<String, DecodeError<<BytesSource as Source>::Error>> {
         self.0.clone().decode(|cons| {
             if let Some(s) = cons.take_opt_value_if(Tag::NUMERIC_STRING, |content| {
                 bcder::NumericString::from_content(content)

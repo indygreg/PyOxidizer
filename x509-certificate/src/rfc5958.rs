@@ -7,7 +7,7 @@
 use {
     crate::{rfc5280::AlgorithmIdentifier, rfc5652::Attribute, rfc5915::EcPrivateKey},
     bcder::{
-        decode::{Constructed, Malformed, Source},
+        decode::{Constructed, DecodeError, IntoSource, Source},
         encode::{self, PrimitiveContent, Values},
         BitString, Integer, Mode, OctetString, Tag,
     },
@@ -37,7 +37,7 @@ pub struct OneAsymmetricKey {
 }
 
 impl OneAsymmetricKey {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         cons.take_sequence(|cons| {
             let version = Version::take_from(cons)?;
             let private_key_algorithm = PrivateKeyAlgorithmIdentifier::take_from(cons)?;
@@ -91,11 +91,11 @@ pub enum Version {
 }
 
 impl Version {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         match cons.take_primitive_if(Tag::INTEGER, Integer::i8_from_primitive)? {
             0 => Ok(Self::V1),
             1 => Ok(Self::V2),
-            _ => Err(Malformed.into()),
+            _ => Err(cons.content_err("unexpected Version value")),
         }
     }
 
@@ -119,12 +119,17 @@ impl From<Version> for u8 {
 pub type PrivateKey = OctetString;
 
 impl TryFrom<&PrivateKey> for EcPrivateKey {
-    type Error = bcder::decode::Error;
+    type Error = DecodeError<std::convert::Infallible>;
 
     fn try_from(v: &PrivateKey) -> Result<Self, Self::Error> {
-        Constructed::decode(v.as_slice().ok_or(Malformed)?, Mode::Der, |cons| {
-            EcPrivateKey::take_from(cons)
-        })
+        let source = v.clone().into_source();
+
+        Constructed::decode(
+            v.as_slice()
+                .ok_or_else(|| source.content_err("missing private key data"))?,
+            Mode::Der,
+            |cons| EcPrivateKey::take_from(cons),
+        )
     }
 }
 

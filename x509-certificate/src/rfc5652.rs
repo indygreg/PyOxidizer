@@ -10,7 +10,7 @@
 
 use {
     bcder::{
-        decode::{Constructed, Source},
+        decode::{Constructed, DecodeError, Source},
         encode::{self, PrimitiveContent, Values},
         Captured, Mode, Oid,
     },
@@ -44,7 +44,9 @@ impl Debug for Attribute {
 }
 
 impl Attribute {
-    pub fn take_opt_from<S: Source>(cons: &mut Constructed<S>) -> Result<Option<Self>, S::Err> {
+    pub fn take_opt_from<S: Source>(
+        cons: &mut Constructed<S>,
+    ) -> Result<Option<Self>, DecodeError<S::Error>> {
         cons.take_opt_sequence(|cons| {
             let typ = Oid::take_from(cons)?;
 
@@ -89,7 +91,9 @@ impl AttributeValue {
         Self(captured)
     }
 
-    pub fn take_opt_from<S: Source>(cons: &mut Constructed<S>) -> Result<Option<Self>, S::Err> {
+    pub fn take_opt_from<S: Source>(
+        cons: &mut Constructed<S>,
+    ) -> Result<Option<Self>, DecodeError<S::Error>> {
         let captured = cons.capture_all()?;
 
         if captured.is_empty() {

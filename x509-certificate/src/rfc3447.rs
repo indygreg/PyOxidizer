@@ -7,7 +7,7 @@
 use {
     crate::rfc5280::AlgorithmIdentifier,
     bcder::{
-        decode::{Constructed, Source},
+        decode::{Constructed, DecodeError, Source},
         encode::{self, PrimitiveContent, Values},
         Mode, OctetString, Unsigned,
     },
@@ -35,7 +35,7 @@ pub struct DigestInfo {
 }
 
 impl DigestInfo {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         cons.take_sequence(|cons| {
             let algorithm = AlgorithmIdentifier::take_from(cons)?;
             let digest = OctetString::take_from(cons)?;
@@ -76,15 +76,17 @@ pub struct OtherPrimeInfo {
 }
 
 impl OtherPrimeInfo {
-    pub fn take_opt_from<S: Source>(cons: &mut Constructed<S>) -> Result<Option<Self>, S::Err> {
+    pub fn take_opt_from<S: Source>(
+        cons: &mut Constructed<S>,
+    ) -> Result<Option<Self>, DecodeError<S::Error>> {
         cons.take_opt_sequence(|cons| Self::from_sequence(cons))
     }
 
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         cons.take_sequence(|cons| Self::from_sequence(cons))
     }
 
-    fn from_sequence<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    fn from_sequence<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         let ri = Unsigned::take_from(cons)?;
         let di = Unsigned::take_from(cons)?;
         let ti = Unsigned::take_from(cons)?;
@@ -128,15 +130,19 @@ impl DerefMut for OtherPrimeInfos {
 }
 
 impl OtherPrimeInfos {
-    pub fn take_opt_from<S: Source>(cons: &mut Constructed<S>) -> Result<Option<Self>, S::Err> {
+    pub fn take_opt_from<S: Source>(
+        cons: &mut Constructed<S>,
+    ) -> Result<Option<Self>, DecodeError<S::Error>> {
         cons.take_opt_sequence(|cons| Self::from_sequence(cons))
     }
 
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         cons.take_sequence(|cons| Self::from_sequence(cons))
     }
 
-    pub fn from_sequence<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn from_sequence<S: Source>(
+        cons: &mut Constructed<S>,
+    ) -> Result<Self, DecodeError<S::Error>> {
         let mut vals = Vec::new();
 
         while let Some(info) = OtherPrimeInfo::take_opt_from(cons)? {
@@ -192,7 +198,7 @@ pub struct RsaPrivateKey {
 }
 
 impl RsaPrivateKey {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         cons.take_sequence(|cons| {
             let version = Unsigned::take_from(cons)?;
             let n = Unsigned::take_from(cons)?;

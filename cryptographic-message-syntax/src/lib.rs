@@ -105,7 +105,7 @@ use {
 #[derive(Debug)]
 pub enum CmsError {
     /// An error occurred decoding ASN.1 data.
-    DecodeErr(bcder::decode::Error),
+    DecodeErr(bcder::decode::DecodeError<std::convert::Infallible>),
 
     /// The content-type attribute is missing from the SignedAttributes structure.
     MissingSignedAttributeContentType,
@@ -234,8 +234,8 @@ impl Display for CmsError {
     }
 }
 
-impl From<bcder::decode::Error> for CmsError {
-    fn from(e: bcder::decode::Error) -> Self {
+impl From<bcder::decode::DecodeError<std::convert::Infallible>> for CmsError {
+    fn from(e: bcder::decode::DecodeError<std::convert::Infallible>) -> Self {
         Self::DecodeErr(e)
     }
 }

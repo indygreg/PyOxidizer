@@ -5,7 +5,7 @@
 //! ASN.1 primitives defined by RFC 5480.
 
 use bcder::{
-    decode::{Constructed, Source, Unimplemented},
+    decode::{Constructed, DecodeError, Source},
     encode::{PrimitiveContent, Values},
     Oid, Tag,
 };
@@ -28,7 +28,7 @@ pub enum EcParameters {
 }
 
 impl EcParameters {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         if let Some(oid) = Oid::take_opt_from(cons)? {
             Ok(Self::NamedCurve(oid))
         } else {
@@ -40,7 +40,7 @@ impl EcParameters {
             if null_value.is_some() {
                 Ok(Self::ImplicitCurve)
             } else {
-                Err(Unimplemented.into())
+                Err(cons.content_err("parsing of SpecifiecECDomain not implemented"))
             }
         }
     }

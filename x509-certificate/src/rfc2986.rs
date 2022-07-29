@@ -12,7 +12,7 @@ use {
         rfc5958::Attributes,
     },
     bcder::{
-        decode::{Constructed, Malformed, Source},
+        decode::{Constructed, DecodeError, Source},
         encode::{self, PrimitiveContent, Values},
         BitString, Integer, Mode, Tag,
     },
@@ -33,10 +33,10 @@ impl From<Version> for u8 {
 }
 
 impl Version {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         match cons.take_primitive_if(Tag::INTEGER, Integer::i8_from_primitive)? {
             0 => Ok(Self::V1),
-            _ => Err(Malformed.into()),
+            _ => Err(cons.content_err("unexpected non-integer when parsing Version")),
         }
     }
 
@@ -64,11 +64,13 @@ pub struct CertificationRequestInfo {
 }
 
 impl CertificationRequestInfo {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         cons.take_sequence(|cons| Self::from_sequence(cons))
     }
 
-    pub fn from_sequence<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn from_sequence<S: Source>(
+        cons: &mut Constructed<S>,
+    ) -> Result<Self, DecodeError<S::Error>> {
         let version = Version::take_from(cons)?;
         let subject = Name::take_from(cons)?;
         let subject_public_key_info = SubjectPublicKeyInfo::take_from(cons)?;
@@ -127,11 +129,13 @@ pub struct CertificationRequest {
 }
 
 impl CertificationRequest {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, DecodeError<S::Error>> {
         cons.take_sequence(|cons| Self::from_sequence(cons))
     }
 
-    pub fn from_sequence<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn from_sequence<S: Source>(
+        cons: &mut Constructed<S>,
+    ) -> Result<Self, DecodeError<S::Error>> {
         let certificate_request_info = CertificationRequestInfo::take_from(cons)?;
         let signature_algorithm = AlgorithmIdentifier::take_from(cons)?;
         let signature = BitString::take_from(cons)?;

@@ -13,13 +13,13 @@ use {
         rfc5652::{SignedData, OID_ID_SIGNED_DATA},
     },
     bcder::{
-        decode::{Constructed, Malformed},
+        decode::{Constructed, DecodeError, IntoSource, Source},
         encode::Values,
         Integer, OctetString,
     },
     reqwest::IntoUrl,
     ring::rand::SecureRandom,
-    std::ops::Deref,
+    std::{convert::Infallible, ops::Deref},
     x509_certificate::DigestAlgorithm,
 };
 
@@ -31,7 +31,7 @@ pub const HTTP_CONTENT_TYPE_RESPONSE: &str = "application/timestamp-reply";
 pub enum TimeStampError {
     Io(std::io::Error),
     Reqwest(reqwest::Error),
-    Asn1Decode(bcder::decode::Error),
+    Asn1Decode(DecodeError<Infallible>),
     Http(&'static str),
     Random,
     NonceMismatch,
@@ -71,8 +71,8 @@ impl From<reqwest::Error> for TimeStampError {
     }
 }
 
-impl From<bcder::decode::Error> for TimeStampError {
-    fn from(e: bcder::decode::Error) -> Self {
+impl From<DecodeError<Infallible>> for TimeStampError {
+    fn from(e: DecodeError<Infallible>) -> Self {
         Self::Asn1Decode(e)
     }
 }
@@ -109,24 +109,23 @@ impl TimeStampResponse {
     }
 
     /// Decode the `SignedData` value in the response.
-    pub fn signed_data(&self) -> Result<Option<SignedData>, bcder::decode::Error> {
+    pub fn signed_data(&self) -> Result<Option<SignedData>, DecodeError<Infallible>> {
         if let Some(token) = &self.0.time_stamp_token {
+            let source = token.content.clone();
+
             if token.content_type == OID_ID_SIGNED_DATA {
-                Ok(Some(
-                    token
-                        .content
-                        .clone()
-                        .decode(|cons| SignedData::take_from(cons))?,
-                ))
+                Ok(Some(source.decode(|cons| SignedData::take_from(cons))?))
             } else {
-                Err(Malformed)
+                Err(source
+                    .into_source()
+                    .content_err("invalid OID on signed data"))
             }
         } else {
             Ok(None)
         }
     }
 
-    pub fn tst_info(&self) -> Result<Option<TstInfo>, bcder::decode::Error> {
+    pub fn tst_info(&self) -> Result<Option<TstInfo>, DecodeError<Infallible>> {
         if let Some(signed_data) = self.signed_data()? {
             if signed_data.content_info.content_type == OID_CONTENT_TYPE_TST_INFO {
                 if let Some(content) = signed_data.content_info.content {

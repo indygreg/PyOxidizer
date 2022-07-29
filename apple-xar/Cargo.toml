@@ -12,7 +12,7 @@ readme = "README.md"
 
 [dependencies]
 base64 = "0.13"
-bcder = "0.6"
+bcder = "0.7"
 bzip2 = "0.4"
 chrono = { version = "0.4", features = ["serde"] }
 digest = "0.10"
