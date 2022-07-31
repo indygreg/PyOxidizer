@@ -40,4 +40,4 @@ path = "../tugger-file-manifest"
 tempfile = "3.2"
 
 [target.'cfg(windows)'.dev-dependencies]
-msi = "0.4"
+msi = "0.5"
