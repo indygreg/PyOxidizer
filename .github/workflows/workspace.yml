@@ -35,6 +35,7 @@ jobs:
       IN_CI: '1'
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      CARGO_TERM_COLOR: always
       SCCACHE_BUCKET: 'pyoxidizer-sccache'
       SCCACHE_S3_USE_SSL: '1'
       # Prevent sccache server from stopping due to inactivity.
@@ -62,13 +63,13 @@ jobs:
         run: |
           rustc --version
           cargo build --workspace --exclude pyembed --exclude pyembed-bench --exclude pyoxy --exclude python-oxidized-importer
-          cargo test --workspace --exclude pyembed --exclude pyembed-bench --exclude pyoxy --exclude python-oxidized-importer --no-run
+          cargo nextest run --no-run --workspace --exclude pyembed --exclude pyembed-bench --exclude pyoxy --exclude python-oxidized-importer
 
       - name: Test Workspace
         env:
           RUSTC_WRAPPER: sccache
         run: |
-          cargo test --workspace --exclude pyembed --exclude pyembed-bench --exclude pyoxy --exclude python-oxidized-importer
+          cargo nextest run --no-fail-fast --workspace --exclude pyembed --exclude pyembed-bench --exclude pyoxy --exclude python-oxidized-importer
 
       - uses: actions-rs/clippy@master
         if: ${{ matrix.rust_toolchain == 'stable' || matrix.rust_toolchain == 'beta' }}

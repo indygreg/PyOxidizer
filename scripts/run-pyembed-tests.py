@@ -32,7 +32,14 @@ else:
 
 sys.exit(
     subprocess.run(
-        ["cargo", "test", "-p", sys.argv[1]],
+        [
+            "cargo",
+            "nextest",
+            "run",
+            "--no-fail-fast",
+            "-p",
+            sys.argv[1],
+        ],
         cwd=str(ROOT),
         env=os.environ,
     ).returncode

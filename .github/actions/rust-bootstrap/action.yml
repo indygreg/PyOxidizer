@@ -21,6 +21,8 @@ runs:
         profile: minimal
         components: clippy
 
+    - uses: taiki-e/install-action@nextest
+
     - name: Bootstrap Environment (Linux)
       if: runner.os == 'Linux'
       shell: bash
