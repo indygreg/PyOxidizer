@@ -256,6 +256,18 @@ fn parse_python_json_from_distribution(dist_dir: &Path) -> Result<PythonJsonMain
     parse_python_json(&python_json_path)
 }
 
+fn parse_python_major_minor_version(version: &str) -> String {
+    let mut at_least_minor_version = String::from(version);
+    if !version.contains(".") {
+        at_least_minor_version.push_str(".0");
+    }
+    at_least_minor_version
+        .split('.')
+        .take(2)
+        .collect::<Vec<_>>()
+        .join(".")
+}
+
 /// Resolve the path to a `python` executable in a Python distribution.
 pub fn python_exe_path(dist_dir: &Path) -> Result<PathBuf> {
     let pi = parse_python_json_from_distribution(dist_dir)?;
@@ -294,9 +306,10 @@ pub fn resolve_python_paths(base: &Path, python_version: &str) -> PythonPaths {
     let mut pyoxidizer_state_dir = p.clone();
     pyoxidizer_state_dir.extend(PYOXIDIZER_STATE_DIR.split('/'));
 
-    let unix_lib_dir = p
-        .join("lib")
-        .join(format!("python{}", &python_version[0..3]));
+    let unix_lib_dir = p.join("lib").join(format!(
+        "python{}",
+        parse_python_major_minor_version(python_version)
+    ));
 
     let stdlib = if unix_lib_dir.exists() {
         unix_lib_dir
@@ -1171,8 +1184,7 @@ impl PythonDistribution for StandaloneDistribution {
     }
 
     fn python_major_minor_version(&self) -> String {
-        let parts = self.version.split('.').take(2).collect::<Vec<_>>();
-        parts.join(".")
+        parse_python_major_minor_version(&self.version)
     }
 
     fn python_implementation(&self) -> &str {
@@ -1630,6 +1642,34 @@ pub mod tests {
             }
         }
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_parse_python_major_minor_version() {
+        let version_expectations = [
+            ("3.7.1", "3.7"),
+            ("3.10.1", "3.10"),
+            ("1.2.3.4.5", "1.2"),
+            ("1", "1.0"),
+        ];
+        for (version, expected) in version_expectations {
+            assert_eq!(parse_python_major_minor_version(version), expected);
+        }
+    }
+
+    #[test]
+    fn test_resolve_python_paths_site_packages() -> Result<()> {
+        let python_paths = resolve_python_paths(Path::new("/test/dir"), "3.10.4");
+        assert_eq!(
+            python_paths.site_packages.to_str().unwrap(),
+            "/test/dir/lib/python3.10/site-packages"
+        );
+        let python_paths = resolve_python_paths(Path::new("/test/dir"), "3.9.1");
+        assert_eq!(
+            python_paths.site_packages.to_str().unwrap(),
+            "/test/dir/lib/python3.9/site-packages"
+        );
         Ok(())
     }
 }

@@ -38,6 +38,9 @@ Bug Fixes
 
 * Default macOS Python distributions should no longer crash when running
   tkinter. This fixes a regression introduced in the 0.20 release.
+* The paths to Python modules when using Python 3.10 is now properly resolved.
+  Before, buggy version string parsing caused various code to look for Python
+  modules in a ``3.1`` directory instead of ``3.10``. (#569, #600).
 
 Changes
 ^^^^^^^
