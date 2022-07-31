@@ -254,17 +254,6 @@ impl<'a> SignedDataBuilder<'a> {
                 serial_number: signer.signing_certificate.serial_number_asn1().clone(),
             });
 
-            let mut signed_attributes = SignedAttributes::default();
-
-            // The content-type field is mandatory.
-            signed_attributes.push(Attribute {
-                typ: Oid(Bytes::copy_from_slice(OID_CONTENT_TYPE.as_ref())),
-                values: vec![AttributeValue::new(Captured::from_values(
-                    Mode::Der,
-                    signer.content_type.encode_ref(),
-                ))],
-            });
-
             // The message digest attribute is mandatory.
             //
             // Message digest is computed from override content on the signer
@@ -276,6 +265,17 @@ impl<'a> SignedDataBuilder<'a> {
             } else if let Some(content) = &self.signed_content {
                 hasher.update(content);
             }
+
+            let mut signed_attributes = SignedAttributes::default();
+
+            // The content-type field is mandatory.
+            signed_attributes.push(Attribute {
+                typ: Oid(Bytes::copy_from_slice(OID_CONTENT_TYPE.as_ref())),
+                values: vec![AttributeValue::new(Captured::from_values(
+                    Mode::Der,
+                    signer.content_type.encode_ref(),
+                ))],
+            });
 
             signed_attributes.push(Attribute {
                 typ: Oid(Bytes::copy_from_slice(OID_MESSAGE_DIGEST.as_ref())),
