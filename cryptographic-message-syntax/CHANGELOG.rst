@@ -15,3 +15,7 @@
   incorrect signatures being produced or validations incorrectly failing. (#614)
 * The crate now re-exports some symbols for 3rd party crates ``bcder::Oid`` and
   ``bytes::Bytes``.
+* Support for creating *external signatures*, which are signatures over external
+  content not stored inline in produced signatures. (#614)
+* (API change) ``SignedDataBuilder::signed_content()`` has effectively been
+  renamed to ``content_inline()``. (#614)

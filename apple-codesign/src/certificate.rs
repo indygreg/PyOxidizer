@@ -1413,7 +1413,7 @@ mod tests {
 
             let cms = SignedDataBuilder::default()
                 .certificate(cert.clone())
-                .signed_content(plaintext.as_bytes().to_vec())
+                .content_inline(plaintext.as_bytes().to_vec())
                 .signer(SignerBuilder::new(&signing_key, cert.clone()))
                 .build_der()
                 .unwrap();
@@ -1444,7 +1444,7 @@ mod tests {
 
         let cms = SignedDataBuilder::default()
             .certificate(cert.clone())
-            .signed_content(plaintext.as_bytes().to_vec())
+            .content_inline(plaintext.as_bytes().to_vec())
             .signer(SignerBuilder::new(&signing_key, cert))
             .build_der()
             .unwrap();
