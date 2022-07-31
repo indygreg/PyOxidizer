@@ -553,6 +553,11 @@ impl SignerInfo {
     /// [Self::verify_signature_with_signed_data()], the content that was signed is passed in
     /// explicitly instead of derived from [SignedData].
     ///
+    /// This is a low-level API that bypasses the normal rules for deriving the raw content a
+    /// cryptographic signature was made over. You probably want to use
+    /// [Self::verify_signature_with_signed_data()] instead. Also note that `signed_content` here
+    /// may or may not be the _encapsulated content_ which is ultimately signed.
+    ///
     /// This method only performs cryptographic signature verification. It is therefore subject
     /// to the same limitations as [Self::verify_signature_with_signed_data()].
     pub fn verify_signature_with_signed_data_and_content(
