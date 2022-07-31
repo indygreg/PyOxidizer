@@ -13,3 +13,5 @@
   sorting mechanism that was only partially correct and would result in
   incorrect sorting for some inputs. The old behavior could have resulted in
   incorrect signatures being produced or validations incorrectly failing. (#614)
+* The crate now re-exports some symbols for 3rd party crates ``bcder::Oid`` and
+  ``bytes::Bytes``.
