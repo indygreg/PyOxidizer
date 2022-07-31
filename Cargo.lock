@@ -171,9 +171,9 @@ dependencies = [
 
 [[package]]
 name = "apple-sdk"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "533cf89d89fba96977c893cf035af9493c6a93b58b3f7dc1da0af57369cd5a7b"
+checksum = "a41965f6961b03445e0f009ba9c8ae32eeca2a8c4be92553060a5d2fb8910d70"
 dependencies = [
  "plist",
  "serde",
