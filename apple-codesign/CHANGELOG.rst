@@ -43,6 +43,8 @@
   to custom Mach-O functionality. Most code interfacing with a Mach-O file now
   uses these types. The ``AppleSignable`` trait has been deleted as it is no
   longer needed since we have the dedicated ``MachOBinary`` type.
+* Fixed a bug where we hit an assertion when adding code signatures to Mach-O
+  binaries having padding between segments. (#588 and #616)
 
 0.16.0
 ======

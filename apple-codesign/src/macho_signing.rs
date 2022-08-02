@@ -30,7 +30,7 @@ use {
         },
         parse_magic_and_ctx,
     },
-    log::{info, warn},
+    log::{debug, info, warn},
     scroll::{ctx::SizeWith, IOwrite},
     std::{borrow::Cow, cmp::Ordering, collections::HashMap, io::Write, path::Path},
     tugger_apple::create_universal_macho,
@@ -162,14 +162,42 @@ fn create_macho_with_signature(
 
     // Write out segments, updating the __LINKEDIT segment when we encounter it.
     for segment in macho.macho.segments.iter() {
-        assert!(segment.fileoff == 0 || segment.fileoff == cursor.position());
-
         // The initial __PAGEZERO segment contains no data (it is the magic and load
         // commands) and overlaps with the __TEXT segment, which has .fileoff =0, so
         // we ignore it.
         if matches!(segment.name(), Ok(SEG_PAGEZERO)) {
             continue;
         }
+
+        match cursor.position().cmp(&segment.fileoff) {
+            // Mach-O segments may have padding between them. In this case, copy these
+            // bytes (presumably NULLs but that isn't guaranteed) to the output.
+            Ordering::Less => {
+                let padding = &macho.data[cursor.position() as usize..segment.fileoff as usize];
+                debug!(
+                    "copying {} bytes outside segment boundaries before segment {}",
+                    padding.len(),
+                    segment.name().unwrap_or("<unknown>")
+                );
+                cursor.write_all(&padding)?;
+            }
+            // The __TEXT segment usually has .fileoff = 0, which has it overlapping with
+            // already written data. Allow this special case through.
+            Ordering::Greater if segment.fileoff == 0 => {}
+
+            // The writer has overran into this segment. That means we screwed up on a
+            // previous loop iteration.
+            Ordering::Greater => {
+                return Err(AppleCodesignError::MachOWrite(format!(
+                    "Mach-O segment corruption: cursor at 0x{:x} but segment begins at 0x{:x} (please report this bug)",
+                    cursor.position(),
+                    segment.fileoff
+                )));
+            }
+            Ordering::Equal => {}
+        }
+
+        assert!(segment.fileoff == 0 || segment.fileoff == cursor.position());
 
         match segment.name() {
             Ok(SEG_LINKEDIT) => {

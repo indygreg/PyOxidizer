@@ -167,6 +167,9 @@ pub enum AppleCodesignError {
     #[error("insufficient room to write code signature load command")]
     LoadCommandNoRoom,
 
+    #[error("error writing Mach-O: {0}")]
+    MachOWrite(String),
+
     #[error("no identifier string provided")]
     NoIdentifier,
 
