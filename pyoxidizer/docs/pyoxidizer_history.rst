@@ -45,8 +45,9 @@ Bug Fixes
 Changes
 ^^^^^^^
 
-* Default CPython distributions upgraded. CPython 3.10.4 upgraded to 3.10.5.
+* Default CPython distributions upgraded. CPython 3.10.4 upgraded to 3.10.6.
   See https://github.com/indygreg/python-build-standalone/releases/tag/20220630
+  and https://github.com/indygreg/python-build-standalone/releases/tag/20220802
   for additional changes.
 
 0.22.0
