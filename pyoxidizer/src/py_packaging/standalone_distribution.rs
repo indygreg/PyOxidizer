@@ -291,7 +291,9 @@ pub fn resolve_python_paths(base: &Path, python_version: &str) -> PythonPaths {
 
     let p = prefix.clone();
 
-    let bin_dir = if p.join("Scripts").exists() || cfg!(windows) {
+    let windows_layout = p.join("Scripts").exists();
+
+    let bin_dir = if windows_layout {
         p.join("Scripts")
     } else {
         p.join("bin")
@@ -313,7 +315,7 @@ pub fn resolve_python_paths(base: &Path, python_version: &str) -> PythonPaths {
 
     let stdlib = if unix_lib_dir.exists() {
         unix_lib_dir
-    } else if cfg!(windows) {
+    } else if windows_layout {
         p.join("Lib")
     } else {
         unix_lib_dir
@@ -1662,12 +1664,20 @@ pub mod tests {
     fn test_resolve_python_paths_site_packages() -> Result<()> {
         let python_paths = resolve_python_paths(Path::new("/test/dir"), "3.10.4");
         assert_eq!(
-            python_paths.site_packages.to_str().unwrap(),
+            python_paths
+                .site_packages
+                .to_str()
+                .unwrap()
+                .replace('\\', "/"),
             "/test/dir/lib/python3.10/site-packages"
         );
         let python_paths = resolve_python_paths(Path::new("/test/dir"), "3.9.1");
         assert_eq!(
-            python_paths.site_packages.to_str().unwrap(),
+            python_paths
+                .site_packages
+                .to_str()
+                .unwrap()
+                .replace('\\', "/"),
             "/test/dir/lib/python3.9/site-packages"
         );
         Ok(())
