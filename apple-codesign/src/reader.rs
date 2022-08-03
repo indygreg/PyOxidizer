@@ -388,6 +388,7 @@ pub struct CodeDirectory {
     pub executable_segment_flags: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub runtime_version: Option<String>,
+    pub code_digests_count: usize,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     slot_digests: Vec<String>,
 }
@@ -420,6 +421,7 @@ impl<'a> TryFrom<CodeDirectoryBlob<'a>> for CodeDirectory {
             runtime_version: cd
                 .runtime
                 .map(|x| format!("{}", crate::macho::parse_version_nibbles(x))),
+            code_digests_count: cd.code_digests.len(),
             slot_digests,
         })
     }
