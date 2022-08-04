@@ -69,7 +69,7 @@ use {
         cryptography::{parse_pfx_data, InMemoryPrivateKey, PrivateKey},
         embedded_signature::{Blob, CodeSigningSlot, DigestType, RequirementSetBlob},
         error::AppleCodesignError,
-        macho::{find_macho_targeting, find_signature_data, AppleSignable},
+        macho::{find_macho_targeting, find_signature_data, get_macho_from_data, AppleSignable},
         reader::SignatureReader,
         remote_signing::{
             session_negotiation::{
@@ -84,7 +84,6 @@ use {
     clap::{Arg, ArgGroup, ArgMatches, Command},
     cryptographic_message_syntax::SignedData,
     difference::{Changeset, Difference},
-    goblin::mach::{Mach, MachO},
     log::{error, warn, LevelFilter},
     spki::EncodePublicKey,
     std::{io::Write, path::PathBuf, str::FromStr},
@@ -500,22 +499,6 @@ fn parse_scoped_value(s: &str) -> Result<(SettingsScope, &str), AppleCodesignErr
         1 => Ok((SettingsScope::Main, s)),
         2 => Ok((SettingsScope::try_from(parts[0])?, parts[1])),
         _ => Err(AppleCodesignError::CliBadArgument),
-    }
-}
-
-fn get_macho_from_data(data: &[u8], universal_index: usize) -> Result<MachO, AppleCodesignError> {
-    let mach = Mach::parse(data)?;
-
-    match mach {
-        Mach::Binary(macho) => Ok(macho),
-        Mach::Fat(multiarch) => {
-            eprintln!(
-                "found fat/universal Mach-O binary with {} architectures; examining binary at index {}",
-                multiarch.narches, universal_index
-            );
-
-            Ok(multiarch.get(universal_index)?)
-        }
     }
 }
 

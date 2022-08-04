@@ -338,6 +338,21 @@ impl<'a> AppleSignable for MachO<'a> {
     }
 }
 
+/// Obtain a parsed Mach-O binary from raw data.
+///
+/// Data can refer to a single arch or fat/multiarch Mach-O binary.
+pub fn get_macho_from_data(
+    data: &[u8],
+    universal_index: usize,
+) -> Result<MachO, AppleCodesignError> {
+    let mach = Mach::parse(data)?;
+
+    match mach {
+        Mach::Binary(macho) => Ok(macho),
+        Mach::Fat(multiarch) => Ok(multiarch.get(universal_index)?),
+    }
+}
+
 /// Iterate [MachO] instances from file data.
 pub fn iter_macho(
     macho_data: &[u8],
