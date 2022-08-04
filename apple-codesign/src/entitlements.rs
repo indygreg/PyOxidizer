@@ -120,11 +120,11 @@ mod test {
         super::*,
         crate::{
             embedded_signature::{Blob, CodeSigningSlot},
+            macho::get_macho_from_data,
             AppleSignable,
         },
         anyhow::anyhow,
         anyhow::Result,
-        goblin::mach::Mach,
         plist::{Date, Uid},
         std::{
             process::Command,
@@ -213,11 +213,8 @@ mod test {
         // Now extract the data from the Apple produced code signature.
 
         let signed_exe = std::fs::read(&in_path)?;
-        let mach = Mach::parse(&signed_exe)?;
-        let macho = match mach {
-            Mach::Binary(macho) => macho,
-            Mach::Fat(multiarch) => multiarch.get(0).expect("unable to read fat binary"),
-        };
+
+        let macho = get_macho_from_data(&signed_exe, 0)?;
 
         let signature = macho
             .code_signature()?
