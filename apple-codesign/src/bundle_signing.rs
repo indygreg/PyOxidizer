@@ -11,12 +11,11 @@ use {
         code_resources::{CodeResourcesBuilder, CodeResourcesRule},
         embedded_signature::{Blob, BlobData, DigestType},
         error::AppleCodesignError,
-        macho::{find_macho_targeting, iter_macho, AppleSignable},
+        macho::{find_macho_targeting, get_macho_from_data, iter_macho, AppleSignable},
         macho_signing::{write_macho_file, MachOSigner},
         signing_settings::{SettingsScope, SigningSettings},
     },
     apple_bundles::{BundlePackageType, DirectoryBundle, DirectoryBundleFile},
-    goblin::mach::Mach,
     log::{info, warn},
     std::{
         collections::BTreeMap,
@@ -169,11 +168,8 @@ pub struct SignedMachOInfo {
 impl SignedMachOInfo {
     /// Parse Mach-O data to obtain an instance.
     pub fn parse_data(data: &[u8]) -> Result<Self, AppleCodesignError> {
-        let macho = match Mach::parse(data)? {
-            Mach::Binary(macho) => macho,
-            // Initial Mach-O's signature data is used.
-            Mach::Fat(multi_arch) => multi_arch.get(0)?,
-        };
+        // Initial Mach-O's signature data is used.
+        let macho = get_macho_from_data(data, 0)?;
 
         let signature = macho
             .code_signature()?
