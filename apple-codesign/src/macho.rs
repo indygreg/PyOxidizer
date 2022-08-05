@@ -742,7 +742,7 @@ mod tests {
         }
     }
 
-    fn validate_macho(path: &Path, macho: &MachO) {
+    fn validate_macho(path: &Path, macho: &MachOBinary) {
         // We found signature data in the binary.
         if let Some(signature) = find_apple_embedded_signature(macho) {
             // Attempt a deep parse of all blobs.
@@ -820,18 +820,9 @@ mod tests {
     fn validate_macho_in_dir(dir: &Path) {
         for path in find_likely_macho_files(dir).into_iter() {
             if let Ok(file_data) = std::fs::read(&path) {
-                if let Ok(mach) = goblin::mach::Mach::parse(&file_data) {
-                    match mach {
-                        goblin::mach::Mach::Binary(macho) => {
-                            validate_macho(&path, &macho);
-                        }
-                        goblin::mach::Mach::Fat(multiarch) => {
-                            for i in 0..multiarch.narches {
-                                if let Ok(macho) = multiarch.get(i) {
-                                    validate_macho(&path, &macho);
-                                }
-                            }
-                        }
+                if let Ok(mach) = MachFile::parse(&file_data) {
+                    for macho in mach.into_iter() {
+                        validate_macho(&path, &macho);
                     }
                 }
             }
