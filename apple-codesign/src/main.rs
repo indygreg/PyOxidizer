@@ -69,7 +69,7 @@ use {
         cryptography::{parse_pfx_data, InMemoryPrivateKey, PrivateKey},
         embedded_signature::{Blob, CodeSigningSlot, DigestType, RequirementSetBlob},
         error::AppleCodesignError,
-        macho::{find_macho_targeting, MachFile},
+        macho::MachFile,
         reader::SignatureReader,
         remote_signing::{
             session_negotiation::{
@@ -1525,7 +1525,7 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "macho-target" => {
-            if let Some(target) = find_macho_targeting(&data, &macho.macho)? {
+            if let Some(target) = macho.find_targeting()? {
                 println!("Platform: {}", target.platform);
                 println!("Minimum OS: {}", target.minimum_os_version);
                 println!("SDK: {}", target.sdk_version);

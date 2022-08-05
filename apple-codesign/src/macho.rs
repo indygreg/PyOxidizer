@@ -408,6 +408,47 @@ impl<'a> MachOBinary<'a> {
 
         Ok(size)
     }
+
+    /// Attempt to resolve the mach-o targeting settings.
+    pub fn find_targeting(&self) -> Result<Option<MachoTarget>, AppleCodesignError> {
+        let ctx = parse_magic_and_ctx(self.data, 0)?
+            .1
+            .expect("context should have been parsed before");
+
+        for lc in &self.macho.load_commands {
+            if lc.command.cmd() == LC_BUILD_VERSION {
+                let build_version = self
+                    .data
+                    .pread_with::<BuildVersionCommand>(lc.offset, ctx.le)?;
+
+                return Ok(Some(MachoTarget {
+                    platform: build_version.platform.into(),
+                    minimum_os_version: parse_version_nibbles(build_version.minos),
+                    sdk_version: parse_version_nibbles(build_version.sdk),
+                }));
+            }
+        }
+
+        for lc in &self.macho.load_commands {
+            let command = match lc.command {
+                CommandVariant::VersionMinMacosx(c) => Some((c, Platform::MacOs)),
+                CommandVariant::VersionMinIphoneos(c) => Some((c, Platform::IOs)),
+                CommandVariant::VersionMinTvos(c) => Some((c, Platform::TvOs)),
+                CommandVariant::VersionMinWatchos(c) => Some((c, Platform::WatchOs)),
+                _ => None,
+            };
+
+            if let Some((command, platform)) = command {
+                return Ok(Some(MachoTarget {
+                    platform,
+                    minimum_os_version: parse_version_nibbles(command.version),
+                    sdk_version: parse_version_nibbles(command.sdk),
+                }));
+            }
+        }
+
+        Ok(None)
+    }
 }
 
 /// Describes signature data embedded within a Mach-O binary.
@@ -560,48 +601,6 @@ pub fn semver_to_macho_target_version(version: &semver::Version) -> u32 {
     let patch = version.patch as u32;
 
     (major << 16) | ((minor & 0xff) << 8) | (patch & 0xff)
-}
-
-/// Attempt to resolve the mach-o targeting settings for a mach-o binary.
-pub fn find_macho_targeting(
-    macho_data: &[u8],
-    macho: &MachO,
-) -> Result<Option<MachoTarget>, AppleCodesignError> {
-    let ctx = parse_magic_and_ctx(macho_data, 0)?
-        .1
-        .expect("context should have been parsed before");
-
-    for lc in &macho.load_commands {
-        if lc.command.cmd() == LC_BUILD_VERSION {
-            let build_version = macho_data.pread_with::<BuildVersionCommand>(lc.offset, ctx.le)?;
-
-            return Ok(Some(MachoTarget {
-                platform: build_version.platform.into(),
-                minimum_os_version: parse_version_nibbles(build_version.minos),
-                sdk_version: parse_version_nibbles(build_version.sdk),
-            }));
-        }
-    }
-
-    for lc in &macho.load_commands {
-        let command = match lc.command {
-            CommandVariant::VersionMinMacosx(c) => Some((c, Platform::MacOs)),
-            CommandVariant::VersionMinIphoneos(c) => Some((c, Platform::IOs)),
-            CommandVariant::VersionMinTvos(c) => Some((c, Platform::TvOs)),
-            CommandVariant::VersionMinWatchos(c) => Some((c, Platform::WatchOs)),
-            _ => None,
-        };
-
-        if let Some((command, platform)) = command {
-            return Ok(Some(MachoTarget {
-                platform,
-                minimum_os_version: parse_version_nibbles(command.version),
-                sdk_version: parse_version_nibbles(command.sdk),
-            }));
-        }
-    }
-
-    Ok(None)
 }
 
 /// Represents a semi-parsed Mach[-O] binary.

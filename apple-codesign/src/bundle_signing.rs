@@ -11,7 +11,7 @@ use {
         code_resources::{CodeResourcesBuilder, CodeResourcesRule},
         embedded_signature::{Blob, BlobData, DigestType},
         error::AppleCodesignError,
-        macho::{find_macho_targeting, MachFile},
+        macho::MachFile,
         macho_signing::{write_macho_file, MachOSigner},
         signing_settings::{SettingsScope, SigningSettings},
     },
@@ -457,7 +457,7 @@ impl SingleBundleSigner {
             let mach = MachFile::parse(&macho_data)?;
 
             for macho in mach.iter_macho() {
-                if let Some(targeting) = find_macho_targeting(&macho.data, &macho.macho)? {
+                if let Some(targeting) = macho.find_targeting()? {
                     let sha256_version = targeting.platform.sha256_digest_support()?;
 
                     if !sha256_version.matches(&targeting.minimum_os_version)

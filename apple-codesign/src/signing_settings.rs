@@ -11,7 +11,7 @@ use {
         code_requirement::CodeRequirementExpression,
         embedded_signature::{Blob, DigestType, RequirementBlob},
         error::AppleCodesignError,
-        macho::{find_macho_targeting, parse_version_nibbles, MachFile},
+        macho::{parse_version_nibbles, MachFile},
     },
     glob::Pattern,
     goblin::mach::cputype::{
@@ -755,7 +755,6 @@ impl<'key> SigningSettings<'key> {
 
         for macho in MachFile::parse(data)?.into_iter() {
             let index = macho.index.unwrap_or(0);
-            let macho_data = macho.data;
 
             let scope_main = SettingsScope::Main;
             let scope_index = SettingsScope::MultiArchIndex(index);
@@ -765,7 +764,7 @@ impl<'key> SigningSettings<'key> {
             // signatures. If the minimum version targeting in the binary doesn't
             // support SHA-256, we automatically change the digest targeting settings
             // so the binary will be signed correctly.
-            if let Some(targeting) = find_macho_targeting(macho_data, &macho.macho)? {
+            if let Some(targeting) = macho.find_targeting()? {
                 let sha256_version = targeting.platform.sha256_digest_support()?;
 
                 if !sha256_version.matches(&targeting.minimum_os_version) {

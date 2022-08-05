@@ -18,7 +18,7 @@ use {
         embedded_signature_builder::EmbeddedSignatureBuilder,
         entitlements::plist_to_executable_segment_flags,
         error::AppleCodesignError,
-        macho::{find_macho_targeting, semver_to_macho_target_version, MachFile, MachOBinary},
+        macho::{semver_to_macho_target_version, MachFile, MachOBinary},
         policy::derive_designated_requirements,
         signing_settings::{DesignatedRequirementMode, SettingsScope, SigningSettings},
     },
@@ -410,7 +410,7 @@ impl<'data> MachOSigner<'data> {
         // TODO support defining or filling in proper values for fields with
         // static values.
 
-        let target = find_macho_targeting(macho_data, &macho.macho)?;
+        let target = macho.find_targeting()?;
 
         if let Some(target) = &target {
             info!(
