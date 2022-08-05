@@ -12,7 +12,7 @@ use {
         embedded_signature::{BlobEntry, DigestType, EmbeddedSignature},
         embedded_signature_builder::{CD_DIGESTS_OID, CD_DIGESTS_PLIST_OID},
         error::AppleCodesignError,
-        macho::{get_macho_from_data, iter_macho, AppleSignable},
+        macho::{iter_macho, AppleSignable, MachFile},
     },
     apple_bundles::{DirectoryBundle, DirectoryBundleFile},
     apple_xar::{
@@ -792,7 +792,7 @@ impl SignatureReader {
             }
             PathType::MachO => {
                 let data = std::fs::read(path)?;
-                get_macho_from_data(&data, 0)?;
+                MachFile::parse(&data)?;
 
                 Ok(Self::MachO(path.to_path_buf(), data))
             }

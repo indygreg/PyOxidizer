@@ -69,7 +69,7 @@ use {
         cryptography::{parse_pfx_data, InMemoryPrivateKey, PrivateKey},
         embedded_signature::{Blob, CodeSigningSlot, DigestType, RequirementSetBlob},
         error::AppleCodesignError,
-        macho::{find_macho_targeting, get_macho_from_data, AppleSignable},
+        macho::{find_macho_targeting, AppleSignable, MachFile},
         reader::SignatureReader,
         remote_signing::{
             session_negotiation::{
@@ -1096,7 +1096,8 @@ fn command_compute_code_hashes(args: &ArgMatches) -> Result<(), AppleCodesignErr
     .map_err(|_| AppleCodesignError::CliBadArgument)?;
 
     let data = std::fs::read(path)?;
-    let macho = get_macho_from_data(&data, index)?;
+    let mach = MachFile::parse(&data)?;
+    let macho = mach.nth_macho(index)?;
 
     let hashes = segment_digests(
         macho.digestable_segment_data().into_iter(),
@@ -1324,8 +1325,8 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     let index = usize::from_str(index).map_err(|_| AppleCodesignError::CliBadArgument)?;
 
     let data = std::fs::read(path)?;
-
-    let macho = get_macho_from_data(&data, index)?;
+    let mach = MachFile::parse(&data)?;
+    let macho = mach.nth_macho(index)?;
 
     match format {
         "blobs" => {

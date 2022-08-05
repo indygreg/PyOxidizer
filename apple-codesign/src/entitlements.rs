@@ -120,7 +120,7 @@ mod test {
         super::*,
         crate::{
             embedded_signature::{Blob, CodeSigningSlot},
-            macho::get_macho_from_data,
+            macho::MachFile,
             AppleSignable,
         },
         anyhow::anyhow,
@@ -213,8 +213,8 @@ mod test {
         // Now extract the data from the Apple produced code signature.
 
         let signed_exe = std::fs::read(&in_path)?;
-
-        let macho = get_macho_from_data(&signed_exe, 0)?;
+        let mach = MachFile::parse(&signed_exe)?;
+        let macho = mach.nth_macho(0)?;
 
         let signature = macho
             .code_signature()?

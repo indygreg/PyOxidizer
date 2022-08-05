@@ -32,6 +32,79 @@ use {
     x509_certificate::DigestAlgorithm,
 };
 
+/// A Mach-O binary.
+pub struct MachOBinary<'a> {
+    /// Index within a fat binary this Mach-O resides at.
+    ///
+    /// If `None`, this is not inside a fat binary.
+    pub index: Option<usize>,
+
+    /// The parsed Mach-O binary.
+    pub macho: MachO<'a>,
+
+    /// The raw data backing the Mach-O binary.
+    pub data: &'a [u8],
+}
+
+/// Represents a semi-parsed Mach[-O] binary.
+pub struct MachFile<'a> {
+    data: &'a [u8],
+
+    machos: Vec<MachOBinary<'a>>,
+}
+
+impl<'a> MachFile<'a> {
+    /// Construct an instance from data.
+    pub fn parse(data: &'a [u8]) -> Result<Self, AppleCodesignError> {
+        let mach = Mach::parse(data)?;
+
+        let machos = match mach {
+            Mach::Binary(macho) => vec![MachOBinary {
+                index: None,
+                macho,
+                data,
+            }],
+            Mach::Fat(multiarch) => {
+                let mut machos = vec![];
+
+                for (index, arch) in multiarch.arches()?.into_iter().enumerate() {
+                    let macho = multiarch.get(index)?;
+
+                    machos.push(MachOBinary {
+                        index: Some(index),
+                        macho,
+                        data: arch.slice(data),
+                    });
+                }
+
+                machos
+            }
+        };
+
+        Ok(Self { data, machos })
+    }
+
+    /// Whether this Mach-O data has multiple architectures.
+    pub fn is_fat(&self) -> bool {
+        self.machos.len() > 1
+    }
+
+    /// Iterate [MachO] instances in this data.
+    ///
+    /// The `Option<usize>` is `Some` if this is a universal Mach-O or `None` otherwise.
+    pub fn iter_macho(&self) -> impl Iterator<Item = &MachOBinary> {
+        self.machos.iter()
+    }
+
+    pub fn nth_macho(&self, index: usize) -> Result<&MachO<'a>, AppleCodesignError> {
+        Ok(&self
+            .machos
+            .get(index)
+            .ok_or_else(|| AppleCodesignError::InvalidMachOIndex(index))?
+            .macho)
+    }
+}
+
 pub trait AppleSignable {
     /// Attempt to extract a reference to raw signature data in a Mach-O binary.
     ///
@@ -398,21 +471,6 @@ impl<'a> AppleSignable for MachO<'a> {
         size += 1024 - size % 1024;
 
         Ok(size)
-    }
-}
-
-/// Obtain a parsed Mach-O binary from raw data.
-///
-/// Data can refer to a single arch or fat/multiarch Mach-O binary.
-pub fn get_macho_from_data(
-    data: &[u8],
-    universal_index: usize,
-) -> Result<MachO, AppleCodesignError> {
-    let mach = Mach::parse(data)?;
-
-    match mach {
-        Mach::Binary(macho) => Ok(macho),
-        Mach::Fat(multiarch) => Ok(multiarch.get(universal_index)?),
     }
 }
 

@@ -32,6 +32,9 @@ pub enum AppleCodesignError {
     #[error("invalid Mach-O binary: {0}")]
     InvalidBinary(String),
 
+    #[error("invalid binary index within Mach-O: {0}")]
+    InvalidMachOIndex(usize),
+
     #[error("binary does not have code signature data")]
     BinaryNoCodeSignature,
 

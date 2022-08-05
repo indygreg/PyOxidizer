@@ -11,7 +11,7 @@ use {
         code_resources::{CodeResourcesBuilder, CodeResourcesRule},
         embedded_signature::{Blob, BlobData, DigestType},
         error::AppleCodesignError,
-        macho::{find_macho_targeting, get_macho_from_data, iter_macho, AppleSignable},
+        macho::{find_macho_targeting, iter_macho, AppleSignable, MachFile},
         macho_signing::{write_macho_file, MachOSigner},
         signing_settings::{SettingsScope, SigningSettings},
     },
@@ -169,7 +169,8 @@ impl SignedMachOInfo {
     /// Parse Mach-O data to obtain an instance.
     pub fn parse_data(data: &[u8]) -> Result<Self, AppleCodesignError> {
         // Initial Mach-O's signature data is used.
-        let macho = get_macho_from_data(data, 0)?;
+        let mach = MachFile::parse(data)?;
+        let macho = mach.nth_macho(0)?;
 
         let signature = macho
             .code_signature()?
