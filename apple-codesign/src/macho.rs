@@ -29,6 +29,7 @@ use {
         parse_magic_and_ctx, Mach, MachO,
     },
     scroll::Pread,
+    std::ops::Deref,
     x509_certificate::DigestAlgorithm,
 };
 
@@ -44,6 +45,14 @@ pub struct MachOBinary<'a> {
 
     /// The raw data backing the Mach-O binary.
     pub data: &'a [u8],
+}
+
+impl<'a> Deref for MachOBinary<'a> {
+    type Target = MachO<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.macho
+    }
 }
 
 /// Represents a semi-parsed Mach[-O] binary.

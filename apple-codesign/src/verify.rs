@@ -27,10 +27,9 @@ use {
         code_hash::segment_digests,
         embedded_signature::{CodeSigningSlot, DigestType, EmbeddedSignature},
         error::AppleCodesignError,
-        macho::{AppleSignable, MachFile},
+        macho::{AppleSignable, MachFile, MachOBinary},
     },
     cryptographic_message_syntax::{CmsError, SignedData},
-    goblin::mach::MachO,
     std::path::{Path, PathBuf},
     x509_certificate::{DigestAlgorithm, SignatureAlgorithm},
 };
@@ -222,7 +221,7 @@ fn verify_macho_data_internal(
                 let mut context = context.clone();
                 context.fat_index = macho.index;
 
-                problems.extend(verify_macho_internal(&macho.macho, context));
+                problems.extend(verify_macho_internal(&macho, context));
             }
 
             problems
@@ -240,7 +239,7 @@ fn verify_macho_data_internal(
 ///
 /// Returns a vector of problems detected. An empty vector means no
 /// problems were found.
-pub fn verify_macho(macho: &MachO) -> Vec<VerificationProblem> {
+pub fn verify_macho(macho: &MachOBinary) -> Vec<VerificationProblem> {
     verify_macho_internal(
         macho,
         VerificationContext {
@@ -250,7 +249,10 @@ pub fn verify_macho(macho: &MachO) -> Vec<VerificationProblem> {
     )
 }
 
-fn verify_macho_internal(macho: &MachO, context: VerificationContext) -> Vec<VerificationProblem> {
+fn verify_macho_internal(
+    macho: &MachOBinary,
+    context: VerificationContext,
+) -> Vec<VerificationProblem> {
     let signature_data = match macho.find_signature_data() {
         Ok(Some(data)) => data,
         Ok(None) => {
@@ -402,7 +404,7 @@ fn verify_cms_signature(data: &[u8], context: VerificationContext) -> Vec<Verifi
 }
 
 fn verify_code_directory(
-    macho: &MachO,
+    macho: &MachOBinary,
     signature: &EmbeddedSignature,
     cd: &CodeDirectoryBlob,
     context: VerificationContext,
