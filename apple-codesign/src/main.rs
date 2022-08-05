@@ -69,7 +69,7 @@ use {
         cryptography::{parse_pfx_data, InMemoryPrivateKey, PrivateKey},
         embedded_signature::{Blob, CodeSigningSlot, DigestType, RequirementSetBlob},
         error::AppleCodesignError,
-        macho::{find_macho_targeting, find_signature_data, get_macho_from_data, AppleSignable},
+        macho::{find_macho_targeting, get_macho_from_data, AppleSignable},
         reader::SignatureReader,
         remote_signing::{
             session_negotiation::{
@@ -1440,8 +1440,9 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "linkedit-info" => {
-            let sig =
-                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
+            let sig = macho
+                .find_signature_data()?
+                .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
             println!("__LINKEDIT segment index: {}", sig.linkedit_segment_index);
             println!(
                 "__LINKEDIT segment start offset: {}",
@@ -1474,8 +1475,9 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             println!("__LINKEDIT signature size: {}", sig.signature_data.len());
         }
         "linkedit-segment-raw" => {
-            let sig =
-                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
+            let sig = macho
+                .find_signature_data()?
+                .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
             std::io::stdout().write_all(sig.linkedit_segment_data)?;
         }
         "macho-load-commands" => {
@@ -1595,13 +1597,15 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "signature-raw" => {
-            let sig =
-                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
+            let sig = macho
+                .find_signature_data()?
+                .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
             std::io::stdout().write_all(sig.signature_data)?;
         }
         "superblob" => {
-            let sig =
-                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
+            let sig = macho
+                .find_signature_data()?
+                .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
             let embedded = macho
                 .code_signature()?
                 .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;

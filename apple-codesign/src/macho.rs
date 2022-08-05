@@ -33,6 +33,15 @@ use {
 };
 
 pub trait AppleSignable {
+    /// Attempt to extract a reference to raw signature data in a Mach-O binary.
+    ///
+    /// An `LC_CODE_SIGNATURE` load command in the Mach-O file header points to
+    /// signature data in the `__LINKEDIT` segment.
+    ///
+    /// This function is used as part of parsing signature data. You probably want to
+    /// use a function that parses referenced data.
+    fn find_signature_data(&self) -> Result<Option<MachOSignatureData<'_>>, AppleCodesignError>;
+
     /// Obtain the code signature in the entity.
     ///
     /// Returns `Ok(None)` if no signature exists, `Ok(Some)` if it does, or
@@ -94,8 +103,58 @@ pub trait AppleSignable {
 }
 
 impl<'a> AppleSignable for MachO<'a> {
+    fn find_signature_data(&self) -> Result<Option<MachOSignatureData<'a>>, AppleCodesignError> {
+        if let Some(linkedit_data_command) = self.load_commands.iter().find_map(|load_command| {
+            if let CommandVariant::CodeSignature(command) = &load_command.command {
+                Some(command)
+            } else {
+                None
+            }
+        }) {
+            // Now find the slice of data in the __LINKEDIT segment we need to parse.
+            let (linkedit_segment_index, linkedit) = self
+                .segments
+                .iter()
+                .enumerate()
+                .find(|(_, segment)| {
+                    if let Ok(name) = segment.name() {
+                        name == SEG_LINKEDIT
+                    } else {
+                        false
+                    }
+                })
+                .ok_or(AppleCodesignError::MissingLinkedit)?;
+
+            let linkedit_segment_start_offset = linkedit.fileoff as usize;
+            let linkedit_segment_end_offset = linkedit_segment_start_offset + linkedit.data.len();
+            let linkedit_signature_start_offset = linkedit_data_command.dataoff as usize;
+            let linkedit_signature_end_offset =
+                linkedit_signature_start_offset + linkedit_data_command.datasize as usize;
+            let signature_start_offset =
+                linkedit_data_command.dataoff as usize - linkedit.fileoff as usize;
+            let signature_end_offset =
+                signature_start_offset + linkedit_data_command.datasize as usize;
+
+            let signature_data = &linkedit.data[signature_start_offset..signature_end_offset];
+
+            Ok(Some(MachOSignatureData {
+                linkedit_segment_index,
+                linkedit_segment_start_offset,
+                linkedit_segment_end_offset,
+                linkedit_signature_start_offset,
+                linkedit_signature_end_offset,
+                signature_start_offset,
+                signature_end_offset,
+                linkedit_segment_data: linkedit.data,
+                signature_data,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
     fn code_signature(&self) -> Result<Option<EmbeddedSignature>, AppleCodesignError> {
-        if let Some(signature) = find_signature_data(self)? {
+        if let Some(signature) = self.find_signature_data()? {
             Ok(Some(EmbeddedSignature::from_bytes(
                 signature.signature_data,
             )?))
@@ -412,64 +471,6 @@ pub struct MachOSignatureData<'a> {
 
     /// The signature data within the `__LINKEDIT` segment.
     pub signature_data: &'a [u8],
-}
-
-/// Attempt to extract a reference to raw signature data in a Mach-O binary.
-///
-/// An `LC_CODE_SIGNATURE` load command in the Mach-O file header points to
-/// signature data in the `__LINKEDIT` segment.
-///
-/// This function is used as part of parsing signature data. You probably want to
-/// use a function that parses referenced data.
-pub fn find_signature_data<'a>(
-    obj: &'a MachO,
-) -> Result<Option<MachOSignatureData<'a>>, AppleCodesignError> {
-    if let Some(linkedit_data_command) = obj.load_commands.iter().find_map(|load_command| {
-        if let CommandVariant::CodeSignature(command) = &load_command.command {
-            Some(command)
-        } else {
-            None
-        }
-    }) {
-        // Now find the slice of data in the __LINKEDIT segment we need to parse.
-        let (linkedit_segment_index, linkedit) = obj
-            .segments
-            .iter()
-            .enumerate()
-            .find(|(_, segment)| {
-                if let Ok(name) = segment.name() {
-                    name == SEG_LINKEDIT
-                } else {
-                    false
-                }
-            })
-            .ok_or(AppleCodesignError::MissingLinkedit)?;
-
-        let linkedit_segment_start_offset = linkedit.fileoff as usize;
-        let linkedit_segment_end_offset = linkedit_segment_start_offset + linkedit.data.len();
-        let linkedit_signature_start_offset = linkedit_data_command.dataoff as usize;
-        let linkedit_signature_end_offset =
-            linkedit_signature_start_offset + linkedit_data_command.datasize as usize;
-        let signature_start_offset =
-            linkedit_data_command.dataoff as usize - linkedit.fileoff as usize;
-        let signature_end_offset = signature_start_offset + linkedit_data_command.datasize as usize;
-
-        let signature_data = &linkedit.data[signature_start_offset..signature_end_offset];
-
-        Ok(Some(MachOSignatureData {
-            linkedit_segment_index,
-            linkedit_segment_start_offset,
-            linkedit_segment_end_offset,
-            linkedit_signature_start_offset,
-            linkedit_signature_end_offset,
-            signature_start_offset,
-            signature_end_offset,
-            linkedit_segment_data: linkedit.data,
-            signature_data,
-        }))
-    } else {
-        Ok(None)
-    }
 }
 
 /// Content of an `LC_BUILD_VERSION` load command.

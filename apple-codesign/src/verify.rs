@@ -27,7 +27,7 @@ use {
         code_hash::segment_digests,
         embedded_signature::{CodeSigningSlot, DigestType, EmbeddedSignature},
         error::AppleCodesignError,
-        macho::{find_signature_data, iter_macho, AppleSignable},
+        macho::{iter_macho, AppleSignable},
     },
     cryptographic_message_syntax::{CmsError, SignedData},
     goblin::mach::MachO,
@@ -251,7 +251,7 @@ pub fn verify_macho(macho: &MachO) -> Vec<VerificationProblem> {
 }
 
 fn verify_macho_internal(macho: &MachO, context: VerificationContext) -> Vec<VerificationProblem> {
-    let signature_data = match find_signature_data(macho) {
+    let signature_data = match macho.find_signature_data() {
         Ok(Some(data)) => data,
         Ok(None) => {
             return vec![VerificationProblem {
