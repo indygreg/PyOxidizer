@@ -19,7 +19,6 @@ use {
         item::{ItemClass, ItemSearchOptions, Reference, SearchResult},
         key::{Algorithm as KeychainAlgorithm, SecKey},
         os::macos::{
-            encrypt_transform::{Builder as EncryptBuilder, Padding},
             item::ItemSearchOptionsExt,
             keychain::{SecKeychain, SecPreferencesDomain},
         },
