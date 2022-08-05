@@ -417,7 +417,11 @@ fn verify_code_directory(
         }),
     }
 
-    match compute_code_hashes(macho, cd.digest_type, cd.page_size as _) {
+    match compute_code_hashes(
+        macho.digestable_segment_data().into_iter(),
+        cd.digest_type,
+        cd.page_size as _,
+    ) {
         Ok(digests) => {
             let mut cd_iter = cd.code_digests.iter().enumerate();
             let mut actual_iter = digests.iter().enumerate();

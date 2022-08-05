@@ -18,10 +18,7 @@ This module contains code related to reading and writing these so-called
 *code hashes*.
 */
 
-use {
-    crate::{embedded_signature::DigestType, error::AppleCodesignError, macho::AppleSignable},
-    goblin::mach::MachO,
-};
+use crate::{embedded_signature::DigestType, error::AppleCodesignError};
 
 /// Compute paged hashes.
 ///
@@ -41,14 +38,12 @@ pub fn compute_paged_hashes(
 }
 
 /// Compute code hashes for a Mach-O binary.
-pub fn compute_code_hashes(
-    macho: &MachO,
+pub fn compute_code_hashes<'a>(
+    segments: impl Iterator<Item = &'a [u8]>,
     hash_type: DigestType,
     page_size: usize,
 ) -> Result<Vec<Vec<u8>>, AppleCodesignError> {
-    Ok(macho
-        .digestable_segment_data()
-        .into_iter()
+    Ok(segments
         .map(|data| compute_paged_hashes(data, hash_type, page_size))
         .collect::<Result<Vec<_>, AppleCodesignError>>()?
         .into_iter()

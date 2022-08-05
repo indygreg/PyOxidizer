@@ -1098,7 +1098,11 @@ fn command_compute_code_hashes(args: &ArgMatches) -> Result<(), AppleCodesignErr
     let data = std::fs::read(path)?;
     let macho = get_macho_from_data(&data, index)?;
 
-    let hashes = compute_code_hashes(&macho, hash_type, page_size)?;
+    let hashes = compute_code_hashes(
+        macho.digestable_segment_data().into_iter(),
+        hash_type,
+        page_size,
+    )?;
 
     for hash in hashes {
         println!("{}", hex::encode(hash));
