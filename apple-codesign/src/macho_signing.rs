@@ -28,7 +28,7 @@ use {
             CommandVariant, LinkeditDataCommand, SegmentCommand32, SegmentCommand64,
             LC_CODE_SIGNATURE, SIZEOF_LINKEDIT_DATA_COMMAND,
         },
-        parse_magic_and_ctx, Mach, MachO,
+        parse_magic_and_ctx, MachO,
     },
     log::{info, warn},
     scroll::{ctx::SizeWith, IOwrite},
@@ -340,20 +340,12 @@ impl<'data> MachOSigner<'data> {
 
     /// Derive the data slice belonging to a Mach-O binary.
     fn macho_data(&self, index: usize) -> &[u8] {
-        match Mach::parse(self.macho_data).expect("should reparse without error") {
-            Mach::Binary(_) => self.macho_data,
-            Mach::Fat(multiarch) => {
-                let arch = multiarch
-                    .iter_arches()
-                    .nth(index)
-                    .expect("bad index")
-                    .expect("reparse should have worked");
+        let (_, _, data) = iter_macho(self.macho_data)
+            .expect("should reparse without error")
+            .nth(index)
+            .expect("bad index");
 
-                let end_offset = arch.offset as usize + arch.size as usize;
-
-                &self.macho_data[arch.offset as usize..end_offset]
-            }
-        }
+        data
     }
 
     /// Create data constituting the SuperBlob to be embedded in the `__LINKEDIT` segment.
