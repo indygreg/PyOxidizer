@@ -14,7 +14,7 @@ data.
 
 use {
     crate::{
-        code_hash::compute_code_hashes,
+        code_hash::segment_digests,
         embedded_signature::EmbeddedSignature,
         error::AppleCodesignError,
         signing_settings::{SettingsScope, SigningSettings},
@@ -284,7 +284,7 @@ impl<'a> AppleSignable for MachO<'a> {
         // Reserve room for the code digests, which are proportional to binary size.
         // We could avoid doing the actual digesting work here. But until people
         // complain, don't worry about it.
-        size += compute_code_hashes(
+        size += segment_digests(
             self.digestable_segment_data().into_iter(),
             *settings.digest_type(),
             4096,
@@ -295,11 +295,10 @@ impl<'a> AppleSignable for MachO<'a> {
 
         if let Some(digests) = settings.extra_digests(SettingsScope::Main) {
             for digest in digests {
-                size +=
-                    compute_code_hashes(self.digestable_segment_data().into_iter(), *digest, 4096)?
-                        .into_iter()
-                        .map(|x| x.len())
-                        .sum::<usize>();
+                size += segment_digests(self.digestable_segment_data().into_iter(), *digest, 4096)?
+                    .into_iter()
+                    .map(|x| x.len())
+                    .sum::<usize>();
             }
         }
 

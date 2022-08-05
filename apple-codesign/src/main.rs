@@ -64,7 +64,7 @@ use {
             create_self_signed_code_signing_certificate, AppleCertificate, CertificateProfile,
         },
         code_directory::{CodeDirectoryBlob, CodeSignatureFlags},
-        code_hash::compute_code_hashes,
+        code_hash::segment_digests,
         code_requirement::CodeRequirements,
         cryptography::{parse_pfx_data, InMemoryPrivateKey, PrivateKey},
         embedded_signature::{Blob, CodeSigningSlot, DigestType, RequirementSetBlob},
@@ -1098,7 +1098,7 @@ fn command_compute_code_hashes(args: &ArgMatches) -> Result<(), AppleCodesignErr
     let data = std::fs::read(path)?;
     let macho = get_macho_from_data(&data, index)?;
 
-    let hashes = compute_code_hashes(
+    let hashes = segment_digests(
         macho.digestable_segment_data().into_iter(),
         hash_type,
         page_size,

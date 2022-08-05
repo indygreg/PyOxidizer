@@ -22,12 +22,11 @@ use crate::{embedded_signature::DigestType, error::AppleCodesignError};
 
 /// Compute paged hashes.
 ///
-/// This function takes a reference to data, chunks it into segments of `page_size` up to
-/// offset `max_offset` and then hashes it with the specified algorithm, producing a
-/// vector of binary hashes.
+/// This function takes a reference to data, chunks it into segments of `page_size`
+/// and then hashes it with the specified algorithm, producing a vector of binary hashes.
 ///
 /// This is likely used as part of computing code hashes.
-pub fn compute_paged_hashes(
+pub fn paged_digests(
     data: &[u8],
     hash: DigestType,
     page_size: usize,
@@ -37,14 +36,16 @@ pub fn compute_paged_hashes(
         .collect::<Result<Vec<_>, AppleCodesignError>>()
 }
 
-/// Compute code hashes for a Mach-O binary.
-pub fn compute_code_hashes<'a>(
+/// Compute digests over raw data segments.
+///
+/// For each segment within `segments`, we compute paged digests of size `page_size`.
+pub fn segment_digests<'a>(
     segments: impl Iterator<Item = &'a [u8]>,
     hash_type: DigestType,
     page_size: usize,
 ) -> Result<Vec<Vec<u8>>, AppleCodesignError> {
     Ok(segments
-        .map(|data| compute_paged_hashes(data, hash_type, page_size))
+        .map(|data| paged_digests(data, hash_type, page_size))
         .collect::<Result<Vec<_>, AppleCodesignError>>()?
         .into_iter()
         .flatten()

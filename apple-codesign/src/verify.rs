@@ -24,7 +24,7 @@
 use {
     crate::{
         code_directory::CodeDirectoryBlob,
-        code_hash::compute_code_hashes,
+        code_hash::segment_digests,
         embedded_signature::{CodeSigningSlot, DigestType, EmbeddedSignature},
         error::AppleCodesignError,
         macho::{find_signature_data, iter_macho, AppleSignable},
@@ -417,7 +417,7 @@ fn verify_code_directory(
         }),
     }
 
-    match compute_code_hashes(
+    match segment_digests(
         macho.digestable_segment_data().into_iter(),
         cd.digest_type,
         cd.page_size as _,

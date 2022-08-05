@@ -9,7 +9,7 @@
 use {
     crate::{
         code_directory::{CodeDirectoryBlob, CodeSignatureFlags, ExecutableSegmentFlags},
-        code_hash::compute_code_hashes,
+        code_hash::segment_digests,
         code_requirement::{CodeRequirementExpression, CodeRequirements, RequirementType},
         embedded_signature::{
             BlobData, CodeSigningSlot, Digest, EntitlementsBlob, EntitlementsDerBlob,
@@ -521,7 +521,7 @@ impl<'data> MachOSigner<'data> {
             runtime
         };
 
-        let code_hashes = compute_code_hashes(
+        let code_hashes = segment_digests(
             macho.digestable_segment_data().into_iter(),
             *settings.digest_type(),
             page_size as _,
