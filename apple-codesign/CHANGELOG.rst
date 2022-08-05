@@ -9,6 +9,12 @@
 
 * minicbor crate upgraded from version 0.15. This created API differences in
   remote signing code.
+* The APIs around Mach-O file parsing have been significantly overhauled. It
+  is probably best to diff the ``macho`` module to see the full differences.
+  There are now ``MachFile`` and ``MachOBinary`` types serving as interfaces
+  to custom Mach-O functionality. Most code interfacing with a Mach-O file now
+  uses these types. The ``AppleSignable`` trait has been deleted as it is no
+  longer needed since we have the dedicated ``MachOBinary`` type.
 
 0.16.0
 ======
