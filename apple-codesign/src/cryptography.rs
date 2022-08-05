@@ -10,7 +10,7 @@ use {
         AppleCodesignError,
     },
     bytes::Bytes,
-    der::{asn1, Document, Encodable},
+    der::{asn1, Decodable, Document, Encodable},
     elliptic_curve::{
         sec1::{FromEncodedPoint, ModulusSize, ToEncodedPoint},
         AffinePoint, Curve, FieldSize, ProjectiveArithmetic, SecretKey as ECSecretKey,
@@ -21,8 +21,7 @@ use {
     p256::NistP256,
     pkcs1::RsaPrivateKeyDocument,
     pkcs8::{
-        der::Decodable, AlgorithmIdentifier, EncodePrivateKey, ObjectIdentifier,
-        PrivateKeyDocument, PrivateKeyInfo,
+        AlgorithmIdentifier, EncodePrivateKey, ObjectIdentifier, PrivateKeyDocument, PrivateKeyInfo,
     },
     ring::signature::{EcdsaKeyPair, Ed25519KeyPair, KeyPair, RsaKeyPair},
     rsa::{
