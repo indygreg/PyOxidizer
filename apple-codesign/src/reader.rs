@@ -12,7 +12,7 @@ use {
         embedded_signature::{BlobEntry, DigestType, EmbeddedSignature},
         embedded_signature_builder::{CD_DIGESTS_OID, CD_DIGESTS_PLIST_OID},
         error::AppleCodesignError,
-        macho::{AppleSignable, MachFile},
+        macho::{AppleSignable, MachFile, MachOBinary},
     },
     apple_bundles::{DirectoryBundle, DirectoryBundleFile},
     apple_xar::{
@@ -22,7 +22,7 @@ use {
         },
     },
     cryptographic_message_syntax::{SignedData, SignerInfo},
-    goblin::mach::{fat::FAT_MAGIC, parse_magic_and_ctx, MachO},
+    goblin::mach::{fat::FAT_MAGIC, parse_magic_and_ctx},
     serde::Serialize,
     std::{
         fmt::Debug,
@@ -846,7 +846,7 @@ impl SignatureReader {
                 entity.sub_path = Some(format!("macho-index:{}", index));
             }
 
-            entity.entity = SignatureEntity::MachO(Self::resolve_macho_entity(macho.macho)?);
+            entity.entity = SignatureEntity::MachO(Self::resolve_macho_entity(macho)?);
 
             entities.push(entity);
         }
@@ -854,7 +854,7 @@ impl SignatureReader {
         Ok(entities)
     }
 
-    fn resolve_macho_entity(macho: MachO) -> Result<MachOEntity, AppleCodesignError> {
+    fn resolve_macho_entity(macho: MachOBinary) -> Result<MachOEntity, AppleCodesignError> {
         let signature = if let Some(sig) = macho.code_signature()? {
             Some(sig.try_into()?)
         } else {
