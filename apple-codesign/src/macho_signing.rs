@@ -298,8 +298,7 @@ impl<'data> MachOSigner<'data> {
                 // A nice side-effect of this is that it catches bugs if we write malformed Mach-O!
                 let intermediate_macho = MachOBinary::parse(&intermediate_macho_data)?;
 
-                let mut signature_data =
-                    self.create_superblob(&settings, self.macho_data(index), &intermediate_macho)?;
+                let mut signature_data = self.create_superblob(&settings, &intermediate_macho)?;
                 info!("total signature size: {} bytes", signature_data.len());
 
                 // The Mach-O writer adjusts load commands based on the signature length. So pad
@@ -353,7 +352,6 @@ impl<'data> MachOSigner<'data> {
     pub fn create_superblob(
         &self,
         settings: &SigningSettings,
-        macho_data: &[u8],
         macho: &MachOBinary,
     ) -> Result<Vec<u8>, AppleCodesignError> {
         let mut builder = EmbeddedSignatureBuilder::default();
@@ -362,7 +360,7 @@ impl<'data> MachOSigner<'data> {
             builder.add_blob(slot, blob)?;
         }
 
-        let code_directory = self.create_code_directory(settings, macho_data, macho)?;
+        let code_directory = self.create_code_directory(settings, macho)?;
         info!("code directory version: {}", code_directory.version);
 
         builder.add_code_directory(CodeSigningSlot::CodeDirectory, code_directory)?;
@@ -378,7 +376,7 @@ impl<'data> MachOSigner<'data> {
                     "adding alternative code directory using digest {:?}",
                     digest_type
                 );
-                let cd = self.create_code_directory(&alt_settings, macho_data, macho)?;
+                let cd = self.create_code_directory(&alt_settings, macho)?;
 
                 builder.add_alternative_code_directory(cd)?;
             }
@@ -404,7 +402,6 @@ impl<'data> MachOSigner<'data> {
     pub fn create_code_directory(
         &self,
         settings: &SigningSettings,
-        macho_data: &[u8],
         macho: &MachOBinary,
     ) -> Result<CodeDirectoryBlob<'static>, AppleCodesignError> {
         // TODO support defining or filling in proper values for fields with
