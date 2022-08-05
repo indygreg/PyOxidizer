@@ -55,6 +55,19 @@ impl<'a> Deref for MachOBinary<'a> {
     }
 }
 
+impl<'a> MachOBinary<'a> {
+    /// Parse a non-universal Mach-O binary from raw data.
+    pub fn parse(data: &'a [u8]) -> Result<Self, AppleCodesignError> {
+        let macho = MachO::parse(data, 0)?;
+
+        Ok(Self {
+            index: None,
+            macho,
+            data,
+        })
+    }
+}
+
 /// Represents a semi-parsed Mach[-O] binary.
 pub struct MachFile<'a> {
     data: &'a [u8],

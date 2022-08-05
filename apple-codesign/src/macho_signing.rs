@@ -18,7 +18,10 @@ use {
         embedded_signature_builder::EmbeddedSignatureBuilder,
         entitlements::plist_to_executable_segment_flags,
         error::AppleCodesignError,
-        macho::{find_macho_targeting, semver_to_macho_target_version, AppleSignable, MachFile},
+        macho::{
+            find_macho_targeting, semver_to_macho_target_version, AppleSignable, MachFile,
+            MachOBinary,
+        },
         policy::derive_designated_requirements,
         signing_settings::{DesignatedRequirementMode, SettingsScope, SigningSettings},
     },
@@ -28,7 +31,7 @@ use {
             CommandVariant, LinkeditDataCommand, SegmentCommand32, SegmentCommand64,
             LC_CODE_SIGNATURE, SIZEOF_LINKEDIT_DATA_COMMAND,
         },
-        parse_magic_and_ctx, MachO,
+        parse_magic_and_ctx,
     },
     log::{info, warn},
     scroll::{ctx::SizeWith, IOwrite},
@@ -39,7 +42,7 @@ use {
 /// Derive a new Mach-O binary with new signature data.
 fn create_macho_with_signature(
     macho_data: &[u8],
-    macho: &MachO,
+    macho: &MachOBinary,
     signature_data: &[u8],
 ) -> Result<Vec<u8>, AppleCodesignError> {
     // This should have already been called. But we do it again out of paranoia.
@@ -245,13 +248,12 @@ pub fn write_macho_file(
 ///
 /// Our solution to this problem is to estimate the size of the embedded
 /// signature data and then pad the unused data will 0s.
-#[derive(Debug)]
 pub struct MachOSigner<'data> {
     /// Raw data backing parsed Mach-O binary.
     macho_data: &'data [u8],
 
     /// Parsed Mach-O binaries.
-    machos: Vec<MachO<'data>>,
+    machos: Vec<MachOBinary<'data>>,
 }
 
 impl<'data> MachOSigner<'data> {
@@ -260,10 +262,7 @@ impl<'data> MachOSigner<'data> {
     /// The data will be parsed as a Mach-O binary (either single arch or fat/universal)
     /// and validated that we are capable of signing it.
     pub fn new(macho_data: &'data [u8]) -> Result<Self, AppleCodesignError> {
-        let machos = MachFile::parse(macho_data)?
-            .into_iter()
-            .map(|x| x.macho)
-            .collect::<Vec<_>>();
+        let machos = MachFile::parse(macho_data)?.into_iter().collect::<Vec<_>>();
 
         Ok(Self { macho_data, machos })
     }
@@ -300,7 +299,7 @@ impl<'data> MachOSigner<'data> {
                 )?;
 
                 // A nice side-effect of this is that it catches bugs if we write malformed Mach-O!
-                let intermediate_macho = MachO::parse(&intermediate_macho_data, 0)?;
+                let intermediate_macho = MachOBinary::parse(&intermediate_macho_data)?;
 
                 let mut signature_data =
                     self.create_superblob(&settings, self.macho_data(index), &intermediate_macho)?;
@@ -358,7 +357,7 @@ impl<'data> MachOSigner<'data> {
         &self,
         settings: &SigningSettings,
         macho_data: &[u8],
-        macho: &MachO,
+        macho: &MachOBinary,
     ) -> Result<Vec<u8>, AppleCodesignError> {
         let mut builder = EmbeddedSignatureBuilder::default();
 
@@ -409,7 +408,7 @@ impl<'data> MachOSigner<'data> {
         &self,
         settings: &SigningSettings,
         macho_data: &[u8],
-        macho: &MachO,
+        macho: &MachOBinary,
     ) -> Result<CodeDirectoryBlob<'static>, AppleCodesignError> {
         // TODO support defining or filling in proper values for fields with
         // static values.
