@@ -20,8 +20,7 @@
 //! This crate can:
 //!
 //! * Find code signature data embedded in Mach-O binaries (both single and
-//!   multi-arch/fat/universal binaries). (See [AppleSignable] trait and its
-//!   methods.)
+//!   multi-arch/fat/universal binaries). (See [MachOBinary] struct.)
 //! * Deeply parse code signature data into Rust structs. (See
 //!   [EmbeddedSignature], [BlobData], and e.g. [CodeDirectoryBlob].
 //! * Parse and verify the RFC 5652 Cryptographic Message Syntax (CMS)

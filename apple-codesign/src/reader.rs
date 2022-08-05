@@ -12,7 +12,7 @@ use {
         embedded_signature::{BlobEntry, DigestType, EmbeddedSignature},
         embedded_signature_builder::{CD_DIGESTS_OID, CD_DIGESTS_PLIST_OID},
         error::AppleCodesignError,
-        macho::{AppleSignable, MachFile, MachOBinary},
+        macho::{MachFile, MachOBinary},
     },
     apple_bundles::{DirectoryBundle, DirectoryBundleFile},
     apple_xar::{

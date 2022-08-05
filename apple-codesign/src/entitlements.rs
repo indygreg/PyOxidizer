@@ -121,7 +121,6 @@ mod test {
         crate::{
             embedded_signature::{Blob, CodeSigningSlot},
             macho::MachFile,
-            AppleSignable,
         },
         anyhow::anyhow,
         anyhow::Result,

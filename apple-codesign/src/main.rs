@@ -69,7 +69,7 @@ use {
         cryptography::{parse_pfx_data, InMemoryPrivateKey, PrivateKey},
         embedded_signature::{Blob, CodeSigningSlot, DigestType, RequirementSetBlob},
         error::AppleCodesignError,
-        macho::{find_macho_targeting, AppleSignable, MachFile},
+        macho::{find_macho_targeting, MachFile},
         reader::SignatureReader,
         remote_signing::{
             session_negotiation::{

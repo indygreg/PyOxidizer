@@ -11,7 +11,7 @@ use {
         code_resources::{CodeResourcesBuilder, CodeResourcesRule},
         embedded_signature::{Blob, BlobData, DigestType},
         error::AppleCodesignError,
-        macho::{find_macho_targeting, AppleSignable, MachFile},
+        macho::{find_macho_targeting, MachFile},
         macho_signing::{write_macho_file, MachOSigner},
         signing_settings::{SettingsScope, SigningSettings},
     },

@@ -27,7 +27,7 @@ use {
         code_hash::segment_digests,
         embedded_signature::{CodeSigningSlot, DigestType, EmbeddedSignature},
         error::AppleCodesignError,
-        macho::{AppleSignable, MachFile, MachOBinary},
+        macho::{MachFile, MachOBinary},
     },
     cryptographic_message_syntax::{CmsError, SignedData},
     std::path::{Path, PathBuf},

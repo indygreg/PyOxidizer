@@ -122,7 +122,7 @@ impl<'a> MachFile<'a> {
     }
 }
 
-pub trait AppleSignable {
+impl<'a> MachOBinary<'a> {
     /// Attempt to extract a reference to raw signature data in a Mach-O binary.
     ///
     /// An `LC_CODE_SIGNATURE` load command in the Mach-O file header points to
@@ -130,70 +130,9 @@ pub trait AppleSignable {
     ///
     /// This function is used as part of parsing signature data. You probably want to
     /// use a function that parses referenced data.
-    fn find_signature_data(&self) -> Result<Option<MachOSignatureData<'_>>, AppleCodesignError>;
-
-    /// Obtain the code signature in the entity.
-    ///
-    /// Returns `Ok(None)` if no signature exists, `Ok(Some)` if it does, or
-    /// `Err` if there is a parse error.
-    fn code_signature(&self) -> Result<Option<EmbeddedSignature>, AppleCodesignError>;
-
-    /// Determine the start and end offset of the executable segment of a binary.
-    fn executable_segment_boundary(&self) -> Result<(u64, u64), AppleCodesignError>;
-
-    /// Whether this is an executable Mach-O file.
-    fn is_executable(&self) -> bool;
-
-    /// The start offset of the code signature data within the __LINKEDIT segment.
-    fn code_signature_linkedit_start_offset(&self) -> Option<u32>;
-
-    /// The end offset of the code signature data within the __LINKEDIT segment.
-    fn code_signature_linkedit_end_offset(&self) -> Option<u32>;
-
-    /// The byte offset within the binary at which point "code" stops.
-    ///
-    /// If a signature is present, this is the offset of the start of the
-    /// signature. Else it represents the end of the binary.
-    fn code_limit_binary_offset(&self) -> Result<u64, AppleCodesignError>;
-
-    /// Obtain __LINKEDIT segment data before the signature data.
-    fn linkedit_data_before_signature(&self) -> Option<&[u8]>;
-
-    /// Obtain slices of segment data suitable for digesting.
-    ///
-    /// The slices are likely digested as part of computing digests
-    /// embedded in the code directory.
-    fn digestable_segment_data(&self) -> Vec<&[u8]>;
-
-    /// Resolve the load command for the code signature.
-    fn code_signature_load_command(&self) -> Option<LinkeditDataCommand>;
-
-    /// Attempt to locate embedded Info.plist data.
-    fn embedded_info_plist(&self) -> Result<Option<Vec<u8>>, AppleCodesignError>;
-
-    /// Determines whether this crate is capable of signing a given Mach-O binary.
-    ///
-    /// Code in this crate is limited in the amount of Mach-O binary manipulation
-    /// it can perform (supporting rewriting all valid Mach-O binaries effectively
-    /// requires low-level awareness of all Mach-O constructs in order to perform
-    /// offset manipulation). This function can be used to test signing
-    /// compatibility.
-    ///
-    /// We currently only support signing Mach-O files already containing an
-    /// embedded signature. Often linked binaries automatically contain an embedded
-    /// signature containing just the code directory (without a cryptographically
-    /// signed signature), so this limitation hopefully isn't impactful.
-    fn check_signing_capability(&self) -> Result<(), AppleCodesignError>;
-
-    /// Estimate the size in bytes of an embedded code signature.
-    fn estimate_embedded_signature_size(
+    pub fn find_signature_data(
         &self,
-        settings: &SigningSettings,
-    ) -> Result<usize, AppleCodesignError>;
-}
-
-impl<'a> AppleSignable for MachOBinary<'a> {
-    fn find_signature_data(&self) -> Result<Option<MachOSignatureData<'a>>, AppleCodesignError> {
+    ) -> Result<Option<MachOSignatureData<'a>>, AppleCodesignError> {
         if let Some(linkedit_data_command) =
             self.macho.load_commands.iter().find_map(|load_command| {
                 if let CommandVariant::CodeSignature(command) = &load_command.command {
@@ -246,7 +185,11 @@ impl<'a> AppleSignable for MachOBinary<'a> {
         }
     }
 
-    fn code_signature(&self) -> Result<Option<EmbeddedSignature>, AppleCodesignError> {
+    /// Obtain the code signature in the entity.
+    ///
+    /// Returns `Ok(None)` if no signature exists, `Ok(Some)` if it does, or
+    /// `Err` if there is a parse error.
+    pub fn code_signature(&self) -> Result<Option<EmbeddedSignature>, AppleCodesignError> {
         if let Some(signature) = self.find_signature_data()? {
             Ok(Some(EmbeddedSignature::from_bytes(
                 signature.signature_data,
@@ -256,7 +199,8 @@ impl<'a> AppleSignable for MachOBinary<'a> {
         }
     }
 
-    fn executable_segment_boundary(&self) -> Result<(u64, u64), AppleCodesignError> {
+    /// Determine the start and end offset of the executable segment of a binary.
+    pub fn executable_segment_boundary(&self) -> Result<(u64, u64), AppleCodesignError> {
         let segment = self
             .macho
             .segments
@@ -267,11 +211,13 @@ impl<'a> AppleSignable for MachOBinary<'a> {
         Ok((segment.fileoff, segment.fileoff + segment.data.len() as u64))
     }
 
-    fn is_executable(&self) -> bool {
+    /// Whether this is an executable Mach-O file.
+    pub fn is_executable(&self) -> bool {
         self.macho.header.filetype == MH_EXECUTE
     }
 
-    fn code_signature_linkedit_start_offset(&self) -> Option<u32> {
+    /// The start offset of the code signature data within the __LINKEDIT segment.
+    pub fn code_signature_linkedit_start_offset(&self) -> Option<u32> {
         let segment = self
             .macho
             .segments
@@ -285,14 +231,19 @@ impl<'a> AppleSignable for MachOBinary<'a> {
         }
     }
 
-    fn code_signature_linkedit_end_offset(&self) -> Option<u32> {
+    /// The end offset of the code signature data within the __LINKEDIT segment.
+    pub fn code_signature_linkedit_end_offset(&self) -> Option<u32> {
         let start_offset = self.code_signature_linkedit_start_offset()?;
 
         self.code_signature_load_command()
             .map(|command| start_offset + command.datasize)
     }
 
-    fn code_limit_binary_offset(&self) -> Result<u64, AppleCodesignError> {
+    /// The byte offset within the binary at which point "code" stops.
+    ///
+    /// If a signature is present, this is the offset of the start of the
+    /// signature. Else it represents the end of the binary.
+    pub fn code_limit_binary_offset(&self) -> Result<u64, AppleCodesignError> {
         let last_segment = self
             .macho
             .segments
@@ -309,7 +260,8 @@ impl<'a> AppleSignable for MachOBinary<'a> {
         }
     }
 
-    fn linkedit_data_before_signature(&self) -> Option<&[u8]> {
+    /// Obtain __LINKEDIT segment data before the signature data.
+    pub fn linkedit_data_before_signature(&self) -> Option<&[u8]> {
         let segment = self
             .macho
             .segments
@@ -327,7 +279,11 @@ impl<'a> AppleSignable for MachOBinary<'a> {
         }
     }
 
-    fn digestable_segment_data(&self) -> Vec<&[u8]> {
+    /// Obtain slices of segment data suitable for digesting.
+    ///
+    /// The slices are likely digested as part of computing digests
+    /// embedded in the code directory.
+    pub fn digestable_segment_data(&self) -> Vec<&[u8]> {
         self.macho
             .segments
             .iter()
@@ -343,7 +299,8 @@ impl<'a> AppleSignable for MachOBinary<'a> {
             .collect::<Vec<_>>()
     }
 
-    fn code_signature_load_command(&self) -> Option<LinkeditDataCommand> {
+    /// Resolve the load command for the code signature.
+    pub fn code_signature_load_command(&self) -> Option<LinkeditDataCommand> {
         self.macho.load_commands.iter().find_map(|lc| {
             if let CommandVariant::CodeSignature(command) = lc.command {
                 Some(command)
@@ -353,7 +310,8 @@ impl<'a> AppleSignable for MachOBinary<'a> {
         })
     }
 
-    fn embedded_info_plist(&self) -> Result<Option<Vec<u8>>, AppleCodesignError> {
+    /// Attempt to locate embedded Info.plist data.
+    pub fn embedded_info_plist(&self) -> Result<Option<Vec<u8>>, AppleCodesignError> {
         // Mach-O binaries can have the Info.plist data in an `__info_plist` section
         // within the __TEXT segment.
         for segment in &self.macho.segments {
@@ -369,7 +327,19 @@ impl<'a> AppleSignable for MachOBinary<'a> {
         Ok(None)
     }
 
-    fn check_signing_capability(&self) -> Result<(), AppleCodesignError> {
+    /// Determines whether this crate is capable of signing a given Mach-O binary.
+    ///
+    /// Code in this crate is limited in the amount of Mach-O binary manipulation
+    /// it can perform (supporting rewriting all valid Mach-O binaries effectively
+    /// requires low-level awareness of all Mach-O constructs in order to perform
+    /// offset manipulation). This function can be used to test signing
+    /// compatibility.
+    ///
+    /// We currently only support signing Mach-O files already containing an
+    /// embedded signature. Often linked binaries automatically contain an embedded
+    /// signature containing just the code directory (without a cryptographically
+    /// signed signature), so this limitation hopefully isn't impactful.
+    pub fn check_signing_capability(&self) -> Result<(), AppleCodesignError> {
         let last_segment = self
             .macho
             .segments
@@ -429,7 +399,8 @@ impl<'a> AppleSignable for MachOBinary<'a> {
         }
     }
 
-    fn estimate_embedded_signature_size(
+    /// Estimate the size in bytes of an embedded code signature.
+    pub fn estimate_embedded_signature_size(
         &self,
         settings: &SigningSettings,
     ) -> Result<usize, AppleCodesignError> {

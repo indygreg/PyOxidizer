@@ -18,10 +18,7 @@ use {
         embedded_signature_builder::EmbeddedSignatureBuilder,
         entitlements::plist_to_executable_segment_flags,
         error::AppleCodesignError,
-        macho::{
-            find_macho_targeting, semver_to_macho_target_version, AppleSignable, MachFile,
-            MachOBinary,
-        },
+        macho::{find_macho_targeting, semver_to_macho_target_version, MachFile, MachOBinary},
         policy::derive_designated_requirements,
         signing_settings::{DesignatedRequirementMode, SettingsScope, SigningSettings},
     },

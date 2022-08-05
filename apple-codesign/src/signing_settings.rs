@@ -11,7 +11,7 @@ use {
         code_requirement::CodeRequirementExpression,
         embedded_signature::{Blob, DigestType, RequirementBlob},
         error::AppleCodesignError,
-        macho::{find_macho_targeting, parse_version_nibbles, AppleSignable, MachFile},
+        macho::{find_macho_targeting, parse_version_nibbles, MachFile},
     },
     glob::Pattern,
     goblin::mach::cputype::{
