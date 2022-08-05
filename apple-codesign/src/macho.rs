@@ -354,21 +354,23 @@ pub fn get_macho_from_data(
 }
 
 /// Iterate [MachO] instances from file data.
+///
+/// The `Option<usize>` is `Some` if this is a universal Mach-O or `None` otherwise.
 pub fn iter_macho(
     macho_data: &[u8],
-) -> Result<impl Iterator<Item = (MachO<'_>, &'_ [u8])>, AppleCodesignError> {
+) -> Result<impl Iterator<Item = (Option<usize>, MachO<'_>, &'_ [u8])>, AppleCodesignError> {
     let mach = Mach::parse(macho_data)?;
 
     let machos = match mach {
         Mach::Binary(macho) => {
-            vec![(macho, macho_data)]
+            vec![(None, macho, macho_data)]
         }
         Mach::Fat(multiarch) => {
             let mut machos = vec![];
 
             for (index, arch) in multiarch.arches()?.into_iter().enumerate() {
                 let macho = multiarch.get(index)?;
-                machos.push((macho, arch.slice(macho_data)));
+                machos.push((Some(index), macho, arch.slice(macho_data)));
             }
 
             machos

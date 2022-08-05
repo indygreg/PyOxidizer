@@ -263,7 +263,7 @@ impl<'data> MachOSigner<'data> {
         let machos = iter_macho(macho_data)?
             .collect::<Vec<_>>()
             .into_iter()
-            .map(|(x, _)| x)
+            .map(|(_, x, _)| x)
             .collect::<Vec<_>>();
 
         Ok(Self { macho_data, machos })

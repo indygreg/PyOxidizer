@@ -756,7 +756,8 @@ impl<'key> SigningSettings<'key> {
     ) -> Result<(), AppleCodesignError> {
         info!("inferring default signing settings from Mach-O binary");
 
-        for (index, (macho, macho_data)) in iter_macho(macho_data)?.enumerate() {
+        for (index, macho, macho_data) in iter_macho(macho_data)? {
+            let index = index.unwrap_or(0);
             let scope_main = SettingsScope::Main;
             let scope_index = SettingsScope::MultiArchIndex(index);
             let scope_arch = SettingsScope::MultiArchCpuType(macho.header.cputype());

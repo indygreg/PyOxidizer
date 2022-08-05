@@ -454,7 +454,7 @@ impl SingleBundleSigner {
         if let Some(exe) = &main_exe {
             let macho_data = std::fs::read(exe.absolute_path())?;
 
-            for (macho, macho_data) in iter_macho(&macho_data)? {
+            for (_, macho, macho_data) in iter_macho(&macho_data)? {
                 if let Some(targeting) = find_macho_targeting(macho_data, &macho)? {
                     let sha256_version = targeting.platform.sha256_digest_support()?;
 
