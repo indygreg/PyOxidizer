@@ -721,9 +721,7 @@ mod tests {
         res
     }
 
-    fn find_apple_embedded_signature<'a>(
-        macho: &'a goblin::mach::MachO,
-    ) -> Option<EmbeddedSignature<'a>> {
+    fn find_apple_embedded_signature<'a>(macho: &'a MachO) -> Option<EmbeddedSignature<'a>> {
         if let Ok(Some(signature)) = macho.code_signature() {
             Some(signature)
         } else {
