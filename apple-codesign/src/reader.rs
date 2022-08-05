@@ -12,7 +12,7 @@ use {
         embedded_signature::{BlobEntry, DigestType, EmbeddedSignature},
         embedded_signature_builder::{CD_DIGESTS_OID, CD_DIGESTS_PLIST_OID},
         error::AppleCodesignError,
-        macho::{get_macho_from_data, AppleSignable},
+        macho::{get_macho_from_data, iter_macho, AppleSignable},
     },
     apple_bundles::{DirectoryBundle, DirectoryBundleFile},
     apple_xar::{
@@ -22,7 +22,7 @@ use {
         },
     },
     cryptographic_message_syntax::{SignedData, SignerInfo},
-    goblin::mach::{fat::FAT_MAGIC, parse_magic_and_ctx, Mach, MachO},
+    goblin::mach::{fat::FAT_MAGIC, parse_magic_and_ctx, MachO},
     serde::Serialize,
     std::{
         fmt::Debug,
@@ -835,30 +835,23 @@ impl SignatureReader {
         data: &[u8],
         report_path: Option<&Path>,
     ) -> Result<Vec<FileEntity>, AppleCodesignError> {
-        let mut entity = FileEntity::from_path(path, report_path)?;
+        let mut entities = vec![];
 
-        match Mach::parse(data)? {
-            Mach::Binary(macho) => {
-                entity.entity = SignatureEntity::MachO(Self::resolve_macho_entity(macho)?);
+        let entity = FileEntity::from_path(path, report_path)?;
 
-                Ok(vec![entity])
+        for (index, macho, _) in iter_macho(data)? {
+            let mut entity = entity.clone();
+
+            if let Some(index) = index {
+                entity.sub_path = Some(format!("macho-index:{}", index));
             }
-            Mach::Fat(multiarch) => {
-                let mut entities = vec![];
 
-                for index in 0..multiarch.narches {
-                    let macho = multiarch.get(index)?;
+            entity.entity = SignatureEntity::MachO(Self::resolve_macho_entity(macho)?);
 
-                    let mut entity = entity.clone();
-                    entity.sub_path = Some(format!("macho-index:{}", index));
-                    entity.entity = SignatureEntity::MachO(Self::resolve_macho_entity(macho)?);
-
-                    entities.push(entity);
-                }
-
-                Ok(entities)
-            }
+            entities.push(entity);
         }
+
+        Ok(entities)
     }
 
     fn resolve_macho_entity(macho: MachO) -> Result<MachOEntity, AppleCodesignError> {
