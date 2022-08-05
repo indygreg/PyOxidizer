@@ -27,10 +27,10 @@ use {
         code_hash::compute_code_hashes,
         embedded_signature::{CodeSigningSlot, DigestType, EmbeddedSignature},
         error::AppleCodesignError,
-        macho::{find_signature_data, AppleSignable},
+        macho::{find_signature_data, iter_macho, AppleSignable},
     },
     cryptographic_message_syntax::{CmsError, SignedData},
-    goblin::mach::{Mach, MachO},
+    goblin::mach::MachO,
     std::path::{Path, PathBuf},
     x509_certificate::{DigestAlgorithm, SignatureAlgorithm},
 };
@@ -49,7 +49,7 @@ pub struct VerificationContext {
 #[derive(Debug)]
 pub enum VerificationProblemType {
     IoError(std::io::Error),
-    MachOParseError(goblin::error::Error),
+    MachOParseError(AppleCodesignError),
     NoMachOSignatureData,
     MachOSignatureError(AppleCodesignError),
     LinkeditNotLastSegment,
@@ -214,24 +214,15 @@ fn verify_macho_data_internal(
     data: impl AsRef<[u8]>,
     context: VerificationContext,
 ) -> Vec<VerificationProblem> {
-    match Mach::parse(data.as_ref()) {
-        Ok(Mach::Binary(macho)) => verify_macho_internal(&macho, context),
-        Ok(Mach::Fat(multiarch)) => {
+    match iter_macho(data.as_ref()) {
+        Ok(iter) => {
             let mut problems = vec![];
 
-            for index in 0..multiarch.narches {
+            for (index, macho, _) in iter {
                 let mut context = context.clone();
-                context.fat_index = Some(index);
+                context.fat_index = index;
 
-                match multiarch.get(index) {
-                    Ok(macho) => {
-                        problems.extend(verify_macho_internal(&macho, context));
-                    }
-                    Err(e) => problems.push(VerificationProblem {
-                        context,
-                        problem: VerificationProblemType::MachOParseError(e),
-                    }),
-                }
+                problems.extend(verify_macho_internal(&macho, context));
             }
 
             problems
