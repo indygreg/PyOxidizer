@@ -750,26 +750,22 @@ impl<'key> SigningSettings<'key> {
     ///
     /// If existing settings are explicitly set, they will be honored. Otherwise the state from
     /// the Mach-O is imported into the settings.
-    pub fn import_settings_from_macho(
-        &mut self,
-        macho_data: &[u8],
-    ) -> Result<(), AppleCodesignError> {
+    pub fn import_settings_from_macho(&mut self, data: &[u8]) -> Result<(), AppleCodesignError> {
         info!("inferring default signing settings from Mach-O binary");
 
-        for macho in MachFile::parse(macho_data)?.into_iter() {
+        for macho in MachFile::parse(data)?.into_iter() {
             let index = macho.index.unwrap_or(0);
             let macho_data = macho.data;
-            let macho = macho.macho;
 
             let scope_main = SettingsScope::Main;
             let scope_index = SettingsScope::MultiArchIndex(index);
-            let scope_arch = SettingsScope::MultiArchCpuType(macho.header.cputype());
+            let scope_arch = SettingsScope::MultiArchCpuType(macho.macho.header.cputype());
 
             // Older operating system versions don't have support for SHA-256 in
             // signatures. If the minimum version targeting in the binary doesn't
             // support SHA-256, we automatically change the digest targeting settings
             // so the binary will be signed correctly.
-            if let Some(targeting) = find_macho_targeting(macho_data, &macho)? {
+            if let Some(targeting) = find_macho_targeting(macho_data, &macho.macho)? {
                 let sha256_version = targeting.platform.sha256_digest_support()?;
 
                 if !sha256_version.matches(&targeting.minimum_os_version) {

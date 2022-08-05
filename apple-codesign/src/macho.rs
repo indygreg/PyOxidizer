@@ -29,7 +29,6 @@ use {
         parse_magic_and_ctx, Mach, MachO,
     },
     scroll::Pread,
-    std::ops::Deref,
     x509_certificate::DigestAlgorithm,
 };
 
@@ -45,14 +44,6 @@ pub struct MachOBinary<'a> {
 
     /// The raw data backing the Mach-O binary.
     pub data: &'a [u8],
-}
-
-impl<'a> Deref for MachOBinary<'a> {
-    type Target = MachO<'a>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.macho
-    }
 }
 
 impl<'a> MachOBinary<'a> {
@@ -118,12 +109,11 @@ impl<'a> MachFile<'a> {
         self.machos.iter()
     }
 
-    pub fn nth_macho(&self, index: usize) -> Result<&MachO<'a>, AppleCodesignError> {
-        Ok(&self
+    pub fn nth_macho(&self, index: usize) -> Result<&MachOBinary<'a>, AppleCodesignError> {
+        Ok(self
             .machos
             .get(index)
-            .ok_or_else(|| AppleCodesignError::InvalidMachOIndex(index))?
-            .macho)
+            .ok_or_else(|| AppleCodesignError::InvalidMachOIndex(index))?)
     }
 
     /// Produce an iterator over each [MachOBinary], consuming self.
@@ -202,17 +192,20 @@ pub trait AppleSignable {
     ) -> Result<usize, AppleCodesignError>;
 }
 
-impl<'a> AppleSignable for MachO<'a> {
+impl<'a> AppleSignable for MachOBinary<'a> {
     fn find_signature_data(&self) -> Result<Option<MachOSignatureData<'a>>, AppleCodesignError> {
-        if let Some(linkedit_data_command) = self.load_commands.iter().find_map(|load_command| {
-            if let CommandVariant::CodeSignature(command) = &load_command.command {
-                Some(command)
-            } else {
-                None
-            }
-        }) {
+        if let Some(linkedit_data_command) =
+            self.macho.load_commands.iter().find_map(|load_command| {
+                if let CommandVariant::CodeSignature(command) = &load_command.command {
+                    Some(command)
+                } else {
+                    None
+                }
+            })
+        {
             // Now find the slice of data in the __LINKEDIT segment we need to parse.
             let (linkedit_segment_index, linkedit) = self
+                .macho
                 .segments
                 .iter()
                 .enumerate()
@@ -265,6 +258,7 @@ impl<'a> AppleSignable for MachO<'a> {
 
     fn executable_segment_boundary(&self) -> Result<(u64, u64), AppleCodesignError> {
         let segment = self
+            .macho
             .segments
             .iter()
             .find(|segment| matches!(segment.name(), Ok(SEG_TEXT)))
@@ -274,11 +268,12 @@ impl<'a> AppleSignable for MachO<'a> {
     }
 
     fn is_executable(&self) -> bool {
-        self.header.filetype == MH_EXECUTE
+        self.macho.header.filetype == MH_EXECUTE
     }
 
     fn code_signature_linkedit_start_offset(&self) -> Option<u32> {
         let segment = self
+            .macho
             .segments
             .iter()
             .find(|segment| matches!(segment.name(), Ok(SEG_LINKEDIT)));
@@ -299,6 +294,7 @@ impl<'a> AppleSignable for MachO<'a> {
 
     fn code_limit_binary_offset(&self) -> Result<u64, AppleCodesignError> {
         let last_segment = self
+            .macho
             .segments
             .last()
             .ok_or(AppleCodesignError::MissingLinkedit)?;
@@ -315,6 +311,7 @@ impl<'a> AppleSignable for MachO<'a> {
 
     fn linkedit_data_before_signature(&self) -> Option<&[u8]> {
         let segment = self
+            .macho
             .segments
             .iter()
             .find(|segment| matches!(segment.name(), Ok(SEG_LINKEDIT)));
@@ -331,7 +328,8 @@ impl<'a> AppleSignable for MachO<'a> {
     }
 
     fn digestable_segment_data(&self) -> Vec<&[u8]> {
-        self.segments
+        self.macho
+            .segments
             .iter()
             .filter(|segment| !matches!(segment.name(), Ok(SEG_PAGEZERO)))
             .map(|segment| {
@@ -346,7 +344,7 @@ impl<'a> AppleSignable for MachO<'a> {
     }
 
     fn code_signature_load_command(&self) -> Option<LinkeditDataCommand> {
-        self.load_commands.iter().find_map(|lc| {
+        self.macho.load_commands.iter().find_map(|lc| {
             if let CommandVariant::CodeSignature(command) = lc.command {
                 Some(command)
             } else {
@@ -358,7 +356,7 @@ impl<'a> AppleSignable for MachO<'a> {
     fn embedded_info_plist(&self) -> Result<Option<Vec<u8>>, AppleCodesignError> {
         // Mach-O binaries can have the Info.plist data in an `__info_plist` section
         // within the __TEXT segment.
-        for segment in &self.segments {
+        for segment in &self.macho.segments {
             if matches!(segment.name(), Ok(SEG_TEXT)) {
                 for (section, data) in segment.sections()? {
                     if matches!(section.name(), Ok("__info_plist")) {
@@ -373,6 +371,7 @@ impl<'a> AppleSignable for MachO<'a> {
 
     fn check_signing_capability(&self) -> Result<(), AppleCodesignError> {
         let last_segment = self
+            .macho
             .segments
             .iter()
             .last()
@@ -400,12 +399,14 @@ impl<'a> AppleSignable for MachO<'a> {
             }
         } else {
             let last_load_command = self
+                .macho
                 .load_commands
                 .iter()
                 .last()
                 .ok_or_else(|| AppleCodesignError::InvalidBinary("no load commands".into()))?;
 
             let first_section = self
+                .macho
                 .segments
                 .iter()
                 .map(|segment| segment.sections())
@@ -734,7 +735,7 @@ mod tests {
         res
     }
 
-    fn find_apple_embedded_signature<'a>(macho: &'a MachO) -> Option<EmbeddedSignature<'a>> {
+    fn find_apple_embedded_signature<'a>(macho: &'a MachOBinary) -> Option<EmbeddedSignature<'a>> {
         if let Ok(Some(signature)) = macho.code_signature() {
             Some(signature)
         } else {

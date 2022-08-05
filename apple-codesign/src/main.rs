@@ -1482,9 +1482,9 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             std::io::stdout().write_all(sig.linkedit_segment_data)?;
         }
         "macho-load-commands" => {
-            println!("load command count: {}", macho.load_commands.len());
+            println!("load command count: {}", macho.macho.load_commands.len());
 
-            for command in &macho.load_commands {
+            for command in &macho.macho.load_commands {
                 println!(
                     "{}; offsets=0x{:x}-0x{:x} ({}-{}); size={}",
                     goblin::mach::load_command::cmd_to_str(command.command.cmd()),
@@ -1497,8 +1497,8 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "macho-segments" => {
-            println!("segments count: {}", macho.segments.len());
-            for (segment_index, segment) in macho.segments.iter().enumerate() {
+            println!("segments count: {}", macho.macho.segments.len());
+            for (segment_index, segment) in macho.macho.segments.iter().enumerate() {
                 let sections = segment.sections()?;
 
                 println!(
@@ -1525,7 +1525,7 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "macho-target" => {
-            if let Some(target) = find_macho_targeting(&data, &macho)? {
+            if let Some(target) = find_macho_targeting(&data, &macho.macho)? {
                 println!("Platform: {}", target.platform);
                 println!("Minimum OS: {}", target.minimum_os_version);
                 println!("SDK: {}", target.sdk_version);

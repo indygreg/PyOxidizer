@@ -272,7 +272,7 @@ fn verify_macho_internal(
     let mut problems = vec![];
 
     // __LINKEDIT segment should be the last segment.
-    if signature_data.linkedit_segment_index != macho.segments.len() - 1 {
+    if signature_data.linkedit_segment_index != macho.macho.segments.len() - 1 {
         problems.push(VerificationProblem {
             context: context.clone(),
             problem: VerificationProblemType::LinkeditNotLastSegment,

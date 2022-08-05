@@ -80,7 +80,7 @@ fn create_macho_with_signature(
 
     // If there isn't a code signature presently, we'll need to introduce a load
     // command for it.
-    let mut header = macho.header;
+    let mut header = macho.macho.header;
     if macho.code_signature_load_command().is_none() {
         header.ncmds += 1;
         header.sizeofcmds += SIZEOF_LINKEDIT_DATA_COMMAND as u32;
@@ -93,7 +93,7 @@ fn create_macho_with_signature(
 
     let mut seen_signature_load_command = false;
 
-    for load_command in &macho.load_commands {
+    for load_command in &macho.macho.load_commands {
         let original_command_data =
             &macho_data[load_command.offset..load_command.offset + load_command.command.cmdsize()];
 
@@ -165,7 +165,7 @@ fn create_macho_with_signature(
     }
 
     // Write out segments, updating the __LINKEDIT segment when we encounter it.
-    for segment in macho.segments.iter() {
+    for segment in macho.macho.segments.iter() {
         assert!(segment.fileoff == 0 || segment.fileoff == cursor.position());
 
         // The initial __PAGEZERO segment contains no data (it is the magic and load
@@ -284,7 +284,7 @@ impl<'data> MachOSigner<'data> {
             .map(|(index, original_macho)| {
                 info!("signing Mach-O binary at index {}", index);
                 let settings =
-                    settings.as_nested_macho_settings(index, original_macho.header.cputype());
+                    settings.as_nested_macho_settings(index, original_macho.macho.header.cputype());
 
                 let signature_len = original_macho.estimate_embedded_signature_size(&settings)?;
 
@@ -413,7 +413,7 @@ impl<'data> MachOSigner<'data> {
         // TODO support defining or filling in proper values for fields with
         // static values.
 
-        let target = find_macho_targeting(macho_data, macho)?;
+        let target = find_macho_targeting(macho_data, &macho.macho)?;
 
         if let Some(target) = &target {
             info!(
