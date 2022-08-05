@@ -18,7 +18,7 @@ use {
         embedded_signature_builder::EmbeddedSignatureBuilder,
         entitlements::plist_to_executable_segment_flags,
         error::AppleCodesignError,
-        macho::{find_macho_targeting, iter_macho, semver_to_macho_target_version, AppleSignable},
+        macho::{find_macho_targeting, semver_to_macho_target_version, AppleSignable, MachFile},
         policy::derive_designated_requirements,
         signing_settings::{DesignatedRequirementMode, SettingsScope, SigningSettings},
     },
@@ -260,10 +260,9 @@ impl<'data> MachOSigner<'data> {
     /// The data will be parsed as a Mach-O binary (either single arch or fat/universal)
     /// and validated that we are capable of signing it.
     pub fn new(macho_data: &'data [u8]) -> Result<Self, AppleCodesignError> {
-        let machos = iter_macho(macho_data)?
-            .collect::<Vec<_>>()
+        let machos = MachFile::parse(macho_data)?
             .into_iter()
-            .map(|(_, x, _)| x)
+            .map(|x| x.macho)
             .collect::<Vec<_>>();
 
         Ok(Self { macho_data, machos })
@@ -340,12 +339,11 @@ impl<'data> MachOSigner<'data> {
 
     /// Derive the data slice belonging to a Mach-O binary.
     fn macho_data(&self, index: usize) -> &[u8] {
-        let (_, _, data) = iter_macho(self.macho_data)
-            .expect("should reparse without error")
-            .nth(index)
-            .expect("bad index");
+        let mach = MachFile::parse(self.macho_data).expect("should reparse without error");
 
-        data
+        let macho = mach.into_iter().nth(index).expect("bad index");
+
+        macho.data
     }
 
     /// Create data constituting the SuperBlob to be embedded in the `__LINKEDIT` segment.

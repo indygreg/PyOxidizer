@@ -103,6 +103,11 @@ impl<'a> MachFile<'a> {
             .ok_or_else(|| AppleCodesignError::InvalidMachOIndex(index))?
             .macho)
     }
+
+    /// Produce an iterator over each [MachOBinary], consuming self.
+    pub fn into_iter(self) -> impl Iterator<Item = MachOBinary<'a>> {
+        self.machos.into_iter()
+    }
 }
 
 pub trait AppleSignable {
@@ -472,33 +477,6 @@ impl<'a> AppleSignable for MachO<'a> {
 
         Ok(size)
     }
-}
-
-/// Iterate [MachO] instances from file data.
-///
-/// The `Option<usize>` is `Some` if this is a universal Mach-O or `None` otherwise.
-pub fn iter_macho(
-    macho_data: &[u8],
-) -> Result<impl Iterator<Item = (Option<usize>, MachO<'_>, &'_ [u8])>, AppleCodesignError> {
-    let mach = Mach::parse(macho_data)?;
-
-    let machos = match mach {
-        Mach::Binary(macho) => {
-            vec![(None, macho, macho_data)]
-        }
-        Mach::Fat(multiarch) => {
-            let mut machos = vec![];
-
-            for (index, arch) in multiarch.arches()?.into_iter().enumerate() {
-                let macho = multiarch.get(index)?;
-                machos.push((Some(index), macho, arch.slice(macho_data)));
-            }
-
-            machos
-        }
-    };
-
-    Ok(machos.into_iter())
 }
 
 /// Describes signature data embedded within a Mach-O binary.

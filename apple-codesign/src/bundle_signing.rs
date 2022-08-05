@@ -11,7 +11,7 @@ use {
         code_resources::{CodeResourcesBuilder, CodeResourcesRule},
         embedded_signature::{Blob, BlobData, DigestType},
         error::AppleCodesignError,
-        macho::{find_macho_targeting, iter_macho, AppleSignable, MachFile},
+        macho::{find_macho_targeting, AppleSignable, MachFile},
         macho_signing::{write_macho_file, MachOSigner},
         signing_settings::{SettingsScope, SigningSettings},
     },
@@ -454,9 +454,10 @@ impl SingleBundleSigner {
 
         if let Some(exe) = &main_exe {
             let macho_data = std::fs::read(exe.absolute_path())?;
+            let mach = MachFile::parse(&macho_data)?;
 
-            for (_, macho, macho_data) in iter_macho(&macho_data)? {
-                if let Some(targeting) = find_macho_targeting(macho_data, &macho)? {
+            for macho in mach.iter_macho() {
+                if let Some(targeting) = find_macho_targeting(&macho.data, &macho.macho)? {
                     let sha256_version = targeting.platform.sha256_digest_support()?;
 
                     if !sha256_version.matches(&targeting.minimum_os_version)

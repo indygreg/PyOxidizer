@@ -11,7 +11,7 @@ use {
         code_requirement::CodeRequirementExpression,
         embedded_signature::{Blob, DigestType, RequirementBlob},
         error::AppleCodesignError,
-        macho::{find_macho_targeting, iter_macho, parse_version_nibbles, AppleSignable},
+        macho::{find_macho_targeting, parse_version_nibbles, AppleSignable, MachFile},
     },
     glob::Pattern,
     goblin::mach::cputype::{
@@ -756,8 +756,11 @@ impl<'key> SigningSettings<'key> {
     ) -> Result<(), AppleCodesignError> {
         info!("inferring default signing settings from Mach-O binary");
 
-        for (index, macho, macho_data) in iter_macho(macho_data)? {
-            let index = index.unwrap_or(0);
+        for macho in MachFile::parse(macho_data)?.into_iter() {
+            let index = macho.index.unwrap_or(0);
+            let macho_data = macho.data;
+            let macho = macho.macho;
+
             let scope_main = SettingsScope::Main;
             let scope_index = SettingsScope::MultiArchIndex(index);
             let scope_arch = SettingsScope::MultiArchCpuType(macho.header.cputype());

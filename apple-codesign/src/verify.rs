@@ -27,7 +27,7 @@ use {
         code_hash::segment_digests,
         embedded_signature::{CodeSigningSlot, DigestType, EmbeddedSignature},
         error::AppleCodesignError,
-        macho::{iter_macho, AppleSignable},
+        macho::{AppleSignable, MachFile},
     },
     cryptographic_message_syntax::{CmsError, SignedData},
     goblin::mach::MachO,
@@ -214,15 +214,15 @@ fn verify_macho_data_internal(
     data: impl AsRef<[u8]>,
     context: VerificationContext,
 ) -> Vec<VerificationProblem> {
-    match iter_macho(data.as_ref()) {
-        Ok(iter) => {
+    match MachFile::parse(data.as_ref()) {
+        Ok(mach) => {
             let mut problems = vec![];
 
-            for (index, macho, _) in iter {
+            for macho in mach.into_iter() {
                 let mut context = context.clone();
-                context.fat_index = index;
+                context.fat_index = macho.index;
 
-                problems.extend(verify_macho_internal(&macho, context));
+                problems.extend(verify_macho_internal(&macho.macho, context));
             }
 
             problems

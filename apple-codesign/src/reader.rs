@@ -12,7 +12,7 @@ use {
         embedded_signature::{BlobEntry, DigestType, EmbeddedSignature},
         embedded_signature_builder::{CD_DIGESTS_OID, CD_DIGESTS_PLIST_OID},
         error::AppleCodesignError,
-        macho::{iter_macho, AppleSignable, MachFile},
+        macho::{AppleSignable, MachFile},
     },
     apple_bundles::{DirectoryBundle, DirectoryBundleFile},
     apple_xar::{
@@ -839,14 +839,14 @@ impl SignatureReader {
 
         let entity = FileEntity::from_path(path, report_path)?;
 
-        for (index, macho, _) in iter_macho(data)? {
+        for macho in MachFile::parse(data)?.into_iter() {
             let mut entity = entity.clone();
 
-            if let Some(index) = index {
+            if let Some(index) = macho.index {
                 entity.sub_path = Some(format!("macho-index:{}", index));
             }
 
-            entity.entity = SignatureEntity::MachO(Self::resolve_macho_entity(macho)?);
+            entity.entity = SignatureEntity::MachO(Self::resolve_macho_entity(macho.macho)?);
 
             entities.push(entity);
         }
