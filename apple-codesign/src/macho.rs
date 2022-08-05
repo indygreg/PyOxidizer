@@ -59,69 +59,6 @@ impl<'a> MachOBinary<'a> {
     }
 }
 
-/// Represents a semi-parsed Mach[-O] binary.
-pub struct MachFile<'a> {
-    data: &'a [u8],
-
-    machos: Vec<MachOBinary<'a>>,
-}
-
-impl<'a> MachFile<'a> {
-    /// Construct an instance from data.
-    pub fn parse(data: &'a [u8]) -> Result<Self, AppleCodesignError> {
-        let mach = Mach::parse(data)?;
-
-        let machos = match mach {
-            Mach::Binary(macho) => vec![MachOBinary {
-                index: None,
-                macho,
-                data,
-            }],
-            Mach::Fat(multiarch) => {
-                let mut machos = vec![];
-
-                for (index, arch) in multiarch.arches()?.into_iter().enumerate() {
-                    let macho = multiarch.get(index)?;
-
-                    machos.push(MachOBinary {
-                        index: Some(index),
-                        macho,
-                        data: arch.slice(data),
-                    });
-                }
-
-                machos
-            }
-        };
-
-        Ok(Self { data, machos })
-    }
-
-    /// Whether this Mach-O data has multiple architectures.
-    pub fn is_fat(&self) -> bool {
-        self.machos.len() > 1
-    }
-
-    /// Iterate [MachO] instances in this data.
-    ///
-    /// The `Option<usize>` is `Some` if this is a universal Mach-O or `None` otherwise.
-    pub fn iter_macho(&self) -> impl Iterator<Item = &MachOBinary> {
-        self.machos.iter()
-    }
-
-    pub fn nth_macho(&self, index: usize) -> Result<&MachOBinary<'a>, AppleCodesignError> {
-        Ok(self
-            .machos
-            .get(index)
-            .ok_or_else(|| AppleCodesignError::InvalidMachOIndex(index))?)
-    }
-
-    /// Produce an iterator over each [MachOBinary], consuming self.
-    pub fn into_iter(self) -> impl Iterator<Item = MachOBinary<'a>> {
-        self.machos.into_iter()
-    }
-}
-
 impl<'a> MachOBinary<'a> {
     /// Attempt to extract a reference to raw signature data in a Mach-O binary.
     ///
@@ -665,6 +602,69 @@ pub fn find_macho_targeting(
     }
 
     Ok(None)
+}
+
+/// Represents a semi-parsed Mach[-O] binary.
+pub struct MachFile<'a> {
+    data: &'a [u8],
+
+    machos: Vec<MachOBinary<'a>>,
+}
+
+impl<'a> MachFile<'a> {
+    /// Construct an instance from data.
+    pub fn parse(data: &'a [u8]) -> Result<Self, AppleCodesignError> {
+        let mach = Mach::parse(data)?;
+
+        let machos = match mach {
+            Mach::Binary(macho) => vec![MachOBinary {
+                index: None,
+                macho,
+                data,
+            }],
+            Mach::Fat(multiarch) => {
+                let mut machos = vec![];
+
+                for (index, arch) in multiarch.arches()?.into_iter().enumerate() {
+                    let macho = multiarch.get(index)?;
+
+                    machos.push(MachOBinary {
+                        index: Some(index),
+                        macho,
+                        data: arch.slice(data),
+                    });
+                }
+
+                machos
+            }
+        };
+
+        Ok(Self { data, machos })
+    }
+
+    /// Whether this Mach-O data has multiple architectures.
+    pub fn is_fat(&self) -> bool {
+        self.machos.len() > 1
+    }
+
+    /// Iterate [MachO] instances in this data.
+    ///
+    /// The `Option<usize>` is `Some` if this is a universal Mach-O or `None` otherwise.
+    pub fn iter_macho(&self) -> impl Iterator<Item = &MachOBinary> {
+        self.machos.iter()
+    }
+
+    pub fn nth_macho(&self, index: usize) -> Result<&MachOBinary<'a>, AppleCodesignError> {
+        Ok(self
+            .machos
+            .get(index)
+            .ok_or_else(|| AppleCodesignError::InvalidMachOIndex(index))?)
+    }
+
+    /// Produce an iterator over each [MachOBinary], consuming self.
+    pub fn into_iter(self) -> impl Iterator<Item = MachOBinary<'a>> {
+        self.machos.into_iter()
+    }
 }
 
 #[cfg(test)]
