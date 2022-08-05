@@ -399,7 +399,7 @@ impl<'a> TryFrom<CodeDirectoryBlob<'a>> for CodeDirectory {
     fn try_from(cd: CodeDirectoryBlob<'a>) -> Result<Self, Self::Error> {
         let mut temp = cd
             .slot_digests()
-            .into_iter()
+            .iter()
             .map(|(slot, digest)| (slot, digest.as_hex()))
             .collect::<Vec<_>>();
         temp.sort_by(|(a, _), (b, _)| a.cmp(b));
