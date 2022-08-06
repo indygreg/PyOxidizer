@@ -7,6 +7,22 @@
 
 (Not yet released)
 
+* **Major feature**: Notarization is now implemented in Rust and no longer
+  requires Apple's *Transporter* application. Going forward, you only need
+  the ``rcodesign`` executable (or this crate embedded as a library) and an
+  App Store Connect API Key to notarize. Major thanks to Robin Lambertz
+  (@roblabla) for contributing the bulk of the implementation in #593.
+* As a result of native notarization, integration with Apple's *Transporter*
+  has been removed. The ``find-transporter`` sub-command has been removed. Rust
+  APIs related to Transporter, the *app metadata* XML format it used, and App
+  Store Connect APIs previously used have been removed.
+* As a result of native notarization, UI and implementation details of
+  notarization have changed. The output when uploading assets is much more
+  concise. Before, code existed to normalize uploaded assets to a data format
+  required by Transporter. As a side-effect, assets were somewhat validated
+  locally before upload. In the new world, minimal checks are performed locally.
+  This can result in errors (such as attempting to upload an asset without a
+  code signature) occurring later than they did previously.
 * minicbor crate upgraded from version 0.15. This created API differences in
   remote signing code.
 * The APIs around Mach-O file parsing have been significantly overhauled. It
