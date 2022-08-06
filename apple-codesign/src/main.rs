@@ -1973,6 +1973,21 @@ fn notarizer_wait_duration(args: &ArgMatches) -> Result<std::time::Duration, App
     Ok(std::time::Duration::from_secs(max_wait_seconds))
 }
 
+fn command_notary_log(args: &ArgMatches) -> Result<(), AppleCodesignError> {
+    let notarizer = notarizer_from_args(args)?;
+    let submission_id = args
+        .value_of("submission_id")
+        .expect("submission_id is required");
+
+    let log = notarizer.fetch_notarization_log(submission_id)?;
+
+    for line in serde_json::to_string_pretty(&log)?.lines() {
+        println!("{}", line);
+    }
+
+    Ok(())
+}
+
 fn command_notary_submit(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     let path = PathBuf::from(
         args.value_of("path")
@@ -2774,6 +2789,17 @@ fn main_impl() -> Result<(), AppleCodesignError> {
             ),
     );
 
+    let app = app.subcommand(add_notary_api_args(
+        Command::new("notary-log")
+            .about("Fetch the notarization log for a previous submission")
+            .arg(
+                Arg::new("submission_id")
+                    .required(true)
+                    .takes_value(true)
+                    .help("The ID of the previous submission to wait on"),
+            ),
+    ));
+
     let app =
         app.subcommand(add_notary_api_args(
             Command::new("notary-submit")
@@ -3105,6 +3131,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
             command_keychain_export_certificate_chain(args)
         }
         Some(("keychain-print-certificates", args)) => command_keychain_print_certificates(args),
+        Some(("notary-log", args)) => command_notary_log(args),
         Some(("notary-submit", args)) => command_notary_submit(args),
         Some(("notary-wait", args)) => command_notary_wait(args),
         Some(("parse-code-signing-requirement", args)) => {

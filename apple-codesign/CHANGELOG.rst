@@ -43,6 +43,8 @@
   submission to complete and to view its log info. This command can be useful if
   ``notary-submit`` times out or otherwise fails and you want to query the
   status of a previous notarization.
+* A new ``notary-log`` command will fetch the notarization log of a previous
+  submission from the Notary API server.
 * Fixed signing of Mach-O binaries having a gap between segments. (This is known
   to commonly occur in Go binaries.) In previous versions, we would compute
   digests of the file incorrectly and would encounter an assertion when copying
