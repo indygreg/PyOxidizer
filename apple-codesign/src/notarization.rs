@@ -16,7 +16,7 @@ and waiting on the availability of a notarization ticket.
 use {
     crate::{
         app_store_connect::{
-            AppStoreConnectClient, ConnectToken, NewSubmissionResponse, SubmissionResponse,
+            AppStoreConnectClient, ConnectTokenEncoder, NewSubmissionResponse, SubmissionResponse,
             SubmissionResponseStatus,
         },
         reader::PathType,
@@ -143,7 +143,7 @@ enum UploadKind {
 /// and incorporating it into the entity being signed.
 #[derive(Clone)]
 pub struct Notarizer {
-    auth: Option<ConnectToken>,
+    token_encoder: Option<ConnectTokenEncoder>,
 
     /// How long to wait between polling the server for upload status.
     wait_poll_interval: Duration,
@@ -153,7 +153,7 @@ impl Notarizer {
     /// Construct a new instance.
     pub fn new() -> Result<Self, AppleCodesignError> {
         Ok(Self {
-            auth: None,
+            token_encoder: None,
             wait_poll_interval: Duration::from_secs(3),
         })
     }
@@ -169,9 +169,9 @@ impl Notarizer {
         let api_key = api_key.to_string();
         let api_issuer = api_issuer.to_string();
 
-        let token = ConnectToken::from_api_key_id(api_key, api_issuer)?;
+        let token = ConnectTokenEncoder::from_api_key_id(api_key, api_issuer)?;
 
-        self.auth = Some(token);
+        self.token_encoder = Some(token);
 
         Ok(())
     }
@@ -267,7 +267,7 @@ impl Notarizer {
         digest: &[u8],
         name: &str,
     ) -> Result<NewSubmissionResponse, AppleCodesignError> {
-        let client = match &self.auth {
+        let client = match &self.token_encoder {
             Some(token) => Ok(AppStoreConnectClient::new(token.clone())?),
             _ => Err(AppleCodesignError::NotarizeNoAuthCredentials),
         }?;
@@ -357,7 +357,7 @@ impl Notarizer {
         let start_time = std::time::Instant::now();
 
         loop {
-            let client = match &self.auth {
+            let client = match &self.token_encoder {
                 Some(token) => Ok(AppStoreConnectClient::new(token.clone())?),
                 None => Err(AppleCodesignError::NotarizeNoAuthCredentials),
             }?;
@@ -393,7 +393,7 @@ impl Notarizer {
         submission_id: &str,
     ) -> Result<String, AppleCodesignError> {
         info!("fetching log from {}", submission_id);
-        let client = match &self.auth {
+        let client = match &self.token_encoder {
             Some(token) => Ok(AppStoreConnectClient::new(token.clone())?),
             None => Err(AppleCodesignError::NotarizeNoAuthCredentials),
         }?;

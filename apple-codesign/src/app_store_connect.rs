@@ -22,37 +22,79 @@ struct ConnectTokenRequest {
     aud: String,
 }
 
-/// An authentication token for the App Store Connect API.
+/// A JWT Token for use with App Store Connect API.
+pub type AppStoreConnectToken = String;
+
+/// Represents a private key used to create JWT tokens for use with App Store Connect.
+///
+/// See https://developer.apple.com/documentation/appstoreconnectapi/creating_api_keys_for_app_store_connect_api
+/// and https://developer.apple.com/documentation/appstoreconnectapi/generating_tokens_for_api_requests
+/// for more details.
+///
+/// This entity holds the necessary metadata to issue new JWT tokens.
+///
+/// App Store Connect API tokens/JWTs are derived from:
+///
+/// * A key identifier. This is a short alphanumeric string like `DEADBEEF42`.
+/// * An issuer ID. This is likely a UUID.
+/// * A private key. Likely ECDSA.
+///
+/// All these are issued by Apple. You can log in to App Store Connect and see/manage your keys
+/// at https://appstoreconnect.apple.com/access/api.
 #[derive(Clone)]
-pub struct ConnectToken {
+pub struct ConnectTokenEncoder {
     key_id: String,
     issuer_id: String,
     encoding_key: EncodingKey,
 }
 
-impl ConnectToken {
-    pub fn from_pkcs8_ec(
-        data: &[u8],
+impl ConnectTokenEncoder {
+    /// Construct an instance from an [EncodingKey] instance.
+    ///
+    /// This is the lowest level API and ultimately what all constructors use.
+    pub fn from_jwt_encoding_key(
         key_id: String,
         issuer_id: String,
-    ) -> Result<Self, AppleCodesignError> {
-        let encoding_key = EncodingKey::from_ec_pem(data)?;
-
-        Ok(Self {
+        encoding_key: EncodingKey,
+    ) -> Self {
+        Self {
             key_id,
             issuer_id,
             encoding_key,
-        })
+        }
     }
 
-    pub fn from_path(
-        path: impl AsRef<Path>,
+    /// Construct an instance from a DER encoded ECDSA private key.
+    pub fn from_ecdsa_der(
         key_id: String,
         issuer_id: String,
+        der_data: &[u8],
+    ) -> Result<Self, AppleCodesignError> {
+        let encoding_key = EncodingKey::from_ec_der(der_data);
+
+        Ok(Self::from_jwt_encoding_key(key_id, issuer_id, encoding_key))
+    }
+
+    /// Create a token from a PEM encoded ECDSA private key.
+    pub fn from_ecdsa_pem(
+        key_id: String,
+        issuer_id: String,
+        pem_data: &[u8],
+    ) -> Result<Self, AppleCodesignError> {
+        let encoding_key = EncodingKey::from_ec_pem(pem_data)?;
+
+        Ok(Self::from_jwt_encoding_key(key_id, issuer_id, encoding_key))
+    }
+
+    /// Create a token from a PEM encoded ECDSA private key in a filesystem path.
+    pub fn from_ecdsa_pem_path(
+        key_id: String,
+        issuer_id: String,
+        path: impl AsRef<Path>,
     ) -> Result<Self, AppleCodesignError> {
         let data = std::fs::read(path.as_ref())?;
 
-        Self::from_pkcs8_ec(&data, key_id, issuer_id)
+        Self::from_ecdsa_pem(key_id, issuer_id, &data)
     }
 
     /// Attempt to construct in instance from an API Key ID.
@@ -77,14 +119,18 @@ impl ConnectToken {
             let candidate = path.join(&filename);
 
             if candidate.exists() {
-                return Self::from_path(candidate, key_id, issuer_id);
+                return Self::from_ecdsa_pem_path(key_id, issuer_id, candidate);
             }
         }
 
         Err(AppleCodesignError::AppStoreConnectApiKeyNotFound)
     }
 
-    pub fn new_token(&self, duration: u64) -> Result<String, AppleCodesignError> {
+    /// Mint a new JWT token.
+    ///
+    /// Using the private key and key metadata bound to this instance, we issue a new JWT
+    /// for the requested duration.
+    pub fn new_token(&self, duration: u64) -> Result<AppStoreConnectToken, AppleCodesignError> {
         let header = Header {
             kid: Some(self.key_id.clone()),
             alg: Algorithm::ES256,
@@ -246,12 +292,12 @@ pub struct SubmissionLogResponse {
 /// The client isn't generic. Don't get any ideas.
 pub struct AppStoreConnectClient {
     client: Client,
-    connect_token: ConnectToken,
-    token: Mutex<Option<String>>,
+    connect_token: ConnectTokenEncoder,
+    token: Mutex<Option<AppStoreConnectToken>>,
 }
 
 impl AppStoreConnectClient {
-    pub fn new(connect_token: ConnectToken) -> Result<Self, AppleCodesignError> {
+    pub fn new(connect_token: ConnectTokenEncoder) -> Result<Self, AppleCodesignError> {
         Ok(Self {
             client: crate::ticket_lookup::default_client()?,
             connect_token,
@@ -262,6 +308,7 @@ impl AppStoreConnectClient {
     fn get_token(&self) -> Result<String, AppleCodesignError> {
         let mut token = self.token.lock().unwrap();
 
+        // TODO need to handle token expiration.
         if token.is_none() {
             token.replace(self.connect_token.new_token(300)?);
         }
