@@ -5,6 +5,7 @@
 use {
     crate::AppleCodesignError,
     jsonwebtoken::{Algorithm, EncodingKey, Header},
+    log::error,
     reqwest::blocking::Client,
     serde::{Deserialize, Serialize},
     serde_json::Value,
@@ -443,9 +444,16 @@ impl AppStoreConnectClient {
 
         let response = req.send()?;
 
-        let res_data = response.json::<NewSubmissionResponse>()?;
+        if response.status() == 200 {
+            let res_data = response.json::<NewSubmissionResponse>()?;
 
-        Ok(res_data)
+            Ok(res_data)
+        } else {
+            error!("non-200 from Notary API NewSubmissionRequest");
+            error!("{}", response.text()?);
+
+            Err(AppleCodesignError::NotarizeServerError)
+        }
     }
 
     /// Fetch the status of a Notary API submission.
