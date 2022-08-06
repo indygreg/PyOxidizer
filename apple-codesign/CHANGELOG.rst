@@ -35,6 +35,11 @@
   method was required for use with Apple's Transporter application, which we
   no longer use so we're no longer bound by its requirements. The old method
   will likely be dropped from a future release.
+* Fixed signing of Mach-O binaries having a gap between segments. (This is known
+  to commonly occur in Go binaries.) In previous versions, we would compute
+  digests of the file incorrectly and would encounter an assertion when copying
+  Mach-O data to the output binary. Both of these issues should now be fixed.
+  (#588 and #616)
 * minicbor crate upgraded from version 0.15. This created API differences in
   remote signing code.
 * The APIs around Mach-O file parsing have been significantly overhauled. It
@@ -43,8 +48,6 @@
   to custom Mach-O functionality. Most code interfacing with a Mach-O file now
   uses these types. The ``AppleSignable`` trait has been deleted as it is no
   longer needed since we have the dedicated ``MachOBinary`` type.
-* Fixed a bug where we hit an assertion when adding code signatures to Mach-O
-  binaries having padding between segments. (#588 and #616)
 
 0.16.0
 ======

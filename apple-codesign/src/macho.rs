@@ -198,6 +198,8 @@ impl<'a> MachOBinary<'a> {
     }
 
     /// Obtain __LINKEDIT segment data before the signature data.
+    ///
+    /// If there is no signature, returns all the data for the __LINKEDIT segment.
     pub fn linkedit_data_before_signature(&self) -> Option<&[u8]> {
         let segment = self
             .macho
@@ -221,17 +223,40 @@ impl<'a> MachOBinary<'a> {
     /// The slices are likely digested as part of computing digests
     /// embedded in the code directory.
     pub fn digestable_segment_data(&self) -> Vec<&[u8]> {
+        let mut last_segment_end_offset = None;
+
         self.macho
             .segments
             .iter()
             .filter(|segment| !matches!(segment.name(), Ok(SEG_PAGEZERO)))
-            .map(|segment| {
-                if matches!(segment.name(), Ok(SEG_LINKEDIT)) {
-                    self.linkedit_data_before_signature()
-                        .expect("__LINKEDIT data should resolve")
-                } else {
-                    segment.data
+            .flat_map(|segment| {
+                let mut segments = vec![];
+
+                let our_start_offset = segment.fileoff;
+                let our_end_offset = segment.fileoff + segment.filesize;
+
+                // There can be gaps between segments. Emit that gap as its own virtual segment.
+                if let Some(last_segment_end_offset) = last_segment_end_offset {
+                    if our_start_offset > last_segment_end_offset {
+                        let missing_data =
+                            &self.data[last_segment_end_offset as usize..our_start_offset as usize];
+                        segments.push(missing_data);
+                    }
                 }
+
+                last_segment_end_offset = Some(our_end_offset);
+
+                // The __LINKEDIT segment is only digested up to the code signature.
+                if matches!(segment.name(), Ok(SEG_LINKEDIT)) {
+                    segments.push(
+                        self.linkedit_data_before_signature()
+                            .expect("__LINKEDIT data should resolve"),
+                    );
+                } else {
+                    segments.push(segment.data);
+                }
+
+                segments
             })
             .collect::<Vec<_>>()
     }
