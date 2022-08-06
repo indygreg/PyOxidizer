@@ -50,15 +50,9 @@ Notarization requires an Apple Connect API Key. See
 :ref:`apple_codesign_apple_connect_api_key` for instructions on how
 to obtain one.
 
-Notarization also requires Apple's Transporter tool. See
-:ref:`apple_codesign_transporter` for more about Transporter. The
-``rcodesign find-transporter`` command can be used to see if ``rcodesign``
-can find Transporter.
-
 You will need an API Key ``AuthKey_<ID>.p8`` file on disk in one of the
-default locations used by Apple Transporter. These are
-``$(pwd)/private_keys/``, ``~/private_keys/``, ``~/.private_keys/``, and
-``~/.appstoreconnect/private_keys/``.
+following locations: ``$(pwd)/private_keys/``, ``~/private_keys/``,
+``~/.private_keys/``, and ``~/.appstoreconnect/private_keys/``.
 
 You need to provide both the Key ID and IssuerID when invoking this command.
 Both can be found at https://appstoreconnect.apple.com/access/api.

@@ -199,27 +199,12 @@ const NOTARIZE_ABOUT: &str = "\
 Submit a notarization request to Apple.
 
 This command is used to submit an asset to Apple for notarization. Given
-a path to an asset with a code signature, this command will invoke Apple's
-Transporter tool to upload the asset to Apple for them to notarize. *Notarize*
-just means that Apple inspects the uploaded asset and if it validates their
-requirements they will issue a *notarization ticket* that is proof that they
-approved of it. This ticket is then added to the uploaded asset in a process
-called *stapling*.
-
-# Use of Apple Transporter
-
-Upload to Apple requires Apple's Transporter program. This is a Java program
-that does the heavy lifting of sending data to Apple. The program is available
-for Linux, Windows, and macOS and instructions for downloading it can be found
-at https://help.apple.com/itc/transporteruserguide/#/.
-
-This command will look for the executable in the following locations:
-
-1) `APPLE_CODESIGN_TRANSPORTER_EXE` environment variable.
-2) An `iTMSTransporter` executable in PATH
-3) In the default install locations used by Apple's installation docs
-   (e.g. `/usr/local/itms/bin/iTMSTransporter` and
-   `%ProgramFiles%/itms/iTMSTransporter.cmd`).
+a path to an asset with a code signature, this command will connect to Apple's
+Notary API and upload the asset. It will then optionally wait on the submission
+to finish processing (which typically takes a few dozen seconds). If the
+asset validates Apple's requirements, Apple will issue a *notarization ticket*
+as proof that they approved of it. This ticket is then added to the asset in a
+process called *stapling*.
 
 # App Store Connect API Key
 
@@ -228,9 +213,8 @@ API Key. This requires an Apple Developer account. You can generate an
 API Key at https://appstoreconnect.apple.com/access/api.
 
 You will need an API Key `AuthKey_<ID>.p8` file on disk in one of the
-default locations used by Apple Transporter. These are
-`$(pwd)/private_keys/`, `~/private_keys/`, `~/.private_keys/`, and
-`~/.appstoreconnect/private_keys/`.
+following locations: `$(pwd)/private_keys/`, `~/private_keys/`,
+`~/.private_keys/`, and `~/.appstoreconnect/private_keys/`.
 
 You need to provide both the Key ID and IssuerID when invoking this command.
 Both can be found at https://appstoreconnect.apple.com/access/api.

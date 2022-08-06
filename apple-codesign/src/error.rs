@@ -263,9 +263,6 @@ pub enum AppleCodesignError {
     #[error("signing XAR archives requires a signing certificate")]
     XarNoAdhoc,
 
-    #[error("Apple Transporter executable not found")]
-    TransporterNotFound,
-
     #[error("Could not find App Store Connect API key in default search locations")]
     AppStoreConnectApiKeyNotFound,
 
@@ -274,9 +271,6 @@ pub enum AppleCodesignError {
 
     #[error("error parsing metadata from flat package")]
     NotarizeFlatPackageParse,
-
-    #[error("failure when performing transporter upload (see logs)")]
-    NotarizeUploadFailure,
 
     #[error("no authentication credentials to perform notarization request")]
     NotarizeNoAuthCredentials,
