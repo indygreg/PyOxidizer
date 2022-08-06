@@ -234,6 +234,16 @@ impl AppStoreConnectClient {
         })
     }
 
+    fn get_token(&self) -> Result<String, AppleCodesignError> {
+        let mut token = self.token.lock().unwrap();
+
+        if token.is_none() {
+            token.replace(self.connect_token.new_token(300)?);
+        }
+
+        Ok(token.as_ref().unwrap().clone())
+    }
+
     /// Perform a `developerIDPlusInfoForPackageWithArguments` RPC request.
     ///
     /// This looks up information for a package submission having a UUID.
@@ -244,15 +254,7 @@ impl AppStoreConnectClient {
         &self,
         request_uuid: &str,
     ) -> Result<DevIdPlusInfoResponse, AppleCodesignError> {
-        let token = {
-            let mut token = self.token.lock().unwrap();
-
-            if token.is_none() {
-                token.replace(self.connect_token.new_token(300)?);
-            }
-
-            token.as_ref().unwrap().clone()
-        };
+        let token = self.get_token()?;
 
         let params = DevIdPlusInfoRequest {
             // Only the request UUID seems to matter?
