@@ -1643,7 +1643,6 @@ checksum = "d0d69ae62e0ce582d56380743515fefaf1a8c70cec685d9677636d7e30ae9dc9"
 dependencies = [
  "der 0.5.1",
  "elliptic-curve 0.11.12",
- "rfc6979",
  "signature",
 ]
 
@@ -3226,7 +3225,6 @@ dependencies = [
  "ecdsa 0.13.4",
  "elliptic-curve 0.11.12",
  "sec1",
- "sha2 0.9.9",
 ]
 
 [[package]]
@@ -4232,17 +4230,6 @@ dependencies = [
  "web-sys",
  "webpki-roots",
  "winreg 0.10.1",
-]
-
-[[package]]
-name = "rfc6979"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96ef608575f6392792f9ecf7890c00086591d29a83910939d430753f7c050525"
-dependencies = [
- "crypto-bigint 0.3.2",
- "hmac 0.11.0",
- "zeroize",
 ]
 
 [[package]]
