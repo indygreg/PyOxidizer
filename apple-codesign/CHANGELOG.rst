@@ -39,6 +39,10 @@
   method was required for use with Apple's Transporter application, which we
   no longer use so we're no longer bound by its requirements. The old method
   will likely be dropped from a future release.
+* A new ``notary-wait`` command can be used to wait on a previous notary
+  submission to complete and to view its log info. This command can be useful if
+  ``notary-submit`` times out or otherwise fails and you want to query the
+  status of a previous notarization.
 * Fixed signing of Mach-O binaries having a gap between segments. (This is known
   to commonly occur in Go binaries.) In previous versions, we would compute
   digests of the file incorrectly and would encounter an assertion when copying

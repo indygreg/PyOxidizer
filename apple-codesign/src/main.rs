@@ -1945,25 +1945,11 @@ To automatically staple an asset after server-side processing has finished,
 specify `--staple`. This implies `--wait`.
 ";
 
-fn command_notary_submit(args: &ArgMatches) -> Result<(), AppleCodesignError> {
-    let path = PathBuf::from(
-        args.value_of("path")
-            .expect("clap should have validated arguments"),
-    );
+/// Obtain a notarization client from arguments.
+fn notarizer_from_args(args: &ArgMatches) -> Result<notarization::Notarizer, AppleCodesignError> {
     let api_key_path = args.value_of_os("api_key_path").map(Path::new);
     let api_issuer = args.value_of("api_issuer");
     let api_key = args.value_of("api_key");
-    let staple = args.is_present("staple");
-    let wait = args.is_present("wait") || staple;
-    let max_wait_seconds = args
-        .value_of("max_wait_seconds")
-        .expect("argument should have default value");
-    let max_wait_seconds =
-        u64::from_str(max_wait_seconds).map_err(|_| AppleCodesignError::CliBadArgument)?;
-
-    let wait_duration = std::time::Duration::from_secs(max_wait_seconds);
-
-    let wait_limit = if wait { Some(wait_duration) } else { None };
 
     let mut notarizer = crate::notarization::Notarizer::new()?;
 
@@ -1973,6 +1959,34 @@ fn command_notary_submit(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     } else if let (Some(issuer), Some(key)) = (api_issuer, api_key) {
         notarizer.set_api_key(issuer, key)?;
     }
+
+    Ok(notarizer)
+}
+
+fn notarizer_wait_duration(args: &ArgMatches) -> Result<std::time::Duration, AppleCodesignError> {
+    let max_wait_seconds = args
+        .value_of("max_wait_seconds")
+        .expect("argument should have default value");
+    let max_wait_seconds =
+        u64::from_str(max_wait_seconds).map_err(|_| AppleCodesignError::CliBadArgument)?;
+
+    Ok(std::time::Duration::from_secs(max_wait_seconds))
+}
+
+fn command_notary_submit(args: &ArgMatches) -> Result<(), AppleCodesignError> {
+    let path = PathBuf::from(
+        args.value_of("path")
+            .expect("clap should have validated arguments"),
+    );
+    let staple = args.is_present("staple");
+    let wait = args.is_present("wait") || staple;
+
+    let wait_limit = if wait {
+        Some(notarizer_wait_duration(args)?)
+    } else {
+        None
+    };
+    let notarizer = notarizer_from_args(args)?;
 
     let upload = notarizer.notarize_path(&path, wait_limit)?;
 
@@ -1989,6 +2003,18 @@ fn command_notary_submit(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
     }
+
+    Ok(())
+}
+
+fn command_notary_wait(args: &ArgMatches) -> Result<(), AppleCodesignError> {
+    let wait_duration = notarizer_wait_duration(args)?;
+    let notarizer = notarizer_from_args(args)?;
+    let submission_id = args
+        .value_of("submission_id")
+        .expect("submission_id is required");
+
+    notarizer.wait_on_notarization_and_fetch_log(submission_id, wait_duration)?;
 
     Ok(())
 }
@@ -2777,6 +2803,24 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                 ),
         ));
 
+    let app = app.subcommand(add_notary_api_args(
+        Command::new("notary-wait")
+            .about("Wait for completion of a previous submission")
+            .arg(
+                Arg::new("max_wait_seconds")
+                    .long("max-wait-seconds")
+                    .takes_value(true)
+                    .default_value("600")
+                    .help("Maximum time in seconds to wait for the upload result"),
+            )
+            .arg(
+                Arg::new("submission_id")
+                    .required(true)
+                    .takes_value(true)
+                    .help("The ID of the previous submission to wait on"),
+            ),
+    ));
+
     let app = app.subcommand(
         Command::new("parse-code-signing-requirement")
             .about("Parse binary Code Signing Requirement data into a human readable string")
@@ -3062,6 +3106,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
         }
         Some(("keychain-print-certificates", args)) => command_keychain_print_certificates(args),
         Some(("notary-submit", args)) => command_notary_submit(args),
+        Some(("notary-wait", args)) => command_notary_wait(args),
         Some(("parse-code-signing-requirement", args)) => {
             command_parse_code_signing_requirement(args)
         }
