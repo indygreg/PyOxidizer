@@ -23,6 +23,11 @@
   locally before upload. In the new world, minimal checks are performed locally.
   This can result in errors (such as attempting to upload an asset without a
   code signature) occurring later than they did previously.
+* A new ``encode-app-store-connect-api-key`` command can be used to encode an
+  App Store Connect API Key in a single JSON object. These keys are used for
+  notarization and having all the API Key metadata in a single file / JSON
+  blob means you have 1 entity to define your App Store Connect API Key instead
+  of 3, making UI simpler.
 * minicbor crate upgraded from version 0.15. This created API differences in
   remote signing code.
 * The APIs around Mach-O file parsing have been significantly overhauled. It

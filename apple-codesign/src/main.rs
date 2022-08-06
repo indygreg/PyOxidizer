@@ -58,6 +58,7 @@ mod yubikey;
 
 use {
     crate::{
+        app_store_connect::UnifiedApiKey,
         certificate::{
             create_self_signed_code_signing_certificate, AppleCertificate, CertificateProfile,
         },
@@ -84,7 +85,11 @@ use {
     difference::{Changeset, Difference},
     log::{error, warn, LevelFilter},
     spki::EncodePublicKey,
-    std::{io::Write, path::PathBuf, str::FromStr},
+    std::{
+        io::Write,
+        path::{Path, PathBuf},
+        str::FromStr,
+    },
     x509_certificate::{CapturedX509Certificate, EcdsaCurve, KeyAlgorithm, X509CertificateBuilder},
 };
 
@@ -1132,6 +1137,68 @@ fn command_diff_signatures(args: &ArgMatches) -> Result<(), AppleCodesignError> 
                 }
             }
         }
+    }
+
+    Ok(())
+}
+
+const ENCODE_APP_STORE_CONNECT_API_KEY_ABOUT: &str = "\
+Encode an App Store Connect API Key to JSON.
+
+App Store Connect API Keys
+(https://developer.apple.com/documentation/appstoreconnectapi/creating_api_keys_for_app_store_connect_api)
+are defined by 3 components:
+
+* The Issuer ID (likely a UUID)
+* A Key ID (an alphanumeric value like `DEADBEEF42`)
+* A PEM encoded ECDSA private key (typically a file beginning with
+  `-----BEGIN PRIVATE KEY-----`).
+
+This command is used to encode all API Key components into a single JSON
+object so you only have to refer to a single entity when performing
+operations (like notarization) using these API Keys.
+
+The API Key components are specified as positional arguments.
+
+By default, the JSON encoded unified representation is printed to stdout.
+You can write to a file instead by passing `--output-path <path>`.
+
+# Security Considerations
+
+The App Store Connect API Key contains a private key and its value should be
+treated as sensitive: if an unwanted party obtains your private key, they
+effectively have access to your App Store Connect account.
+
+When this command writes JSON files, an attempt is made to limit access
+to the file. However, file access restrictions may not be as secure as you
+want. Security conscious individuals should audit the permissions of the
+file and adjust accordingly.
+";
+
+fn command_encode_app_store_connect_api_key(args: &ArgMatches) -> Result<(), AppleCodesignError> {
+    let issuer_id = args
+        .value_of("issuer_id")
+        .expect("arg should have been required");
+    let key_id = args
+        .value_of("key_id")
+        .expect("arg should have been required");
+    let private_key_path = Path::new(
+        args.value_of_os("private_key_path")
+            .expect("arg should have been required"),
+    );
+
+    let unified = UnifiedApiKey::from_ecdsa_pem_path(issuer_id, key_id, private_key_path)?;
+
+    if let Some(output_path) = args.value_of_os("output_path") {
+        let output_path = Path::new(output_path);
+
+        eprintln!("writing unified key JSON to {}", output_path.display());
+        unified.write_json_file(output_path)?;
+        eprintln!(
+            "consider auditing the file's access permissions to ensure its content remains secure"
+        );
+    } else {
+        println!("{}", unified.to_json_string()?);
     }
 
     Ok(())
@@ -2465,6 +2532,36 @@ fn main_impl() -> Result<(), AppleCodesignError> {
     );
 
     let app = app.subcommand(
+        Command::new("encode-app-store-connect-api-key")
+            .about("Encode App Store Connect API Key metadata to a single file")
+            .long_about(ENCODE_APP_STORE_CONNECT_API_KEY_ABOUT)
+            .arg(
+                Arg::new("output_path")
+                    .short('o')
+                    .long("output-path")
+                    .takes_value(true)
+                    .allow_invalid_utf8(true)
+                    .help("Path to a JSON file to create the output to"),
+            )
+            .arg(
+                Arg::new("issuer_id")
+                    .required(true)
+                    .help("The issuer of the API Token. Likely a UUID"),
+            )
+            .arg(
+                Arg::new("key_id")
+                    .required(true)
+                    .help("The Key ID. A short alphanumeric string like DEADBEEF42"),
+            )
+            .arg(
+                Arg::new("private_key_path")
+                    .required(true)
+                    .allow_invalid_utf8(true)
+                    .help("Path to a file containing the private key downloaded from Apple"),
+            ),
+    );
+
+    let app = app.subcommand(
         Command::new("extract")
             .about("Extracts code signature data from a Mach-O binary")
             .long_about(EXTRACT_ABOUT)
@@ -2927,6 +3024,9 @@ fn main_impl() -> Result<(), AppleCodesignError> {
         Some(("analyze-certificate", args)) => command_analyze_certificate(args),
         Some(("compute-code-hashes", args)) => command_compute_code_hashes(args),
         Some(("diff-signatures", args)) => command_diff_signatures(args),
+        Some(("encode-app-store-connect-api-key", args)) => {
+            command_encode_app_store_connect_api_key(args)
+        }
         Some(("extract", args)) => command_extract(args),
         Some(("generate-certificate-signing-request", args)) => {
             command_generate_certificate_signing_request(args)

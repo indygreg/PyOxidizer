@@ -263,6 +263,9 @@ pub enum AppleCodesignError {
     #[error("signing XAR archives requires a signing certificate")]
     XarNoAdhoc,
 
+    #[error("App Store Connect API Key error: {0}")]
+    AppStoreConnectApiKey(String),
+
     #[error("Could not find App Store Connect API key in default search locations")]
     AppStoreConnectApiKeyNotFound,
 
