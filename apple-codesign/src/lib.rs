@@ -111,7 +111,6 @@
 
 mod apple_certificates;
 pub use apple_certificates::*;
-pub mod app_metadata;
 pub mod app_store_connect;
 mod bundle_signing;
 pub use bundle_signing::*;

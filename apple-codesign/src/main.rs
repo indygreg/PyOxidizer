@@ -3,8 +3,6 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 #[allow(unused)]
-mod app_metadata;
-#[allow(unused)]
 mod app_store_connect;
 #[allow(unused)]
 mod apple_certificates;
