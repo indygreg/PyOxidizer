@@ -290,6 +290,9 @@ pub enum AppleCodesignError {
     #[error("notarization is incomplete (no status code and message)")]
     NotarizeIncomplete,
 
+    #[error("notarization package is invalid")]
+    NotarizeInvalid,
+
     #[error("no log file URL in notarization status")]
     NotarizeNoLogUrl,
 
@@ -353,4 +356,10 @@ pub enum AppleCodesignError {
 
     #[error("remote signing error: {0}")]
     RemoteSign(#[from] RemoteSignError),
+
+    #[error("bytestream creation error: {0}")]
+    AwsByteStream(#[from] aws_smithy_http::byte_stream::Error),
+
+    #[error("s3 upload error: {0}")]
+    AwsS3Error(#[from] aws_sdk_s3::Error),
 }

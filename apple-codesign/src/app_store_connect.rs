@@ -306,6 +306,24 @@ pub struct SubmissionResponse {
     pub meta: Value,
 }
 
+impl SubmissionResponse {
+    /// Convert the instance into a [Result].
+    ///
+    /// Will yield [Err] if the notarization/upload was not successful.
+    pub fn into_result(self) -> Result<Self, AppleCodesignError> {
+        match self.data.attributes.status {
+            SubmissionResponseStatus::Accepted => Ok(self),
+            SubmissionResponseStatus::InProgress => Err(AppleCodesignError::NotarizeIncomplete),
+            SubmissionResponseStatus::Invalid => Err(AppleCodesignError::NotarizeInvalid),
+            SubmissionResponseStatus::Rejected => Err(AppleCodesignError::NotarizeRejected(
+                0,
+                "Notarization error".into(),
+            )),
+            SubmissionResponseStatus::Unknown => Err(AppleCodesignError::NotarizeInvalid),
+        }
+    }
+}
+
 /// Information about the log associated with the submission.
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]

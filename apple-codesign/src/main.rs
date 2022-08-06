@@ -1678,32 +1678,6 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     Ok(())
 }
 
-fn command_find_transporter() -> Result<(), AppleCodesignError> {
-    if let Some(path) = crate::notarization::find_transporter_exe() {
-        println!("{}", path.display())
-    } else {
-        indoc::eprintdoc! {"
-            Apple Transporter not found.
-
-            This executable is needed to perform notarization.
-
-            Instructions for installing the application are available at
-            https://help.apple.com/itc/transporteruserguide/#/apdAbeb95d60
-
-            We looked in PATH and in common install locations but could not find
-            transporter.
-
-            To force usage of a specific executable, set the {env}
-            environment variable to the path of the executable to use.
-        ",
-            env=crate::notarization::TRANSPORTER_PATH_ENV_VARIABLE
-        };
-        std::process::exit(1);
-    }
-
-    Ok(())
-}
-
 fn command_generate_certificate_signing_request(
     args: &ArgMatches,
 ) -> Result<(), AppleCodesignError> {
@@ -1938,7 +1912,7 @@ fn command_notarize(args: &ArgMatches) -> Result<(), AppleCodesignError> {
                     "NotarizationUpload::UploadId should not be returned if we waited successfully"
                 );
             }
-            crate::notarization::NotarizationUpload::DevIdResponse(_) => {
+            crate::notarization::NotarizationUpload::NotaryResponse(_) => {
                 let stapler = crate::stapling::Stapler::new()?;
                 stapler.staple_path(&path)?;
             }
@@ -2557,10 +2531,6 @@ fn main_impl() -> Result<(), AppleCodesignError> {
     );
 
     let app = app.subcommand(
-        Command::new("find-transporter").about("Find the path to Apple's transporter executable"),
-    );
-
-    let app = app.subcommand(
         add_certificate_source_args(Command::new("generate-certificate-signing-request")
             .about("Generates a certificate signing request that can be sent to Apple and exchanged for a signing certificate")
             .arg(
@@ -2976,7 +2946,6 @@ fn main_impl() -> Result<(), AppleCodesignError> {
         Some(("compute-code-hashes", args)) => command_compute_code_hashes(args),
         Some(("diff-signatures", args)) => command_diff_signatures(args),
         Some(("extract", args)) => command_extract(args),
-        Some(("find-transporter", _)) => command_find_transporter(),
         Some(("generate-certificate-signing-request", args)) => {
             command_generate_certificate_signing_request(args)
         }
