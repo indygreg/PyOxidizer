@@ -292,7 +292,7 @@ impl Notarizer {
         Ok(submission)
     }
 
-    fn upload_s3_package<'a>(
+    fn upload_s3_package(
         &self,
         submission: &NewSubmissionResponse,
         upload: UploadKind,
@@ -423,7 +423,7 @@ impl Notarizer {
             Some(token) => Ok(AppStoreConnectClient::new(token.clone())?),
             None => Err(AppleCodesignError::NotarizeNoAuthCredentials),
         }?;
-        client.get_submission_log(&submission_id)
+        client.get_submission_log(submission_id)
     }
 
     /// Waits on an app store package upload and fetches and logs the upload log.
