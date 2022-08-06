@@ -272,9 +272,6 @@ pub enum AppleCodesignError {
     #[error("do not know how to notarize {0}")]
     NotarizeUnsupportedPath(PathBuf),
 
-    #[error("error parsing metadata from flat package")]
-    NotarizeFlatPackageParse,
-
     #[error("no authentication credentials to perform notarization request")]
     NotarizeNoAuthCredentials,
 
@@ -292,9 +289,6 @@ pub enum AppleCodesignError {
 
     #[error("notarization package is invalid")]
     NotarizeInvalid,
-
-    #[error("no log file URL in notarization status")]
-    NotarizeNoLogUrl,
 
     #[error("notarization record not in response: {0}")]
     NotarizationRecordNotInResponse(String),
