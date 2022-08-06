@@ -143,7 +143,7 @@ enum UploadKind {
 /// and incorporating it into the entity being signed.
 #[derive(Clone)]
 pub struct Notarizer {
-    auth: Option<(String, String, ConnectToken)>,
+    auth: Option<ConnectToken>,
 
     /// How long to wait between polling the server for upload status.
     wait_poll_interval: Duration,
@@ -169,9 +169,9 @@ impl Notarizer {
         let api_key = api_key.to_string();
         let api_issuer = api_issuer.to_string();
 
-        let token = ConnectToken::from_api_key_id(api_key.clone(), api_issuer.clone())?;
+        let token = ConnectToken::from_api_key_id(api_key, api_issuer)?;
 
-        self.auth = Some((api_issuer, api_key, token));
+        self.auth = Some(token);
 
         Ok(())
     }
@@ -268,7 +268,7 @@ impl Notarizer {
         name: &str,
     ) -> Result<NewSubmissionResponse, AppleCodesignError> {
         let client = match &self.auth {
-            Some((_, _, token)) => Ok(AppStoreConnectClient::new(token.clone())?),
+            Some(token) => Ok(AppStoreConnectClient::new(token.clone())?),
             _ => Err(AppleCodesignError::NotarizeNoAuthCredentials),
         }?;
 
@@ -358,7 +358,7 @@ impl Notarizer {
 
         loop {
             let client = match &self.auth {
-                Some((_, _, token)) => Ok(AppStoreConnectClient::new(token.clone())?),
+                Some(token) => Ok(AppStoreConnectClient::new(token.clone())?),
                 None => Err(AppleCodesignError::NotarizeNoAuthCredentials),
             }?;
 
@@ -394,7 +394,7 @@ impl Notarizer {
     ) -> Result<String, AppleCodesignError> {
         info!("fetching log from {}", submission_id);
         let client = match &self.auth {
-            Some((_, _, token)) => Ok(AppStoreConnectClient::new(token.clone())?),
+            Some(token) => Ok(AppStoreConnectClient::new(token.clone())?),
             None => Err(AppleCodesignError::NotarizeNoAuthCredentials),
         }?;
         let logs = client.get_submission_log(&submission_id)?;
