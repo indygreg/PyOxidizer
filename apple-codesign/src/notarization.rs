@@ -371,13 +371,13 @@ impl Notarizer {
 
     pub fn wait_on_notarization(
         &self,
-        upload_id: &str,
+        submission_id: &str,
         wait_limit: Duration,
     ) -> Result<SubmissionResponse, AppleCodesignError> {
         warn!(
             "waiting up to {}s for package upload {} to finish processing",
             wait_limit.as_secs(),
-            upload_id
+            submission_id
         );
 
         let start_time = std::time::Instant::now();
@@ -388,7 +388,7 @@ impl Notarizer {
                 None => Err(AppleCodesignError::NotarizeNoAuthCredentials),
             }?;
 
-            let status = client.get_submission(upload_id)?;
+            let status = client.get_submission(submission_id)?;
 
             let elapsed = start_time.elapsed();
 
@@ -432,12 +432,12 @@ impl Notarizer {
     /// [Self::fetch_upload_log()].
     pub fn wait_on_notarization_and_fetch_log(
         &self,
-        upload_id: &str,
+        submission_id: &str,
         wait_limit: Duration,
     ) -> Result<SubmissionResponse, AppleCodesignError> {
-        let status = self.wait_on_notarization(upload_id, wait_limit)?;
+        let status = self.wait_on_notarization(submission_id, wait_limit)?;
 
-        let log = self.fetch_notarization_log(upload_id)?;
+        let log = self.fetch_notarization_log(submission_id)?;
 
         for line in serde_json::to_string_pretty(&log)?.lines() {
             warn!("notary log> {}", line);
