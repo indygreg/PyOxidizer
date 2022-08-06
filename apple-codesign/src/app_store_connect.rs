@@ -5,9 +5,9 @@
 use {
     crate::AppleCodesignError,
     jsonwebtoken::{Algorithm, EncodingKey, Header},
-    log::error,
+    log::{debug, error},
     reqwest::blocking::Client,
-    serde::{Deserialize, Serialize},
+    serde::{de::DeserializeOwned, Deserialize, Serialize},
     serde_json::Value,
     std::{fs::Permissions, io::Write, path::Path, sync::Mutex, time::SystemTime},
 };
@@ -437,6 +437,36 @@ impl AppStoreConnectClient {
         Ok(token.as_ref().unwrap().clone())
     }
 
+    fn send_request<T: DeserializeOwned>(
+        &self,
+        request: reqwest::blocking::RequestBuilder,
+    ) -> Result<T, AppleCodesignError> {
+        let request = request.build()?;
+        let url = request.url().to_string();
+
+        debug!("{} {}", request.method(), url);
+
+        let response = self.client.execute(request)?;
+
+        if response.status().is_success() {
+            Ok(response.json::<T>()?)
+        } else {
+            error!("HTTP error from {}", url);
+
+            let body = response.bytes()?;
+
+            if let Ok(value) = serde_json::from_slice::<Value>(body.as_ref()) {
+                for line in serde_json::to_string_pretty(&value)?.lines() {
+                    error!("{}", line);
+                }
+            } else {
+                error!("{}", String::from_utf8_lossy(body.as_ref()));
+            }
+
+            Err(AppleCodesignError::NotarizeServerError)
+        }
+    }
+
     /// Create a submission to the Notary API.
     pub fn create_submission(
         &self,
@@ -458,18 +488,7 @@ impl AppStoreConnectClient {
             .header("Content-Type", "application/json")
             .json(&body);
 
-        let response = req.send()?;
-
-        if response.status() == 200 {
-            let res_data = response.json::<NewSubmissionResponse>()?;
-
-            Ok(res_data)
-        } else {
-            error!("non-200 from Notary API NewSubmissionRequest");
-            error!("{}", response.text()?);
-
-            Err(AppleCodesignError::NotarizeServerError)
-        }
+        self.send_request(req)
     }
 
     /// Fetch the status of a Notary API submission.
@@ -488,11 +507,7 @@ impl AppStoreConnectClient {
             .bearer_auth(token)
             .header("Accept", "application/json");
 
-        let response = req.send()?;
-
-        let res_data = response.json::<SubmissionResponse>()?;
-
-        Ok(res_data)
+        self.send_request(req)
     }
 
     /// Fetch details about a single completed notarization.
@@ -508,12 +523,9 @@ impl AppStoreConnectClient {
             .bearer_auth(token)
             .header("Accept", "application/json");
 
-        let response = req.send()?;
+        let res = self.send_request::<SubmissionLogResponse>(req)?;
 
-        let res_data = response.json::<SubmissionLogResponse>()?;
-
-        let url = res_data.data.attributes.developer_log_url;
-
+        let url = res.data.attributes.developer_log_url;
         let logs = self.client.get(url).send()?.json::<Value>()?;
 
         Ok(logs)
