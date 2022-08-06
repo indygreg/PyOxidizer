@@ -15,8 +15,6 @@ use {
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 
-pub const ITUNES_PRODUCER_SERVICE_URL: &str = "https://contentdelivery.itunes.apple.com/WebObjects/MZLabelService.woa/json/MZITunesProducerService";
-
 #[cfg(unix)]
 fn set_permissions_private(p: &mut Permissions) {
     p.set_mode(0o600);
