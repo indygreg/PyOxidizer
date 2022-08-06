@@ -158,6 +158,13 @@ impl Notarizer {
         })
     }
 
+    /// Define the App Store Connect JWT token encoder to use.
+    ///
+    /// This is the most generic way to define the credentials for this client.
+    pub fn set_token_encoder(&mut self, encoder: ConnectTokenEncoder) {
+        self.token_encoder = Some(encoder);
+    }
+
     /// Set the API key used to upload.
     ///
     /// The API issuer is required when using an API key.
@@ -169,9 +176,9 @@ impl Notarizer {
         let api_key = api_key.to_string();
         let api_issuer = api_issuer.to_string();
 
-        let token = ConnectTokenEncoder::from_api_key_id(api_key, api_issuer)?;
+        let encoder = ConnectTokenEncoder::from_api_key_id(api_key, api_issuer)?;
 
-        self.token_encoder = Some(token);
+        self.set_token_encoder(encoder);
 
         Ok(())
     }

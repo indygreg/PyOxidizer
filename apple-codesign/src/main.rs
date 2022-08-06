@@ -200,46 +200,6 @@ certificate pair to a pair of files. The destination files will have
 When the certificate is written to a file, it isn't printed to stdout.
 ";
 
-const NOTARIZE_ABOUT: &str = "\
-Submit a notarization request to Apple.
-
-This command is used to submit an asset to Apple for notarization. Given
-a path to an asset with a code signature, this command will connect to Apple's
-Notary API and upload the asset. It will then optionally wait on the submission
-to finish processing (which typically takes a few dozen seconds). If the
-asset validates Apple's requirements, Apple will issue a *notarization ticket*
-as proof that they approved of it. This ticket is then added to the asset in a
-process called *stapling*.
-
-# App Store Connect API Key
-
-In order to communicate with Apple's servers, you need an App Store Connect
-API Key. This requires an Apple Developer account. You can generate an
-API Key at https://appstoreconnect.apple.com/access/api.
-
-You will need an API Key `AuthKey_<ID>.p8` file on disk in one of the
-following locations: `$(pwd)/private_keys/`, `~/private_keys/`,
-`~/.private_keys/`, and `~/.appstoreconnect/private_keys/`.
-
-You need to provide both the Key ID and IssuerID when invoking this command.
-Both can be found at https://appstoreconnect.apple.com/access/api.
-
-# Modes of Operation
-
-By default, the `notarize` command will initiate an upload to Apple and exit
-once the upload is complete.
-
-Once an upload is performed, Apple will asynchronously process the uploaded
-content. This can take seconds to minutes.
-
-To poll Apple's servers and wait on the server-side processing to finish,
-specify `--wait`. This will query the state of the processing every few seconds
-until it is finished, the max wait time is reached, or an error occurs.
-
-To automatically staple an asset after server-side processing has finished,
-specify `--staple`. This implies `--wait`.
-";
-
 const PARSE_CODE_SIGNING_REQUIREMENT_ABOUT: &str = "\
 Parse code signing requirement data into human readable text.
 
@@ -767,6 +727,14 @@ fn collect_certificates_from_args(
 
 fn add_notarization_upload_args(app: Command) -> Command {
     app.arg(
+        Arg::new("api_key_path")
+            .long("api-key-path")
+            .takes_value(true)
+            .allow_invalid_utf8(true)
+            .conflicts_with_all(&["api_issuer", "api_key"])
+            .help("Path to a JSON file containing the API Key"),
+    )
+    .arg(
         Arg::new("api_issuer")
             .long("api-issuer")
             .takes_value(true)
@@ -1927,11 +1895,61 @@ fn command_keychain_print_certificates(_args: &ArgMatches) -> Result<(), AppleCo
     ))
 }
 
+const NOTARIZE_ABOUT: &str = "\
+Submit a notarization request to Apple.
+
+This command is used to submit an asset to Apple for notarization. Given
+a path to an asset with a code signature, this command will connect to Apple's
+Notary API and upload the asset. It will then optionally wait on the submission
+to finish processing (which typically takes a few dozen seconds). If the
+asset validates Apple's requirements, Apple will issue a *notarization ticket*
+as proof that they approved of it. This ticket is then added to the asset in a
+process called *stapling*, which this command can do automatically if the
+`--staple` argument is passed.
+
+# App Store Connect API Key
+
+In order to communicate with Apple's servers, you need an App Store Connect
+API Key. This requires an Apple Developer account. You can generate an
+API Key at https://appstoreconnect.apple.com/access/api.
+
+The recommended mechanism to define the API Key is via `--api-key-path`,
+which takes the path to a file containing JSON produced by the
+`encode-app-store-connect-api-key` command. See that command's help for
+more details.
+
+If you don't wish to use `--api-key-path`, you can define the key components
+via the `--api-issuer` and `--api-key` arguments. You will need a file named
+`AuthKey_<ID>.p8` in one of the following locations: `$(pwd)/private_keys/`,
+`~/private_keys/`, '~/.private_keys/`, and `~/.appstoreconnect/private_keys/`
+(searched in that order). The name of the file is derived from the value of
+`--api-key`.
+
+In all cases, App Store Connect API Keys can be managed at
+https://appstoreconnect.apple.com/access/api.
+
+# Modes of Operation
+
+By default, the `notarize` command will initiate an upload to Apple and exit
+once the upload is complete.
+
+Once an upload is performed, Apple will asynchronously process the uploaded
+content. This can take seconds to minutes.
+
+To poll Apple's servers and wait on the server-side processing to finish,
+specify `--wait`. This will query the state of the processing every few seconds
+until it is finished, the max wait time is reached, or an error occurs.
+
+To automatically staple an asset after server-side processing has finished,
+specify `--staple`. This implies `--wait`.
+";
+
 fn command_notarize(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     let path = PathBuf::from(
         args.value_of("path")
             .expect("clap should have validated arguments"),
     );
+    let api_key_path = args.value_of_os("api_key_path").map(Path::new);
     let api_issuer = args.value_of("api_issuer");
     let api_key = args.value_of("api_key");
     let staple = args.is_present("staple");
@@ -1948,7 +1966,10 @@ fn command_notarize(args: &ArgMatches) -> Result<(), AppleCodesignError> {
 
     let mut notarizer = crate::notarization::Notarizer::new()?;
 
-    if let (Some(issuer), Some(key)) = (api_issuer, api_key) {
+    if let Some(api_key_path) = api_key_path {
+        let unified = UnifiedApiKey::from_json_path(api_key_path)?;
+        notarizer.set_token_encoder(unified.try_into()?);
+    } else if let (Some(issuer), Some(key)) = (api_issuer, api_key) {
         notarizer.set_api_key(issuer, key)?;
     }
 

@@ -46,38 +46,32 @@ Notarizing and Stapling
 
 You can notarize a signed asset via ``rcodesign notarize``.
 
-Notarization requires an Apple Connect API Key. See
-:ref:`apple_codesign_apple_connect_api_key` for instructions on how
+Notarization requires an App Store Connect API Key. See
+:ref:`apple_codesign_app_store_connect_api_key` for instructions on how
 to obtain one.
 
-You will need an API Key ``AuthKey_<ID>.p8`` file on disk in one of the
-following locations: ``$(pwd)/private_keys/``, ``~/private_keys/``,
-``~/.private_keys/``, and ``~/.appstoreconnect/private_keys/``.
-
-You need to provide both the Key ID and IssuerID when invoking this command.
-Both can be found at https://appstoreconnect.apple.com/access/api.
+Assuming you used ``rcodesign encode-app-store-connect-api-key`` to produce
+a JSON file with all the API Key information, simply specify ``--api-key-path``
+to define the path to this JSON file.
 
 To notarize an already signed asset::
 
     rcodesign notarize \
-      --api-issuer 68911d4c-110c-4172-b9f7-b7efa30f9680 \
-      --api-key DEADBEEF \
+      --api-key-path ~/.appstoreconnect/key.json \
       path/to/file/to/notarize
 
 By default ``notarize`` just uploads the asset to Apple. To wait
 on its notarization result, add ``--wait``::
 
     rcodesign notarize \
-      --api-issuer 68911d4c-110c-4172-b9f7-b7efa30f9680 \
-      --api-key DEADBEEF \
+      --api-key-path ~/.appstoreconnect/key.json \
       --wait \
       path/to/file/to/notarize
 
 Or to wait and automatically staple the file if notarization was successful::
 
     rcodesign notarize \
-      --api-issuer 68911d4c-110c-4172-b9f7-b7efa30f9680 \
-      --api-key DEADBEEF \
+    --api-key-path ~/.appstoreconnect/key.json \
       --staple \
       path/to/file/to/notarize
 
@@ -85,7 +79,8 @@ If notarization is interrupted or was initiated on another machine and you
 just want to attempt to staple an asset that was already notarized, you
 can run ``rcodesign staple``. e.g.::
 
-    rcodesign staple \
-      --api-issuer 68911d4c-110c-4172-b9f7-b7efa30f9680 \
-      --api-key DEADBEEF \
-      path/to/file/to/staple
+    rcodesign staple path/to/file/to/staple
+
+.. tip::
+
+   It is possible to staple any asset, not just those notarized by you.

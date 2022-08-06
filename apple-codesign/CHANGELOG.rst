@@ -28,6 +28,13 @@
   notarization and having all the API Key metadata in a single file / JSON
   blob means you have 1 entity to define your App Store Connect API Key instead
   of 3, making UI simpler.
+* The ``notarize`` command now has an ``--api-key-path`` argument defining the
+  path to a JSON file containing the unified App Store Connect API Key emitted
+  by the ``encode-app-store-connect-api-key`` command. We recommend using this
+  method for specifying the API Key going forward, as it is simpler. The old
+  method was required for use with Apple's Transporter application, which we
+  no longer use so we're no longer bound by its requirements. The old method
+  will likely be dropped from a future release.
 * minicbor crate upgraded from version 0.15. This created API differences in
   remote signing code.
 * The APIs around Mach-O file parsing have been significantly overhauled. It
