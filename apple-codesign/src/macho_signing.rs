@@ -38,7 +38,6 @@ use {
 
 /// Derive a new Mach-O binary with new signature data.
 fn create_macho_with_signature(
-    macho_data: &[u8],
     macho: &MachOBinary,
     signature_data: &[u8],
 ) -> Result<Vec<u8>, AppleCodesignError> {
@@ -71,7 +70,7 @@ fn create_macho_with_signature(
 
     // Mach-O data structures are variable endian. So use the endian defined
     // by the magic when writing.
-    let ctx = parse_magic_and_ctx(macho_data, 0)?
+    let ctx = parse_magic_and_ctx(macho.data, 0)?
         .1
         .expect("context should have been parsed before");
 
@@ -92,7 +91,7 @@ fn create_macho_with_signature(
 
     for load_command in &macho.macho.load_commands {
         let original_command_data =
-            &macho_data[load_command.offset..load_command.offset + load_command.command.cmdsize()];
+            &macho.data[load_command.offset..load_command.offset + load_command.command.cmdsize()];
 
         let written_len = match &load_command.command {
             CommandVariant::CodeSignature(command) => {
@@ -246,9 +245,6 @@ pub fn write_macho_file(
 /// Our solution to this problem is to estimate the size of the embedded
 /// signature data and then pad the unused data will 0s.
 pub struct MachOSigner<'data> {
-    /// Raw data backing parsed Mach-O binary.
-    macho_data: &'data [u8],
-
     /// Parsed Mach-O binaries.
     machos: Vec<MachOBinary<'data>>,
 }
@@ -261,7 +257,7 @@ impl<'data> MachOSigner<'data> {
     pub fn new(macho_data: &'data [u8]) -> Result<Self, AppleCodesignError> {
         let machos = MachFile::parse(macho_data)?.into_iter().collect::<Vec<_>>();
 
-        Ok(Self { macho_data, machos })
+        Ok(Self { machos })
     }
 
     /// Write signed Mach-O data to the given writer using signing settings.
@@ -289,11 +285,8 @@ impl<'data> MachOSigner<'data> {
                 // data so Code Directory digests over the load commands are correct.
                 let placeholder_signature_data = b"\0".repeat(signature_len);
 
-                let intermediate_macho_data = create_macho_with_signature(
-                    self.macho_data(index),
-                    original_macho,
-                    &placeholder_signature_data,
-                )?;
+                let intermediate_macho_data =
+                    create_macho_with_signature(original_macho, &placeholder_signature_data)?;
 
                 // A nice side-effect of this is that it catches bugs if we write malformed Mach-O!
                 let intermediate_macho = MachOBinary::parse(&intermediate_macho_data)?;
@@ -315,11 +308,7 @@ impl<'data> MachOSigner<'data> {
                     }
                 }
 
-                create_macho_with_signature(
-                    &intermediate_macho_data,
-                    &intermediate_macho,
-                    &signature_data,
-                )
+                create_macho_with_signature(&intermediate_macho, &signature_data)
             })
             .collect::<Result<Vec<_>, AppleCodesignError>>()?;
 
@@ -330,15 +319,6 @@ impl<'data> MachOSigner<'data> {
         }
 
         Ok(())
-    }
-
-    /// Derive the data slice belonging to a Mach-O binary.
-    fn macho_data(&self, index: usize) -> &[u8] {
-        let mach = MachFile::parse(self.macho_data).expect("should reparse without error");
-
-        let macho = mach.into_iter().nth(index).expect("bad index");
-
-        macho.data
     }
 
     /// Create data constituting the SuperBlob to be embedded in the `__LINKEDIT` segment.
