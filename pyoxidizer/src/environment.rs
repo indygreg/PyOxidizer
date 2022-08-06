@@ -500,7 +500,7 @@ impl Environment {
 
         warn!(
             "using {} targeting {}{}",
-            sdk.as_sdk_path(),
+            sdk.sdk_path(),
             platform,
             deployment_target
         );
