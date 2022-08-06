@@ -217,7 +217,7 @@ impl Notarizer {
         let zipfile = bundle_to_zip(bundle)?;
         let digest = sha2::Sha256::digest(&zipfile);
 
-        let submission = self.create_submission(&digest, bundle.name())?;
+        let submission = self.create_submission(&digest, &format!("{}.zip", bundle.name()))?;
 
         self.upload_s3_and_maybe_wait(submission, UploadKind::Data(zipfile), wait_limit)
     }
