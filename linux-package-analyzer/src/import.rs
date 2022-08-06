@@ -14,7 +14,7 @@ use {
         repository::{BinaryPackageFetch, RepositoryRootReader},
     },
     futures_util::{AsyncReadExt, StreamExt, TryFutureExt},
-    std::{io::Read, path::PathBuf},
+    std::path::PathBuf,
 };
 
 /// Import a collection of Debian packages given a root reader and iterable of fetches.
@@ -80,6 +80,7 @@ pub async fn import_debian_packages<'fetch>(
     Ok(())
 }
 
+/*
 pub async fn import_rpm_packages(
     repo: &(impl rpm_repository::RepositoryRootReader + ?Sized),
     packages: impl Iterator<Item = rpm_repository::metadata::primary::Package>,
@@ -128,6 +129,8 @@ pub async fn import_rpm_packages(
 
     Ok(())
 }
+
+ */
 
 /// Import a Debian package given its `.deb` archive data.
 pub async fn import_debian_package_from_data(
@@ -274,6 +277,7 @@ async fn process_debian_package<'cf>(
     })
 }
 
+/*
 async fn fetch_rpm_package(
     repo: &(impl rpm_repository::RepositoryRootReader + ?Sized),
     package: rpm_repository::metadata::primary::Package,
@@ -387,6 +391,8 @@ async fn process_rpm_package(
         files,
     })
 }
+
+ */
 
 /// Perform SQLite operations to store metadata for an indexed package.
 fn store_indexed_package(db: &mut DatabaseConnection, package: IndexedPackage) -> Result<()> {

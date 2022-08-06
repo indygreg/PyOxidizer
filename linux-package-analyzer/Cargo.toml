@@ -41,6 +41,8 @@ path = "../debian-packaging"
 version = "0.2.0-pre"
 path = "../rpm-repository"
 
-[dependencies.rpm-rs]
-git = "https://github.com/indygreg/rpm-rs"
-rev = "d6623c68a85e3a14f4260c2161c348fa697131c0"
+# rpm-rs seems to be unmaintained and its old dependencies are holding us back.
+# Disabled until we figure out a path forward.
+#[dependencies.rpm-rs]
+#git = "https://github.com/indygreg/rpm-rs"
+#rev = "d6623c68a85e3a14f4260c2161c348fa697131c0"

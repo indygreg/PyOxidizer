@@ -5,7 +5,6 @@
 use {
     anyhow::{anyhow, Result},
     clap::{Arg, ArgMatches, Command},
-    rpm_repository::RepositoryRootReader,
     std::collections::{HashMap, HashSet},
 };
 
@@ -329,7 +328,12 @@ async fn command_import_debian_repository(args: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
-async fn command_import_rpm_repository(args: &ArgMatches) -> Result<()> {
+async fn command_import_rpm_repository(_: &ArgMatches) -> Result<()> {
+    eprintln!("RPM functionality has been disabled because the rpm-rs crate is not maintained.");
+    eprintln!("See https://github.com/indygreg/PyOxidizer/issues/619 for more");
+    Err(anyhow!("functionality disabled"))
+
+    /*
     let threads = args.value_of_t::<usize>("threads")?;
     let db_path = args.value_of("db_path").expect("database path is required");
     let url = args.value_of("url").expect("url argument is required");
@@ -353,6 +357,8 @@ async fn command_import_rpm_repository(args: &ArgMatches) -> Result<()> {
     .await?;
 
     Ok(())
+
+         */
 }
 
 fn command_elf_files(args: &ArgMatches) -> Result<()> {
