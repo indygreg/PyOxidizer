@@ -505,8 +505,14 @@ impl<'a> TryFrom<EmbeddedSignature<'a>> for CodeSignature {
     }
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Default, Serialize)]
 pub struct MachOEntity {
+    pub linkedit_segment_file_start_offset: Option<usize>,
+    pub linkedit_segment_file_end_offset: Option<usize>,
+    pub signature_file_start_offset: Option<usize>,
+    pub signature_file_end_offset: Option<usize>,
+    pub signature_linkedit_start_offset: Option<usize>,
+    pub signature_linkedit_end_offset: Option<usize>,
     pub signature: Option<CodeSignature>,
 }
 
@@ -855,13 +861,22 @@ impl SignatureReader {
     }
 
     fn resolve_macho_entity(macho: MachOBinary) -> Result<MachOEntity, AppleCodesignError> {
-        let signature = if let Some(sig) = macho.code_signature()? {
-            Some(sig.try_into()?)
-        } else {
-            None
-        };
+        let mut entity = MachOEntity::default();
 
-        Ok(MachOEntity { signature })
+        if let Some(sig) = macho.find_signature_data()? {
+            entity.linkedit_segment_file_start_offset = Some(sig.linkedit_segment_start_offset);
+            entity.linkedit_segment_file_end_offset = Some(sig.linkedit_segment_end_offset);
+            entity.signature_file_start_offset = Some(sig.linkedit_signature_start_offset);
+            entity.signature_file_end_offset = Some(sig.linkedit_signature_end_offset);
+            entity.signature_linkedit_start_offset = Some(sig.signature_start_offset);
+            entity.signature_linkedit_end_offset = Some(sig.signature_end_offset);
+        }
+
+        if let Some(sig) = macho.code_signature()? {
+            entity.signature = Some(sig.try_into()?);
+        }
+
+        Ok(entity)
     }
 
     fn resolve_bundle_entities(
