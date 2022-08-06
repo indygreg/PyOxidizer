@@ -14,7 +14,7 @@ To install the latest release version of the ``rcodesign`` executable using Carg
 
     cargo install apple-codesign
 
-To enable smart card integration:
+To enable smart card integration (i.e. use a YubiKey for signing):
 
 .. code-block:: bash
 
@@ -42,21 +42,25 @@ Obtaining a Code Signing Certificate
 ====================================
 
 Follow the instructions at :ref:`apple_codesign_certificate_management` to obtain
-a code signing certificate.
+a code signing certificate. This is required if signing software for
+distribution to other machines.
+
+If you just want to play around, you can use
+``rcodesign generate-self-signed-certificate`` to create a self-signed
+certificate.
 
 .. _apple_codesign_app_store_connect_api_key:
 
 Obtaining an App Store Connect API Key
 ======================================
 
-To notarize and staple, you'll need an Apple Connect API Key to
+To notarize and staple, you'll need an App Store Connect API Key to
 authenticate connections to Apple's servers.
 
 You can generate one at https://appstoreconnect.apple.com/access/api.
 
-This requires an Apple Developer account, which requires paying money. You may
-need to click around in the App Store Connect website to enable the API keys
-feature.
+This requires joining the Apple Developer Program, which has an annual
+fee.
 
 See
 https://developer.apple.com/documentation/appstoreconnectapi/creating_api_keys_for_app_store_connect_api
@@ -100,3 +104,10 @@ e.g.
 
    rcodesign encode-app-store-connect-api-key -o ~/.appstoreconnect/key.json \
      11dda589-8632-49a8-a432-03b5e17fe1d2 DEADBEEF42 ~/Downloads/AuthKey_DEADBEAF42.p8
+
+Next Steps
+==========
+
+Once you have a code signing certificate and/or App Store Connect API Key,
+read :ref:`apple_codesign_rcodesign` to learn how to sign and/or notarize
+software.

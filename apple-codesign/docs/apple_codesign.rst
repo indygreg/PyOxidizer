@@ -17,7 +17,8 @@ features:
 * Signing, notarizing, and stapling disk images / ``.dmg`` files.
 
 **What this all means is that you can sign, notarize, and release Apple software
-from Linux and Windows without needing access to proprietary Apple software!**
+from non-Apple operating systems (like Linux and Windows) without needing access
+to proprietary Apple software!**
 
 Other features include:
 
@@ -35,7 +36,7 @@ Other features include:
 * Awareness of Apple's public PKI infrastructure, including CA certificates
   and custom X.509 extensions and OIDs used by Apple.
 * Documentation and code that are likely a treasure trove for others wanting
-  to play with Apple code signing.
+  to learn and experiment with Apple code signing.
 
 The canonical home of this project is
 https://github.com/indygreg/PyOxidizer/tree/main/apple-codesign.
