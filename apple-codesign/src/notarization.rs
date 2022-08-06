@@ -271,7 +271,7 @@ impl Notarizer {
     /// Tell the notary service to expect an upload to S3.
     fn create_submission(
         &self,
-        digest: &[u8],
+        raw_digest: &[u8],
         name: &str,
     ) -> Result<NewSubmissionResponse, AppleCodesignError> {
         let client = match &self.token_encoder {
@@ -279,7 +279,17 @@ impl Notarizer {
             _ => Err(AppleCodesignError::NotarizeNoAuthCredentials),
         }?;
 
-        Ok(client.create_submission(&hex::encode(digest), name)?)
+        let digest = hex::encode(raw_digest);
+        warn!(
+            "creating Notary API submission for {} (sha256: {})",
+            name, digest
+        );
+
+        let submission = client.create_submission(&digest, name)?;
+
+        warn!("created submission ID: {}", submission.data.id);
+
+        Ok(submission)
     }
 
     fn upload_s3_package<'a>(
@@ -296,6 +306,7 @@ impl Notarizer {
         };
 
         // upload using s3 api
+        warn!("resolving AWS S3 configuration from Apple-provided credentials");
         let config = rt.block_on(
             aws_config::from_env()
                 .credentials_provider(Credentials::new(
@@ -314,6 +325,12 @@ impl Notarizer {
 
         let s3_client = aws_sdk_s3::Client::new(&config);
 
+        warn!(
+            "uploading asset to s3://{}/{}",
+            submission.data.attributes.bucket, submission.data.attributes.object
+        );
+        info!("(you may see additional log output from S3 client)");
+
         // TODO: Support multi-part upload.
         // Unfortunately, aws-sdk-s3 does not have a simple upload_file helper
         // like it does in other languages.
@@ -325,7 +342,9 @@ impl Notarizer {
             .body(bytestream)
             .send();
 
-        let _res = rt.block_on(fut).map_err(aws_sdk_s3::Error::from)?;
+        rt.block_on(fut).map_err(aws_sdk_s3::Error::from)?;
+
+        warn!("S3 upload completed successfully");
 
         Ok(())
     }
@@ -380,7 +399,7 @@ impl Notarizer {
             );
 
             if status.data.attributes.status != SubmissionResponseStatus::InProgress {
-                warn!("upload operation complete");
+                warn!("Notary API Server has finished processing the uploaded asset");
 
                 return Ok(status);
             }
@@ -398,15 +417,13 @@ impl Notarizer {
     pub fn fetch_notarization_log(
         &self,
         submission_id: &str,
-    ) -> Result<String, AppleCodesignError> {
-        info!("fetching log from {}", submission_id);
+    ) -> Result<serde_json::Value, AppleCodesignError> {
+        warn!("fetching notarization log for {}", submission_id);
         let client = match &self.token_encoder {
             Some(token) => Ok(AppStoreConnectClient::new(token.clone())?),
             None => Err(AppleCodesignError::NotarizeNoAuthCredentials),
         }?;
-        let logs = client.get_submission_log(&submission_id)?;
-
-        Ok(logs.to_string())
+        client.get_submission_log(&submission_id)
     }
 
     /// Waits on an app store package upload and fetches and logs the upload log.
@@ -421,8 +438,9 @@ impl Notarizer {
         let status = self.wait_on_notarization(upload_id, wait_limit)?;
 
         let log = self.fetch_notarization_log(upload_id)?;
-        for line in log.lines() {
-            warn!("upload log> {}", line);
+
+        for line in serde_json::to_string_pretty(&log)?.lines() {
+            warn!("notary log> {}", line);
         }
 
         Ok(status)
