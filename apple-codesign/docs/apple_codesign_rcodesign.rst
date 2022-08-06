@@ -44,7 +44,7 @@ To sign a ``.pkg`` installer::
 Notarizing and Stapling
 =======================
 
-You can notarize a signed asset via ``rcodesign notarize``.
+You can notarize a signed asset via ``rcodesign notary-submit``.
 
 Notarization requires an App Store Connect API Key. See
 :ref:`apple_codesign_app_store_connect_api_key` for instructions on how
@@ -56,21 +56,21 @@ to define the path to this JSON file.
 
 To notarize an already signed asset::
 
-    rcodesign notarize \
+    rcodesign notary-submit \
       --api-key-path ~/.appstoreconnect/key.json \
       path/to/file/to/notarize
 
 By default ``notarize`` just uploads the asset to Apple. To wait
 on its notarization result, add ``--wait``::
 
-    rcodesign notarize \
+    rcodesign notary-submit \
       --api-key-path ~/.appstoreconnect/key.json \
       --wait \
       path/to/file/to/notarize
 
 Or to wait and automatically staple the file if notarization was successful::
 
-    rcodesign notarize \
+    rcodesign notary-submit \
     --api-key-path ~/.appstoreconnect/key.json \
       --staple \
       path/to/file/to/notarize

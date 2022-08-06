@@ -13,7 +13,7 @@
   App Store Connect API Key to notarize. Major thanks to Robin Lambertz
   (@roblabla) for contributing the bulk of the implementation in #593.
 * As a result of native notarization, integration with Apple's *Transporter*
-  has been removed. The ``find-transporter`` sub-command has been removed. Rust
+  has been removed. The ``find-transporter`` command has been removed. Rust
   APIs related to Transporter, the *app metadata* XML format it used, and App
   Store Connect APIs previously used have been removed.
 * As a result of native notarization, UI and implementation details of
@@ -28,7 +28,11 @@
   notarization and having all the API Key metadata in a single file / JSON
   blob means you have 1 entity to define your App Store Connect API Key instead
   of 3, making UI simpler.
-* The ``notarize`` command now has an ``--api-key-path`` argument defining the
+* The ``notarize`` command has been renamed to ``notary-submit``. This follows
+  the terminology of Apple's ``notarytool`` and mimics the nomenclature used
+  by the Notary API. The old ``notarize`` command is an alias to
+  ``notary-submit``.
+* The ``notary-submit`` command now has an ``--api-key-path`` argument defining the
   path to a JSON file containing the unified App Store Connect API Key emitted
   by the ``encode-app-store-connect-api-key`` command. We recommend using this
   method for specifying the API Key going forward, as it is simpler. The old

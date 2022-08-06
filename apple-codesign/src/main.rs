@@ -725,7 +725,8 @@ fn collect_certificates_from_args(
     Ok((keys, certs))
 }
 
-fn add_notarization_upload_args(app: Command) -> Command {
+/// Add arguments common to commands that interact with the Notary API.
+fn add_notary_api_args(app: Command) -> Command {
     app.arg(
         Arg::new("api_key_path")
             .long("api-key-path")
@@ -1944,7 +1945,7 @@ To automatically staple an asset after server-side processing has finished,
 specify `--staple`. This implies `--wait`.
 ";
 
-fn command_notarize(args: &ArgMatches) -> Result<(), AppleCodesignError> {
+fn command_notary_submit(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     let path = PathBuf::from(
         args.value_of("path")
             .expect("clap should have validated arguments"),
@@ -2748,10 +2749,11 @@ fn main_impl() -> Result<(), AppleCodesignError> {
     );
 
     let app =
-        app.subcommand(add_notarization_upload_args(
-            Command::new("notarize")
+        app.subcommand(add_notary_api_args(
+            Command::new("notary-submit")
                 .about("Upload an asset to Apple for notarization and possibly staple it")
                 .long_about(NOTARIZE_ABOUT)
+                .alias("notarize")
                 .arg(
                     Arg::new("wait")
                         .long("wait")
@@ -3059,7 +3061,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
             command_keychain_export_certificate_chain(args)
         }
         Some(("keychain-print-certificates", args)) => command_keychain_print_certificates(args),
-        Some(("notarize", args)) => command_notarize(args),
+        Some(("notary-submit", args)) => command_notary_submit(args),
         Some(("parse-code-signing-requirement", args)) => {
             command_parse_code_signing_requirement(args)
         }
