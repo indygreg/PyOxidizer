@@ -37,5 +37,5 @@ xz2 = { version = "0.1", features = ["static"] }
 version = "0.17.0"
 
 [dependencies.x509-certificate]
-# path = "../x509-certificate"
-version = "0.14.0"
+path = "../x509-certificate"
+version = "0.15.0-pre"
