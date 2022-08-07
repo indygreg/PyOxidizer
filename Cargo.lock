@@ -1807,7 +1807,7 @@ checksum = "3ee2393c4a91429dffb4bedf19f4d6abf27d8a732c8ce4980305d782e5426d57"
 
 [[package]]
 name = "debian-packaging"
-version = "0.15.0"
+version = "0.16.0-pre"
 dependencies = [
  "ar",
  "async-compression",
@@ -1827,7 +1827,7 @@ dependencies = [
  "once_cell",
  "os_str_bytes",
  "pgp",
- "pgp-cleartext 0.4.0-pre",
+ "pgp-cleartext",
  "pin-project",
  "regex",
  "reqwest",
@@ -1850,54 +1850,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "debian-packaging"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d50124ea980a0fe1f25dde35018e1f449fab00a5d0b452feb78378bb4a95f007"
-dependencies = [
- "ar",
- "async-compression",
- "async-std",
- "async-tar",
- "async-trait",
- "bytes",
- "chrono",
- "digest 0.10.3",
- "futures",
- "hex",
- "libflate",
- "mailparse",
- "md-5 0.10.1",
- "once_cell",
- "os_str_bytes",
- "pgp",
- "pgp-cleartext 0.3.0",
- "pin-project",
- "regex",
- "reqwest",
- "rusoto_core",
- "rusoto_s3",
- "serde",
- "sha-1 0.10.0",
- "sha2 0.10.2",
- "smallvec",
- "strum",
- "strum_macros",
- "tar",
- "thiserror",
- "tokio",
- "tugger-file-manifest 0.10.0",
- "url",
- "xz2",
- "zstd",
-]
-
-[[package]]
 name = "debian-repo-tool"
 version = "0.7.0"
 dependencies = [
  "clap 3.2.16",
- "debian-packaging 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "debian-packaging",
  "num_cpus",
  "pbr",
  "serde_yaml",
@@ -3296,7 +3253,7 @@ dependencies = [
  "anyhow",
  "clap 3.2.16",
  "cpio",
- "debian-packaging 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "debian-packaging",
  "futures",
  "futures-util",
  "iced-x86",
@@ -4002,21 +3959,6 @@ dependencies = [
  "twofish",
  "x25519-dalek",
  "zeroize",
-]
-
-[[package]]
-name = "pgp-cleartext"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81c83151c8d3859f8b021485cc5bd42428ee492af96cc390ee320b29e5980d14"
-dependencies = [
- "chrono",
- "digest 0.10.3",
- "md-5 0.10.1",
- "pgp",
- "sha-1 0.10.0",
- "sha2 0.10.2",
- "smallvec",
 ]
 
 [[package]]
