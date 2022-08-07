@@ -1,6 +1,6 @@
 [package]
 name = "debian-repo-tool"
-version = "0.7.0-pre"
+version = "0.7.0"
 edition = "2021"
 authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
 license = "MPL-2.0"
