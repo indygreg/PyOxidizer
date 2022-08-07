@@ -137,7 +137,7 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tokio",
- "tugger-apple 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-apple 0.8.0-pre",
  "tugger-file-manifest 0.11.0-pre",
  "tungstenite",
  "uuid 1.1.2",
@@ -214,7 +214,7 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tokio",
- "tugger-apple 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-apple 0.7.0",
  "tugger-file-manifest 0.10.0",
  "tungstenite",
  "uuid 1.1.2",
@@ -6018,7 +6018,7 @@ dependencies = [
  "tar",
  "tempfile",
  "time 0.3.12",
- "tugger-apple 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-apple 0.8.0-pre",
  "tugger-code-signing",
  "tugger-common",
  "tugger-file-manifest 0.11.0-pre",
@@ -6033,6 +6033,8 @@ dependencies = [
 [[package]]
 name = "tugger-apple"
 version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "670415a5b36664fbb80ebef9fb3fe32e809aa3cc62a7676e6c9dc35a51502aad"
 dependencies = [
  "anyhow",
  "goblin",
@@ -6042,9 +6044,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-apple"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "670415a5b36664fbb80ebef9fb3fe32e809aa3cc62a7676e6c9dc35a51502aad"
+version = "0.8.0-pre"
 dependencies = [
  "anyhow",
  "goblin",
