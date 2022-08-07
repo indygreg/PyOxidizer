@@ -30,14 +30,12 @@ dialoguer = "0.10"
 difference = "2.0"
 digest = "0.10"
 dirs = "4.0"
-duct = "0.13"
 elliptic-curve = { version = "0.11", features = ["arithmetic", "pkcs8"] }
 env_logger = "0.9"
 filetime = "0.2"
 glob = "0.3"
 goblin = "0.5"
 hex = "0.4"
-indoc = "1.0"
 jsonwebtoken = "8"
 log = "0.4"
 md-5 = "0.10"
@@ -71,7 +69,6 @@ thiserror = "1.0"
 tokio = { version = "1.19", features = ["rt"] }
 tungstenite = { version = "0.17", features = ["rustls-tls-native-roots"] }
 uuid = { version = "1.1", features = ["v4"] }
-which = "4.2"
 x509 = "0.2"
 xml-rs = "0.8"
 yasna = "0.5"
