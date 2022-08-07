@@ -25,7 +25,7 @@ All this complexity means bundle signing is susceptible to a lot of subtle
 bugs and variation from how Apple's tooling does it.
 
 If you find bugs in bundle signing or have suggestions for improving its
-ergonomics, please file a GitHub issue!
+ergonomics, please `file a GitHub issue <https://github.com/indygreg/PyOxidizer/issues/new>`_!
 
 Cannot Sign File Contents of DMGs
 =================================
@@ -125,8 +125,9 @@ There is likely a long tail of minor differences in implementation that
 result in variations between the behavior of our implementation and Apple's.
 
 In general, we consider differences in behavior in our implementation to
-be bugs worth filing. So please use ``rcodesign diff-signatures`` to report
-behavior differences!
+be bugs worth filing. Please follow the instructions at
+:ref:`apple_codesign_debugging` to file GitHub issues with meaningful
+details to debug the differences!
 
 Known areas where discrepancies are likely include:
 
@@ -140,5 +141,5 @@ Known areas where discrepancies are likely include:
   embedded signature before signing because the signature encapsulates its own
   size. Our estimation method varies from Apple's and can result in signatures
   with more or less padded null bytes. This difference should be mostly harmless.
-  Improvements to make our signatures use less wasteful extra padding are
+  Improvements to make our signatures use fewer wasteful extra padding are
   appreciated.

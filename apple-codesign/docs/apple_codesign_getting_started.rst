@@ -7,6 +7,10 @@ Getting Started
 Installing
 ==========
 
+Pre-built binaries are published as GitHub Releases. Go to
+https://github.com/indygreg/PyOxidizer/releases and look for the latest
+release of ``Apple Codesign``.
+
 To install the latest release version of the ``rcodesign`` executable using Cargo
 (Rust's package manager):
 

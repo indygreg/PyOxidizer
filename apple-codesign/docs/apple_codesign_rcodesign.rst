@@ -29,7 +29,7 @@ To sign an ``.app`` bundle (and all Mach-O binaries inside)::
      --p12-file developer-id.p12 --p12-password-file ~/.certificate-password \
      path/to/My.app
 
-To sign a DMG image:
+To sign a DMG image::
 
    rcodesign sign \
      --p12-file developer-id.p12 --p12-password-file ~/.certificate-password \
@@ -60,7 +60,7 @@ To notarize an already signed asset::
       --api-key-path ~/.appstoreconnect/key.json \
       path/to/file/to/notarize
 
-By default ``notarize`` just uploads the asset to Apple. To wait
+By default ``notarize-submit`` just uploads the asset to Apple. To wait
 on its notarization result, add ``--wait``::
 
     rcodesign notary-submit \
@@ -71,7 +71,7 @@ on its notarization result, add ``--wait``::
 Or to wait and automatically staple the file if notarization was successful::
 
     rcodesign notary-submit \
-    --api-key-path ~/.appstoreconnect/key.json \
+      --api-key-path ~/.appstoreconnect/key.json \
       --staple \
       path/to/file/to/notarize
 

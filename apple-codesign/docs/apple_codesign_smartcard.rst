@@ -44,7 +44,7 @@ Validating Smart Card Integration
 
 To see if your smart card device is recognized and certificates can be found::
 
-    rcodesign smartcard-scan
+    $ rcodesign smartcard-scan
     Device 0: Yubico YubiKey OTP+FIDO+CCID 0
     Device 0: Serial: 12345678
     Device 0: Version: 5.2.7
