@@ -4352,7 +4352,7 @@ dependencies = [
  "tugger",
  "tugger-binary-analysis",
  "tugger-code-signing",
- "tugger-common 0.10.0-pre",
+ "tugger-common",
  "tugger-file-manifest 0.11.0-pre",
  "tugger-rust-toolchain",
  "tugger-windows",
@@ -6020,9 +6020,9 @@ dependencies = [
  "time 0.3.12",
  "tugger-apple 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-code-signing",
- "tugger-common 0.10.0-pre",
+ "tugger-common",
  "tugger-file-manifest 0.11.0-pre",
- "tugger-snapcraft 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-snapcraft",
  "tugger-windows",
  "tugger-windows-codesign",
  "tugger-wix",
@@ -6086,25 +6086,6 @@ dependencies = [
 
 [[package]]
 name = "tugger-common"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "825d3a3de05922acfe17d28a8dd934288a73c725a6090412235947ddc5025fa2"
-dependencies = [
- "anyhow",
- "fs2",
- "glob",
- "hex",
- "log",
- "once_cell",
- "reqwest",
- "sha2 0.10.2",
- "tempfile",
- "url",
- "zip",
-]
-
-[[package]]
-name = "tugger-common"
 version = "0.10.0-pre"
 dependencies = [
  "anyhow",
@@ -6149,7 +6130,7 @@ dependencies = [
  "tar",
  "tempfile",
  "toml",
- "tugger-common 0.10.0-pre",
+ "tugger-common",
  "tugger-file-manifest 0.11.0-pre",
  "xz2",
  "zstd",
@@ -6157,7 +6138,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-snapcraft"
-version = "0.13.0"
+version = "0.14.0-pre"
 dependencies = [
  "anyhow",
  "duct",
@@ -6165,24 +6146,8 @@ dependencies = [
  "remove_dir_all 0.7.0",
  "serde",
  "serde_yaml",
- "tugger-common 0.10.0-pre",
+ "tugger-common",
  "tugger-file-manifest 0.11.0-pre",
-]
-
-[[package]]
-name = "tugger-snapcraft"
-version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3877e72caa7dd923fa7f2cb9f79c17a7519df47260cde5b0c385806ac5e47a1"
-dependencies = [
- "anyhow",
- "duct",
- "log",
- "remove_dir_all 0.7.0",
- "serde",
- "serde_yaml",
- "tugger-common 0.9.0",
- "tugger-file-manifest 0.10.0",
 ]
 
 [[package]]
@@ -6195,7 +6160,7 @@ dependencies = [
  "glob",
  "once_cell",
  "semver",
- "tugger-common 0.10.0-pre",
+ "tugger-common",
  "winapi",
 ]
 
@@ -6210,7 +6175,7 @@ dependencies = [
  "p12",
  "rcgen",
  "time 0.3.12",
- "tugger-common 0.10.0-pre",
+ "tugger-common",
  "tugger-windows",
  "x509-parser 0.14.0",
  "yasna",
@@ -6226,7 +6191,7 @@ dependencies = [
  "msi",
  "once_cell",
  "tempfile",
- "tugger-common 0.10.0-pre",
+ "tugger-common",
  "tugger-file-manifest 0.11.0-pre",
  "tugger-windows",
  "tugger-windows-codesign",
