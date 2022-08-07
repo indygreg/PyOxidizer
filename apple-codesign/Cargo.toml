@@ -78,8 +78,8 @@ zip = { version = "0.6", default-features = false, features = ["deflate"] }
 zip_structs = "0.2"
 
 [dependencies.apple-bundles]
-path = "../apple-bundles"
-version = "0.13.0-pre"
+# path = "../apple-bundles"
+version = "0.13.0"
 
 [dependencies.apple-flat-package]
 # path = "../apple-flat-package"
