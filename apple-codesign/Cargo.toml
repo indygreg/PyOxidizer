@@ -90,8 +90,8 @@ version = "0.8.0"
 version = "0.8.0"
 
 [dependencies.cryptographic-message-syntax]
-# path = "../cryptographic-message-syntax"
-version = "0.17.0"
+path = "../cryptographic-message-syntax"
+version = "0.18.0-pre"
 
 [dependencies.tugger-apple]
 # path = "../tugger-apple"
