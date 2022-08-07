@@ -130,7 +130,7 @@ dependencies = [
  "tungstenite",
  "uuid 1.1.2",
  "x509",
- "x509-certificate",
+ "x509-certificate 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "xml-rs",
  "yasna",
  "yubikey",
@@ -186,7 +186,7 @@ dependencies = [
  "signature",
  "thiserror",
  "url",
- "x509-certificate",
+ "x509-certificate 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "xml-rs",
  "xz2",
 ]
@@ -1539,7 +1539,7 @@ dependencies = [
  "reqwest",
  "ring",
  "signature",
- "x509-certificate",
+ "x509-certificate 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -5880,7 +5880,7 @@ dependencies = [
  "tugger-windows-codesign",
  "tugger-wix",
  "walkdir",
- "x509-certificate",
+ "x509-certificate 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -5921,7 +5921,7 @@ dependencies = [
  "thiserror",
  "tugger-file-manifest",
  "tugger-windows-codesign",
- "x509-certificate",
+ "x509-certificate 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "yasna",
 ]
 
@@ -6527,7 +6527,25 @@ dependencies = [
 
 [[package]]
 name = "x509-certificate"
-version = "0.14.0-pre"
+version = "0.14.0"
+dependencies = [
+ "bcder",
+ "bytes",
+ "chrono",
+ "der 0.5.1",
+ "hex",
+ "pem 1.1.0",
+ "ring",
+ "signature",
+ "spki 0.5.4",
+ "thiserror",
+]
+
+[[package]]
+name = "x509-certificate"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "670fa717535eff7c806dd7b67df2cd5d7670d5f4e71d1ffc5c7f3fa8c66b2546"
 dependencies = [
  "bcder",
  "bytes",
