@@ -5,7 +5,7 @@
 0.17.0
 ======
 
-(Not yet released)
+(Released 2022-08-07)
 
 * **Major feature**: Notarization is now implemented in Rust and no longer
   requires Apple's *Transporter* application. Going forward, you only need
