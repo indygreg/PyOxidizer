@@ -232,7 +232,7 @@ name = "apple-flat-package"
 version = "0.8.0"
 dependencies = [
  "apple-xar 0.9.0-pre",
- "cpio-archive 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cpio-archive 0.6.0-pre",
  "flate2",
  "scroll",
  "serde",
@@ -247,7 +247,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9c627fd8abf85af68c87a8a09e538f6a293648522fcdb16efaa8a82ab0d4a358"
 dependencies = [
  "apple-xar 0.8.0",
- "cpio-archive 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cpio-archive 0.5.0",
  "flate2",
  "scroll",
  "serde",
@@ -1489,16 +1489,6 @@ checksum = "27e77cfc4543efb4837662cb7cd53464ae66f0fd5c708d71e0f338b1c11d62d3"
 [[package]]
 name = "cpio-archive"
 version = "0.5.0"
-dependencies = [
- "chrono",
- "is_executable",
- "thiserror",
- "tugger-file-manifest 0.11.0-pre",
-]
-
-[[package]]
-name = "cpio-archive"
-version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "422d3f6e51093f728814e49d4bc4820b11d7a92b4c3c99ef5a396012ddb6fafe"
 dependencies = [
@@ -1506,6 +1496,16 @@ dependencies = [
  "is_executable",
  "thiserror",
  "tugger-file-manifest 0.10.0",
+]
+
+[[package]]
+name = "cpio-archive"
+version = "0.6.0-pre"
+dependencies = [
+ "chrono",
+ "is_executable",
+ "thiserror",
+ "tugger-file-manifest 0.11.0-pre",
 ]
 
 [[package]]
