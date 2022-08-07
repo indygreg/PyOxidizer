@@ -54,35 +54,23 @@ checksum = "c794e162a5eff65c72ef524dfe393eb923c354e350bb78b9c7383df13f3bc142"
 
 [[package]]
 name = "apple-bundles"
-version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee09de6fe8343ee8182b0d5349c7d79688b4c8aba7c207e852dfbaa654e77d82"
-dependencies = [
- "anyhow",
- "plist",
- "tugger-file-manifest 0.10.0",
- "walkdir",
-]
-
-[[package]]
-name = "apple-bundles"
 version = "0.14.0-pre"
 dependencies = [
  "anyhow",
  "plist",
  "tempfile",
- "tugger-file-manifest 0.11.0-pre",
+ "tugger-file-manifest",
  "walkdir",
 ]
 
 [[package]]
 name = "apple-codesign"
-version = "0.17.0"
+version = "0.18.0-pre"
 dependencies = [
  "anyhow",
- "apple-bundles 0.14.0-pre",
- "apple-flat-package 0.9.0-pre",
- "apple-xar 0.9.0-pre",
+ "apple-bundles",
+ "apple-flat-package",
+ "apple-xar",
  "aws-config",
  "aws-sdk-s3",
  "aws-smithy-http",
@@ -92,7 +80,7 @@ dependencies = [
  "bytes",
  "chrono",
  "clap 3.2.16",
- "cryptographic-message-syntax 0.18.0-pre",
+ "cryptographic-message-syntax",
  "der 0.5.1",
  "dialoguer",
  "difference",
@@ -137,12 +125,12 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tokio",
- "tugger-apple 0.8.0-pre",
- "tugger-file-manifest 0.11.0-pre",
+ "tugger-apple",
+ "tugger-file-manifest",
  "tungstenite",
  "uuid 1.1.2",
  "x509",
- "x509-certificate 0.15.0-pre",
+ "x509-certificate",
  "xml-rs",
  "yasna",
  "yubikey",
@@ -152,102 +140,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "apple-codesign"
-version = "0.17.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8fcecc55a52dbb78f99ecc7bd600eedf080670ef89378c16abc9fa7013ac093"
-dependencies = [
- "anyhow",
- "apple-bundles 0.13.0",
- "apple-flat-package 0.8.0",
- "apple-xar 0.8.0",
- "aws-config",
- "aws-sdk-s3",
- "aws-smithy-http",
- "base64",
- "bcder",
- "bitflags",
- "bytes",
- "chrono",
- "clap 3.2.16",
- "cryptographic-message-syntax 0.17.0",
- "der 0.5.1",
- "dialoguer",
- "difference",
- "digest 0.10.3",
- "dirs",
- "elliptic-curve 0.11.12",
- "env_logger",
- "filetime",
- "glob",
- "goblin",
- "hex",
- "jsonwebtoken",
- "log",
- "md-5 0.10.1",
- "minicbor",
- "oid-registry 0.5.0",
- "once_cell",
- "p12",
- "p256 0.10.1",
- "pem 1.1.0",
- "pkcs1",
- "pkcs8 0.8.0",
- "plist",
- "rand 0.8.5",
- "rasn",
- "regex",
- "reqwest",
- "ring",
- "rsa 0.6.1",
- "scroll",
- "security-framework",
- "semver",
- "serde",
- "serde_json",
- "serde_yaml",
- "sha2 0.10.2",
- "signature",
- "spake2",
- "spki 0.5.4",
- "subtle",
- "tempfile",
- "thiserror",
- "tokio",
- "tugger-apple 0.7.0",
- "tugger-file-manifest 0.10.0",
- "tungstenite",
- "uuid 1.1.2",
- "x509",
- "x509-certificate 0.14.0",
- "xml-rs",
- "yasna",
- "zeroize",
- "zip",
- "zip_structs",
-]
-
-[[package]]
-name = "apple-flat-package"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c627fd8abf85af68c87a8a09e538f6a293648522fcdb16efaa8a82ab0d4a358"
-dependencies = [
- "apple-xar 0.8.0",
- "cpio-archive 0.5.0",
- "flate2",
- "scroll",
- "serde",
- "serde-xml-rs",
- "thiserror",
-]
-
-[[package]]
 name = "apple-flat-package"
 version = "0.9.0-pre"
 dependencies = [
- "apple-xar 0.9.0-pre",
- "cpio-archive 0.6.0-pre",
+ "apple-xar",
+ "cpio-archive",
  "flate2",
  "scroll",
  "serde",
@@ -268,43 +165,13 @@ dependencies = [
 
 [[package]]
 name = "apple-xar"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab70165201f4dc30199957a345a0cdb4e144f9d28653ae94ce963f8dc1404114"
-dependencies = [
- "base64",
- "bcder",
- "bzip2",
- "chrono",
- "cryptographic-message-syntax 0.17.0",
- "digest 0.10.3",
- "flate2",
- "log",
- "md-5 0.10.1",
- "rand 0.8.5",
- "reqwest",
- "scroll",
- "serde",
- "serde-xml-rs",
- "sha1",
- "sha2 0.10.2",
- "signature",
- "thiserror",
- "url",
- "x509-certificate 0.14.0",
- "xml-rs",
- "xz2",
-]
-
-[[package]]
-name = "apple-xar"
 version = "0.9.0-pre"
 dependencies = [
  "base64",
  "bcder",
  "bzip2",
  "chrono",
- "cryptographic-message-syntax 0.18.0-pre",
+ "cryptographic-message-syntax",
  "digest 0.10.3",
  "flate2",
  "log",
@@ -319,7 +186,7 @@ dependencies = [
  "signature",
  "thiserror",
  "url",
- "x509-certificate 0.15.0-pre",
+ "x509-certificate",
  "xml-rs",
  "xz2",
 ]
@@ -1488,24 +1355,12 @@ checksum = "27e77cfc4543efb4837662cb7cd53464ae66f0fd5c708d71e0f338b1c11d62d3"
 
 [[package]]
 name = "cpio-archive"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "422d3f6e51093f728814e49d4bc4820b11d7a92b4c3c99ef5a396012ddb6fafe"
-dependencies = [
- "chrono",
- "is_executable",
- "thiserror",
- "tugger-file-manifest 0.10.0",
-]
-
-[[package]]
-name = "cpio-archive"
 version = "0.6.0-pre"
 dependencies = [
  "chrono",
  "is_executable",
  "thiserror",
- "tugger-file-manifest 0.11.0-pre",
+ "tugger-file-manifest",
 ]
 
 [[package]]
@@ -1674,23 +1529,6 @@ dependencies = [
 
 [[package]]
 name = "cryptographic-message-syntax"
-version = "0.17.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d13b927ab0248244bb4fc9b65cc1fd1e4de541c0fe5008ecdfa04e2b87b7134d"
-dependencies = [
- "bcder",
- "bytes",
- "chrono",
- "hex",
- "pem 1.1.0",
- "reqwest",
- "ring",
- "signature",
- "x509-certificate 0.14.0",
-]
-
-[[package]]
-name = "cryptographic-message-syntax"
 version = "0.18.0-pre"
 dependencies = [
  "bcder",
@@ -1701,7 +1539,7 @@ dependencies = [
  "reqwest",
  "ring",
  "signature",
- "x509-certificate 0.15.0-pre",
+ "x509-certificate",
 ]
 
 [[package]]
@@ -1843,7 +1681,7 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tokio",
- "tugger-file-manifest 0.11.0-pre",
+ "tugger-file-manifest",
  "url",
  "xz2",
  "zstd",
@@ -4353,7 +4191,7 @@ dependencies = [
  "tugger-binary-analysis",
  "tugger-code-signing",
  "tugger-common",
- "tugger-file-manifest 0.11.0-pre",
+ "tugger-file-manifest",
  "tugger-rust-toolchain",
  "tugger-windows",
  "tugger-wix",
@@ -4393,7 +4231,7 @@ dependencies = [
  "pyo3",
  "python-packaging",
  "python-packed-resources",
- "tugger-file-manifest 0.11.0-pre",
+ "tugger-file-manifest",
  "winapi",
  "zip",
 ]
@@ -4416,7 +4254,7 @@ dependencies = [
  "spdx",
  "tempfile",
  "time 0.3.12",
- "tugger-file-manifest 0.11.0-pre",
+ "tugger-file-manifest",
  "walkdir",
  "zip",
 ]
@@ -6001,8 +5839,8 @@ name = "tugger"
 version = "0.17.0-pre"
 dependencies = [
  "anyhow",
- "apple-bundles 0.14.0-pre",
- "apple-codesign 0.17.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "apple-bundles",
+ "apple-codesign",
  "atty",
  "chrono",
  "codemap",
@@ -6018,28 +5856,16 @@ dependencies = [
  "tar",
  "tempfile",
  "time 0.3.12",
- "tugger-apple 0.8.0-pre",
+ "tugger-apple",
  "tugger-code-signing",
  "tugger-common",
- "tugger-file-manifest 0.11.0-pre",
+ "tugger-file-manifest",
  "tugger-snapcraft",
  "tugger-windows",
  "tugger-windows-codesign",
  "tugger-wix",
  "walkdir",
- "x509-certificate 0.15.0-pre",
-]
-
-[[package]]
-name = "tugger-apple"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "670415a5b36664fbb80ebef9fb3fe32e809aa3cc62a7676e6c9dc35a51502aad"
-dependencies = [
- "anyhow",
- "goblin",
- "scroll",
- "thiserror",
+ "x509-certificate",
 ]
 
 [[package]]
@@ -6068,19 +5894,19 @@ name = "tugger-code-signing"
 version = "0.9.0-pre"
 dependencies = [
  "anyhow",
- "apple-bundles 0.14.0-pre",
- "apple-codesign 0.17.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "apple-bundles",
+ "apple-codesign",
  "bcder",
- "cryptographic-message-syntax 0.18.0-pre",
+ "cryptographic-message-syntax",
  "goblin",
  "log",
  "p12",
  "reqwest",
  "tempfile",
  "thiserror",
- "tugger-file-manifest 0.11.0-pre",
+ "tugger-file-manifest",
  "tugger-windows-codesign",
- "x509-certificate 0.15.0-pre",
+ "x509-certificate",
  "yasna",
 ]
 
@@ -6100,12 +5926,6 @@ dependencies = [
  "url",
  "zip",
 ]
-
-[[package]]
-name = "tugger-file-manifest"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4eb47a7c6d38b6994490284e7572edbe226364e85cf1ab18525cfabeb0ea70be"
 
 [[package]]
 name = "tugger-file-manifest"
@@ -6131,7 +5951,7 @@ dependencies = [
  "tempfile",
  "toml",
  "tugger-common",
- "tugger-file-manifest 0.11.0-pre",
+ "tugger-file-manifest",
  "xz2",
  "zstd",
 ]
@@ -6147,7 +5967,7 @@ dependencies = [
  "serde",
  "serde_yaml",
  "tugger-common",
- "tugger-file-manifest 0.11.0-pre",
+ "tugger-file-manifest",
 ]
 
 [[package]]
@@ -6192,7 +6012,7 @@ dependencies = [
  "once_cell",
  "tempfile",
  "tugger-common",
- "tugger-file-manifest 0.11.0-pre",
+ "tugger-file-manifest",
  "tugger-windows",
  "tugger-windows-codesign",
  "url",
@@ -6688,24 +6508,6 @@ checksum = "ca3cec94c3999f31341553f358ef55f65fc031291a022cd42ec0ce7219560c76"
 dependencies = [
  "chrono",
  "cookie-factory",
-]
-
-[[package]]
-name = "x509-certificate"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "670fa717535eff7c806dd7b67df2cd5d7670d5f4e71d1ffc5c7f3fa8c66b2546"
-dependencies = [
- "bcder",
- "bytes",
- "chrono",
- "der 0.5.1",
- "hex",
- "pem 1.1.0",
- "ring",
- "signature",
- "spki 0.5.4",
- "thiserror",
 ]
 
 [[package]]
