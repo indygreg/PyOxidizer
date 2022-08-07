@@ -2,10 +2,15 @@
 ``cryptographic-message-syntax`` History
 ========================================
 
-0.17.0
+0.18.0
 ======
 
 (Not yet released)
+
+0.17.0
+======
+
+(Released 2022-0807)
 
 * bcder crate upgraded from 0.6.1 to 0.7.0. This entailed a lot of changes,
   mainly to error handling.

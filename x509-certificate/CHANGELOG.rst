@@ -2,10 +2,15 @@
 ``x509-certificate`` History
 ============================
 
-0.14.0
+0.15.0
 ======
 
 (Not yet released)
+
+0.14.0
+======
+
+(Released 2022-08-07)
 
 * bcder crate upgraded from 0.6.1 to 0.7.0. This entailed a lot of changes,
   mainly to error handling.
