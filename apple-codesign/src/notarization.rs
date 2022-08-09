@@ -16,8 +16,9 @@ and waiting on the availability of a notarization ticket.
 use {
     crate::{
         app_store_connect::{
-            api_token::ConnectTokenEncoder, AppStoreConnectClient, NewSubmissionResponse,
-            SubmissionResponse, SubmissionResponseStatus,
+            api_token::ConnectTokenEncoder,
+            notary_api::{NewSubmissionResponse, SubmissionResponse, SubmissionResponseStatus},
+            AppStoreConnectClient,
         },
         reader::PathType,
         AppleCodesignError,
