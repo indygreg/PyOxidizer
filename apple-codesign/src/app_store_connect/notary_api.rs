@@ -7,9 +7,10 @@
 //! See also <https://developer.apple.com/documentation/notaryapi>.
 
 use {
-    crate::AppleCodesignError,
+    crate::{app_store_connect::AppStoreConnectClient, AppleCodesignError},
     serde::{Deserialize, Serialize},
     serde_json::Value,
+    std::ops::Deref,
 };
 
 pub const APPLE_NOTARY_SUBMIT_SOFTWARE_URL: &str =
@@ -139,4 +140,87 @@ pub struct SubmissionLogResponseData {
 pub struct SubmissionLogResponse {
     pub data: SubmissionLogResponseData,
     pub meta: Value,
+}
+
+/// A client to the App Store Connect Notary API.
+pub struct NotaryApiClient(AppStoreConnectClient);
+
+impl Deref for NotaryApiClient {
+    type Target = AppStoreConnectClient;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl From<AppStoreConnectClient> for NotaryApiClient {
+    fn from(v: AppStoreConnectClient) -> Self {
+        Self(v)
+    }
+}
+
+impl NotaryApiClient {
+    /// Create a submission to the Notary API.
+    pub fn create_submission(
+        &self,
+        sha256: &str,
+        submission_name: &str,
+    ) -> Result<NewSubmissionResponse, AppleCodesignError> {
+        let token = self.get_token()?;
+
+        let body = NewSubmissionRequest {
+            notifications: Vec::new(),
+            sha256: sha256.to_string(),
+            submission_name: submission_name.to_string(),
+        };
+        let req = self
+            .client
+            .post(APPLE_NOTARY_SUBMIT_SOFTWARE_URL)
+            .bearer_auth(token)
+            .header("Accept", "application/json")
+            .header("Content-Type", "application/json")
+            .json(&body);
+
+        self.send_request(req)
+    }
+
+    /// Fetch the status of a Notary API submission.
+    pub fn get_submission(
+        &self,
+        submission_id: &str,
+    ) -> Result<SubmissionResponse, AppleCodesignError> {
+        let token = self.get_token()?;
+
+        let req = self
+            .client
+            .get(format!(
+                "{}/{}",
+                APPLE_NOTARY_SUBMIT_SOFTWARE_URL, submission_id
+            ))
+            .bearer_auth(token)
+            .header("Accept", "application/json");
+
+        self.send_request(req)
+    }
+
+    /// Fetch details about a single completed notarization.
+    pub fn get_submission_log(&self, submission_id: &str) -> Result<Value, AppleCodesignError> {
+        let token = self.get_token()?;
+
+        let req = self
+            .client
+            .get(format!(
+                "{}/{}/logs",
+                APPLE_NOTARY_SUBMIT_SOFTWARE_URL, submission_id
+            ))
+            .bearer_auth(token)
+            .header("Accept", "application/json");
+
+        let res = self.send_request::<SubmissionLogResponse>(req)?;
+
+        let url = res.data.attributes.developer_log_url;
+        let logs = self.client.get(url).send()?.json::<Value>()?;
+
+        Ok(logs)
+    }
 }

@@ -17,7 +17,10 @@ use {
     crate::{
         app_store_connect::{
             api_token::ConnectTokenEncoder,
-            notary_api::{NewSubmissionResponse, SubmissionResponse, SubmissionResponseStatus},
+            notary_api::{
+                NewSubmissionResponse, NotaryApiClient, SubmissionResponse,
+                SubmissionResponseStatus,
+            },
             AppStoreConnectClient,
         },
         reader::PathType,
@@ -276,7 +279,9 @@ impl Notarizer {
         name: &str,
     ) -> Result<NewSubmissionResponse, AppleCodesignError> {
         let client = match &self.token_encoder {
-            Some(token) => Ok(AppStoreConnectClient::new(token.clone())?),
+            Some(token) => Ok(NotaryApiClient::from(AppStoreConnectClient::new(
+                token.clone(),
+            )?)),
             _ => Err(AppleCodesignError::NotarizeNoAuthCredentials),
         }?;
 
@@ -385,7 +390,9 @@ impl Notarizer {
 
         loop {
             let client = match &self.token_encoder {
-                Some(token) => Ok(AppStoreConnectClient::new(token.clone())?),
+                Some(token) => Ok(NotaryApiClient::from(AppStoreConnectClient::new(
+                    token.clone(),
+                )?)),
                 None => Err(AppleCodesignError::NotarizeNoAuthCredentials),
             }?;
 
@@ -421,7 +428,9 @@ impl Notarizer {
     ) -> Result<serde_json::Value, AppleCodesignError> {
         warn!("fetching notarization log for {}", submission_id);
         let client = match &self.token_encoder {
-            Some(token) => Ok(AppStoreConnectClient::new(token.clone())?),
+            Some(token) => Ok(NotaryApiClient::from(AppStoreConnectClient::new(
+                token.clone(),
+            )?)),
             None => Err(AppleCodesignError::NotarizeNoAuthCredentials),
         }?;
         client.get_submission_log(submission_id)
