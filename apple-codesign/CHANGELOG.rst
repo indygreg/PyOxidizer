@@ -7,6 +7,9 @@
 
 (Not yet released)
 
+* (API) ``app_store_connect`` module has been split up into multiple modules
+  to facilitate better grouping.
+
 0.17.0
 ======
 
