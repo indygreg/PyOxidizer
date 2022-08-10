@@ -630,8 +630,6 @@ pub fn semver_to_macho_target_version(version: &semver::Version) -> u32 {
 
 /// Represents a semi-parsed Mach[-O] binary.
 pub struct MachFile<'a> {
-    data: &'a [u8],
-
     machos: Vec<MachOBinary<'a>>,
 }
 
@@ -663,7 +661,7 @@ impl<'a> MachFile<'a> {
             }
         };
 
-        Ok(Self { data, machos })
+        Ok(Self { machos })
     }
 
     /// Whether this Mach-O data has multiple architectures.
