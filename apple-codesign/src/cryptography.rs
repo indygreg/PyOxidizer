@@ -10,7 +10,7 @@ use {
         AppleCodesignError,
     },
     bytes::Bytes,
-    der::{asn1, Decodable, Document, Encodable},
+    der::{asn1, Document, Encodable},
     elliptic_curve::{
         sec1::{FromEncodedPoint, ModulusSize, ToEncodedPoint},
         AffinePoint, Curve, FieldSize, ProjectiveArithmetic, SecretKey as ECSecretKey,
