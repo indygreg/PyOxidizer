@@ -5,7 +5,7 @@
 use {
     anyhow::{Context, Result},
     assert_cmd::{cargo::cargo_bin, Command},
-    libtest_mimic::{run_tests, Arguments, Outcome, Test},
+    libtest_mimic::{Arguments, Trial},
     predicates::prelude::*,
 };
 
@@ -42,19 +42,6 @@ fn run() -> Result<()> {
 
 fn main() {
     let args = Arguments::from_args();
-
-    // libtest_mimic doesn't properly handle `--list --ignored`.
-    let tests: Vec<Test<()>> = if args.ignored {
-        vec![]
-    } else {
-        vec![Test::test("main")]
-    };
-
-    run_tests(&args, tests, |_| match run() {
-        Ok(_) => Outcome::Passed,
-        Err(e) => Outcome::Failed {
-            msg: Some(format!("{:?}", e)),
-        },
-    })
-    .exit();
+    let test = Trial::test("main", move || run().map_err(Into::into));
+    libtest_mimic::run(&args, vec![test]).exit();
 }
