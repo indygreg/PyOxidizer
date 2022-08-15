@@ -9,7 +9,7 @@
 
 use {
     crate::remote_signing::RemoteSignError,
-    minicbor::{encode::Write, Decode, Decoder, Encode, Encoder},
+    minicbor::{encode::Write, Decode as CborDecode, Decoder, Encode as CborEncode, Encoder},
     oid_registry::OID_PKCS1_RSAENCRYPTION,
     pkcs1::RsaPublicKey as RsaPublicKeyAsn1,
     ring::{
@@ -191,7 +191,7 @@ fn derive_aead_keys(
 
 fn encode_sjs(
     scheme: &str,
-    payload: impl Encode<()>,
+    payload: impl CborEncode<()>,
 ) -> ::std::result::Result<Vec<u8>, minicbor::encode::Error<std::convert::Infallible>> {
     let mut encoder = Encoder::new(Vec::<u8>::new());
 
@@ -209,7 +209,7 @@ fn encode_sjs(
 ///
 /// Implementations must also implement [Encode], which will emit the CBOR
 /// encoding of the instance to an encoder.
-pub trait SessionJoinString<'de>: Decode<'de, ()> + Encode<()> {
+pub trait SessionJoinString<'de>: CborDecode<'de, ()> + CborEncode<()> {
     /// The scheme / name for this SJS implementation.
     ///
     /// This is advertised as the first component in the encoded SJS.
@@ -228,7 +228,7 @@ struct PublicKeySessionJoinString {
     message_ciphertext: Vec<u8>,
 }
 
-impl<'de, C> Decode<'de, C> for PublicKeySessionJoinString {
+impl<'de, C> CborDecode<'de, C> for PublicKeySessionJoinString {
     fn decode(
         d: &mut Decoder<'de>,
         _ctx: &mut C,
@@ -251,7 +251,7 @@ impl<'de, C> Decode<'de, C> for PublicKeySessionJoinString {
     }
 }
 
-impl<C> Encode<C> for PublicKeySessionJoinString {
+impl<C> CborEncode<C> for PublicKeySessionJoinString {
     fn encode<W: Write>(
         &self,
         e: &mut Encoder<W>,
@@ -279,7 +279,7 @@ struct SharedSecretSessionJoinString {
     role_a_init_message: Vec<u8>,
 }
 
-impl<'de, C> Decode<'de, C> for SharedSecretSessionJoinString {
+impl<'de, C> CborDecode<'de, C> for SharedSecretSessionJoinString {
     fn decode(
         d: &mut Decoder<'de>,
         _ctx: &mut C,
@@ -302,7 +302,7 @@ impl<'de, C> Decode<'de, C> for SharedSecretSessionJoinString {
     }
 }
 
-impl<C> Encode<C> for SharedSecretSessionJoinString {
+impl<C> CborEncode<C> for SharedSecretSessionJoinString {
     fn encode<W: Write>(
         &self,
         e: &mut Encoder<W>,
@@ -405,7 +405,7 @@ pub struct SessionJoinContext {
     pub peer_handshake: Box<dyn SessionJoinPeerHandshake>,
 }
 
-#[derive(Decode, Encode)]
+#[derive(CborDecode, CborEncode)]
 #[cbor(array)]
 struct PublicKeySecretMessage {
     #[n(0)]
