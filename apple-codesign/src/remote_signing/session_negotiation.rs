@@ -9,6 +9,7 @@
 
 use {
     crate::remote_signing::RemoteSignError,
+    der::{Decode, Encode},
     minicbor::{encode::Write, Decode as CborDecode, Decoder, Encode as CborEncode, Encoder},
     oid_registry::OID_PKCS1_RSAENCRYPTION,
     pkcs1::RsaPublicKey as RsaPublicKeyAsn1,
@@ -24,10 +25,7 @@ use {
     rsa::{BigUint, PaddingScheme, PublicKey, RsaPublicKey},
     scroll::{Pwrite, LE},
     spake2::{Ed25519Group, Identity, Password, Spake2},
-    spki::{
-        der::{Decodable, Encodable},
-        SubjectPublicKeyInfo,
-    },
+    spki::SubjectPublicKeyInfo,
     std::fmt::{Display, Formatter},
 };
 

@@ -19,10 +19,10 @@ use {
     },
     bytes::Bytes,
     chrono::{Duration, Utc},
-    der::Document,
+    der::{Decode, Document},
     ring::signature as ringsig,
     signature::Signer,
-    spki::{EncodePublicKey, PublicKeyDocument},
+    spki::EncodePublicKey,
     std::{
         cmp::Ordering,
         collections::HashSet,
@@ -374,7 +374,7 @@ impl AsMut<rfc5280::Certificate> for X509Certificate {
 }
 
 impl EncodePublicKey for X509Certificate {
-    fn to_public_key_der(&self) -> spki::Result<PublicKeyDocument> {
+    fn to_public_key_der(&self) -> spki::Result<Document> {
         let mut data = vec![];
 
         self.0
@@ -384,7 +384,7 @@ impl EncodePublicKey for X509Certificate {
             .write_encoded(Mode::Der, &mut data)
             .map_err(|_| spki::Error::Asn1(der::Error::new(der::ErrorKind::Failed, 0u8.into())))?;
 
-        PublicKeyDocument::from_der(&data).map_err(spki::Error::Asn1)
+        Document::from_der(&data).map_err(spki::Error::Asn1)
     }
 }
 

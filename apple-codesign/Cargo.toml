@@ -25,12 +25,12 @@ bitflags = "1.2"
 bytes = "1.0"
 clap = "3.1"
 chrono = "0.4"
-der = "0.5"
+der = "0.6"
 dialoguer = "0.10"
 difference = "2.0"
 digest = "0.10"
 dirs = "4.0"
-elliptic-curve = { version = "0.11", features = ["arithmetic", "pkcs8"] }
+elliptic-curve = { version = "0.12", features = ["arithmetic", "pkcs8"] }
 env_logger = "0.9"
 filetime = "0.2"
 glob = "0.3"
@@ -40,13 +40,13 @@ jsonwebtoken = "8"
 log = "0.4"
 md-5 = "0.10"
 minicbor = { version = "0.18", features = ["derive", "std"] }
-oid-registry = "0.5"
+oid-registry = "0.6"
 once_cell = "1.7"
 p12 = "0.6"
-p256 = { version = "0.10", default-features = false, features = ["arithmetic", "pkcs8", "std"] }
+p256 = { version = "0.11", default-features = false, features = ["arithmetic", "pkcs8", "std"] }
 pem = "1.0"
-pkcs1 = { version = "0.3", features = ["alloc", "std"] }
-pkcs8 = { version = "0.8", features = ["alloc", "std"] }
+pkcs1 = { version = "0.4", features = ["alloc", "std"] }
+pkcs8 = { version = "0.9", features = ["alloc", "std"] }
 plist = "1.2"
 rand = "0.8"
 rasn = "0.6"
@@ -62,7 +62,7 @@ serde_json = "1.0"
 serde_yaml = "0.9"
 signature = "1.3"
 spake2 = "0.3"
-spki = { version = "0.5", features = ["pem"] }
+spki = { version = "0.6", features = ["pem"] }
 subtle = "2.4"
 tempfile = "3.3"
 thiserror = "1.0"
@@ -72,7 +72,7 @@ uuid = { version = "1.1", features = ["v4"] }
 x509 = "0.2"
 xml-rs = "0.8"
 yasna = "0.5"
-yubikey = { version = "0.4", optional = true, features = ["untested"] }
+yubikey = { version = "0.6", optional = true, features = ["untested"] }
 zeroize = { version = "1.3", features = ["zeroize_derive"] }
 zip = { version = "0.6", default-features = false, features = ["deflate"] }
 zip_structs = "0.2"

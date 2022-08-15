@@ -115,6 +115,9 @@ pub enum X509CertificateError {
     #[error("ring rejected loading private key: {0}")]
     PrivateKeyRejected(&'static str),
 
+    #[error("DER error: {0}")]
+    Der(der::Error),
+
     #[error("error when decoding ASN.1 data: {0}")]
     Asn1Parse(bcder::decode::DecodeError<std::convert::Infallible>),
 
@@ -144,6 +147,12 @@ pub enum X509CertificateError {
 
     #[error("unhandled error: {0}")]
     Other(String),
+}
+
+impl From<der::Error> for X509CertificateError {
+    fn from(e: der::Error) -> Self {
+        Self::Der(e)
+    }
 }
 
 impl From<ring::error::KeyRejected> for X509CertificateError {

@@ -9,6 +9,15 @@
 
 * (API) ``app_store_connect`` module has been split up into multiple modules
   to facilitate better grouping.
+* (API) Various changes for upgrades of crates related to cryptography.
+* der crate upgraded from 0.5 to 0.6.
+* elliptic-curve crate upgraded from 0.11 to 0.12.
+* oid-registry crate upgraded from 0.5 to 0.6.
+* p256 crate upgraded from 0.10 to 0.11.
+* pkcs1 crate upgraded from 0.3 to 0.4.
+* pkcs8 crate upgraded from 0.8 to 0.9.
+* spki crate upgraded from 0.5 to 0.6.
+* yubikey crate upgraded from 0.4 to 0.6.
 
 0.17.0
 ======

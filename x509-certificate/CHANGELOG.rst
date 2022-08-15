@@ -7,6 +7,9 @@
 
 (Not yet released)
 
+* der crate upgraded from 0.5 to 0.6.
+* spki crate upgraded from 0.5 to 0.6.
+
 0.14.0
 ======
 

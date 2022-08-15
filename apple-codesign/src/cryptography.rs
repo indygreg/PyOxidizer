@@ -10,7 +10,7 @@ use {
         AppleCodesignError,
     },
     bytes::Bytes,
-    der::{asn1, Decodable, Document, Encodable},
+    der::{asn1, Decode, Document, Encode, SecretDocument},
     elliptic_curve::{
         sec1::{FromEncodedPoint, ModulusSize, ToEncodedPoint},
         AffinePoint, Curve, FieldSize, ProjectiveArithmetic, SecretKey as ECSecretKey,
@@ -19,10 +19,8 @@ use {
         OID_EC_P256, OID_KEY_TYPE_EC_PUBLIC_KEY, OID_PKCS1_RSAENCRYPTION, OID_SIG_ED25519,
     },
     p256::NistP256,
-    pkcs1::RsaPrivateKeyDocument,
-    pkcs8::{
-        AlgorithmIdentifier, EncodePrivateKey, ObjectIdentifier, PrivateKeyDocument, PrivateKeyInfo,
-    },
+    pkcs1::RsaPrivateKey,
+    pkcs8::{AlgorithmIdentifier, EncodePrivateKey, ObjectIdentifier, PrivateKeyInfo},
     ring::signature::{EcdsaKeyPair, Ed25519KeyPair, KeyPair, RsaKeyPair},
     rsa::{
         algorithms::mgf1_xor, pkcs1::DecodeRsaPrivateKey, BigUint, PaddingScheme,
@@ -54,12 +52,29 @@ pub trait PrivateKey: KeyInfoSigner {
 
 #[derive(Clone, Debug)]
 pub struct InMemoryRsaKey {
-    private_key: RsaPrivateKeyDocument,
+    // Validated at construction time to be DER for an RsaPrivateKey.
+    private_key: SecretDocument,
+}
+
+impl InMemoryRsaKey {
+    /// Construct a new instance from DER data, validating DER in process.
+    fn from_der(der_data: &[u8]) -> Result<Self, der::Error> {
+        RsaPrivateKey::from_der(der_data)?;
+
+        let private_key = Document::from_der(der_data)?.into_secret();
+
+        Ok(Self { private_key })
+    }
+
+    fn rsa_private_key(&self) -> RsaPrivateKey<'_> {
+        RsaPrivateKey::from_der(self.private_key.as_bytes())
+            .expect("internal content should be PKCS#1 DER private key data")
+    }
 }
 
 impl From<&InMemoryRsaKey> for RsaConstructedKey {
     fn from(key: &InMemoryRsaKey) -> Self {
-        let key = key.private_key.decode();
+        let key = key.rsa_private_key();
 
         let n = BigUint::from_bytes_be(key.modulus.as_bytes());
         let e = BigUint::from_bytes_be(key.public_exponent.as_bytes());
@@ -76,7 +91,7 @@ impl TryFrom<InMemoryRsaKey> for InMemorySigningKeyPair {
     type Error = AppleCodesignError;
 
     fn try_from(value: InMemoryRsaKey) -> Result<Self, Self::Error> {
-        let key_pair = RsaKeyPair::from_der(value.private_key.as_der()).map_err(|e| {
+        let key_pair = RsaKeyPair::from_der(value.private_key.as_bytes()).map_err(|e| {
             AppleCodesignError::CertificateGeneric(format!(
                 "error importing RSA key to ring: {}",
                 e
@@ -85,20 +100,22 @@ impl TryFrom<InMemoryRsaKey> for InMemorySigningKeyPair {
 
         Ok(InMemorySigningKeyPair::Rsa(
             key_pair,
-            value.private_key.as_ref().to_vec(),
+            value.private_key.as_bytes().to_vec(),
         ))
     }
 }
 
 impl EncodePrivateKey for InMemoryRsaKey {
-    fn to_pkcs8_der(&self) -> pkcs8::Result<PrivateKeyDocument> {
-        PrivateKeyInfo::new(pkcs1::ALGORITHM_ID, self.private_key.as_der()).to_der()
+    fn to_pkcs8_der(&self) -> pkcs8::Result<SecretDocument> {
+        let raw = PrivateKeyInfo::new(pkcs1::ALGORITHM_ID, self.private_key.as_bytes()).to_vec()?;
+
+        Ok(Document::from_der(&raw)?.into_secret())
     }
 }
 
 impl PublicKeyPeerDecrypt for InMemoryRsaKey {
     fn decrypt(&self, ciphertext: &[u8]) -> Result<Vec<u8>, RemoteSignError> {
-        let key = RsaConstructedKey::from_pkcs1_der(self.private_key.as_der())
+        let key = RsaConstructedKey::from_pkcs1_der(self.private_key.as_bytes())
             .map_err(|e| RemoteSignError::Crypto(format!("failed to parse RSA key: {}", e)))?;
 
         let padding = PaddingScheme::new_oaep::<sha2::Sha256>();
@@ -175,14 +192,14 @@ where
     AffinePoint<C>: FromEncodedPoint<C> + ToEncodedPoint<C>,
     FieldSize<C>: ModulusSize,
 {
-    fn to_pkcs8_der(&self) -> pkcs8::Result<PrivateKeyDocument> {
+    fn to_pkcs8_der(&self) -> pkcs8::Result<SecretDocument> {
         let private_key = self.secret_key.to_sec1_der()?;
 
         PrivateKeyInfo {
             algorithm: AlgorithmIdentifier {
                 oid: ObjectIdentifier::from_bytes(OID_KEY_TYPE_EC_PUBLIC_KEY.as_bytes())
                     .expect("OID construction should work"),
-                parameters: Some(asn1::Any::from(&self.curve)),
+                parameters: Some(asn1::AnyRef::from(&self.curve)),
             },
             private_key: private_key.as_ref(),
             public_key: None,
@@ -226,13 +243,14 @@ impl TryFrom<InMemoryEd25519Key> for InMemorySigningKeyPair {
 }
 
 impl EncodePrivateKey for InMemoryEd25519Key {
-    fn to_pkcs8_der(&self) -> pkcs8::Result<PrivateKeyDocument> {
+    fn to_pkcs8_der(&self) -> pkcs8::Result<SecretDocument> {
         let algorithm = AlgorithmIdentifier {
             oid: ObjectIdentifier::from_bytes(OID_SIG_ED25519.as_bytes()).expect("OID is valid"),
             parameters: None,
         };
 
-        let value = Zeroizing::new(asn1::OctetString::new(self.private_key.as_ref())?.to_vec()?);
+        let key_ref: &[u8] = self.private_key.as_ref();
+        let value = Zeroizing::new(asn1::OctetString::new(key_ref)?.to_vec()?);
 
         PrivateKeyInfo::new(algorithm, value.as_ref()).try_into()
     }
@@ -263,9 +281,7 @@ impl<'a> TryFrom<PrivateKeyInfo<'a>> for InMemoryPrivateKey {
     fn try_from(value: PrivateKeyInfo<'a>) -> Result<Self, Self::Error> {
         match value.algorithm.oid {
             x if x.as_bytes() == OID_PKCS1_RSAENCRYPTION.as_bytes() => {
-                let private_key = RsaPrivateKeyDocument::from_der(value.private_key)?;
-
-                Ok(Self::Rsa(InMemoryRsaKey { private_key }))
+                Ok(Self::Rsa(InMemoryRsaKey::from_der(value.private_key)?))
             }
             x if x.as_bytes() == OID_KEY_TYPE_EC_PUBLIC_KEY.as_bytes() => {
                 let curve_oid = value.algorithm.parameters_oid()?;
@@ -306,7 +322,7 @@ impl TryFrom<InMemoryPrivateKey> for InMemorySigningKeyPair {
 }
 
 impl EncodePrivateKey for InMemoryPrivateKey {
-    fn to_pkcs8_der(&self) -> pkcs8::Result<PrivateKeyDocument> {
+    fn to_pkcs8_der(&self) -> pkcs8::Result<SecretDocument> {
         match self {
             Self::EcdsaP256(key) => key.to_pkcs8_der(),
             Self::Ed25519(key) => key.to_pkcs8_der(),
@@ -354,14 +370,16 @@ impl Sign for InMemoryPrivateKey {
                     Bytes::new()
                 }
             }
-            Self::Rsa(key) => Bytes::copy_from_slice(
-                key.private_key
-                    .decode()
-                    .public_key()
-                    .to_der()
-                    .expect("RSA public key DER encoding should not fail")
-                    .as_ref(),
-            ),
+            Self::Rsa(key) => {
+                let key = key.rsa_private_key();
+
+                Bytes::copy_from_slice(
+                    key.public_key()
+                        .to_vec()
+                        .expect("RSA public key DER encoding should not fail")
+                        .as_ref(),
+                )
+            }
         }
     }
 
@@ -377,15 +395,17 @@ impl Sign for InMemoryPrivateKey {
         match self {
             Self::EcdsaP256(key) => Some(key.secret_key.to_be_bytes().to_vec()),
             Self::Ed25519(key) => Some((*key.private_key).clone()),
-            Self::Rsa(key) => Some(key.private_key.as_ref().to_vec()),
+            Self::Rsa(key) => Some(key.private_key.as_bytes().to_vec()),
         }
     }
 
     fn rsa_primes(&self) -> Result<Option<(Vec<u8>, Vec<u8>)>, X509CertificateError> {
         if let Self::Rsa(key) = self {
+            let key = key.rsa_private_key();
+
             Ok(Some((
-                key.private_key.decode().prime1.as_bytes().to_vec(),
-                key.private_key.decode().prime2.as_bytes().to_vec(),
+                key.prime1.as_bytes().to_vec(),
+                key.prime2.as_bytes().to_vec(),
             )))
         } else {
             Ok(None)
@@ -665,7 +685,7 @@ mod test {
         let pki = PrivateKeyInfo::from_der(RSA_2048_PKCS8_DER).unwrap();
         let key = InMemoryPrivateKey::try_from(pki).unwrap();
 
-        assert_eq!(key.to_pkcs8_der().unwrap().as_ref(), RSA_2048_PKCS8_DER);
+        assert_eq!(key.to_pkcs8_der().unwrap().as_bytes(), RSA_2048_PKCS8_DER);
 
         let our_key = InMemorySigningKeyPair::try_from(key)?;
         let our_public_key = our_key.public_key_data();
@@ -683,7 +703,7 @@ mod test {
         let seed = &pki.private_key[2..];
         let key = InMemoryPrivateKey::try_from(pki).unwrap();
 
-        assert_eq!(key.to_pkcs8_der().unwrap().as_ref(), ED25519_PKCS8_DER);
+        assert_eq!(key.to_pkcs8_der().unwrap().as_bytes(), ED25519_PKCS8_DER);
 
         let our_key = InMemorySigningKeyPair::try_from(key)?;
         let our_public_key = our_key.public_key_data();
@@ -710,7 +730,7 @@ mod test {
         let pki = PrivateKeyInfo::from_der(SECP256_PKCS8_DER).unwrap();
         let key = InMemoryPrivateKey::try_from(pki).unwrap();
 
-        assert_eq!(key.to_pkcs8_der().unwrap().as_ref(), SECP256_PKCS8_DER);
+        assert_eq!(key.to_pkcs8_der().unwrap().as_bytes(), SECP256_PKCS8_DER);
 
         let our_key = InMemorySigningKeyPair::try_from(key)?;
         let our_public_key = our_key.public_key_data();

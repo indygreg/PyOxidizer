@@ -712,12 +712,12 @@ mod test {
     fn key_algorithm_oids() -> Result<(), Error> {
         let oid = ObjectIdentifier::from(KeyAlgorithm::Rsa);
         assert_eq!(oid.to_string(), "1.2.840.113549.1.1.1");
-        let oid = ObjectIdentifier::new("1.2.840.113549.1.1.1");
+        let oid = ObjectIdentifier::new("1.2.840.113549.1.1.1").unwrap();
         assert_eq!(KeyAlgorithm::try_from(&oid)?, KeyAlgorithm::Rsa);
 
         let oid = ObjectIdentifier::from(KeyAlgorithm::Ecdsa(EcdsaCurve::Secp256r1));
         assert_eq!(oid.to_string(), "1.2.840.10045.2.1");
-        let oid = ObjectIdentifier::new("1.2.840.10045.2.1");
+        let oid = ObjectIdentifier::new("1.2.840.10045.2.1").unwrap();
         assert_eq!(
             KeyAlgorithm::try_from(&oid)?,
             KeyAlgorithm::Ecdsa(EcdsaCurve::Secp384r1)
@@ -725,7 +725,7 @@ mod test {
 
         let oid = ObjectIdentifier::from(KeyAlgorithm::Ed25519);
         assert_eq!(oid.to_string(), "1.3.101.110");
-        let oid = ObjectIdentifier::new("1.3.101.110");
+        let oid = ObjectIdentifier::new("1.3.101.110").unwrap();
         assert_eq!(KeyAlgorithm::try_from(&oid)?, KeyAlgorithm::Ed25519);
 
         Ok(())
