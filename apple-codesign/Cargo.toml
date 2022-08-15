@@ -16,9 +16,9 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0"
-aws-config = "0.46"
-aws-sdk-s3 = "0.16"
-aws-smithy-http = "0.46"
+aws-config = "0.47"
+aws-sdk-s3 = "0.17"
+aws-smithy-http = "0.47"
 base64 = "0.13"
 bcder = "0.7"
 bitflags = "1.2"
