@@ -42,6 +42,14 @@ pub fn default_interpreter_config<'a>() -> OxidizedPythonInterpreterConfig<'a> {
     config.argv = Some(vec![std::ffi::OsString::from(PYTHON_INTERPRETER_PATH)]);
     config.interpreter_config.executable = Some(std::path::PathBuf::from(PYTHON_INTERPRETER_PATH));
 
+    // Disable "site" import support. The "site" directory is effectively the wild
+    // west and can contain things like .pth files that invalidate assumptions
+    // about how vanilla Python behaves. So disable its use by default. Individual
+    // tests can always re-enable if they need to exercise functionality to test
+    // potential interactions with "site."
+    config.interpreter_config.site_import = Some(false);
+    config.interpreter_config.user_site_directory = Some(false);
+
     config
 }
 
