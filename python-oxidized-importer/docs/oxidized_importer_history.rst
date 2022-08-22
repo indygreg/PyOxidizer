@@ -9,10 +9,15 @@ Project History
 Changelog
 =========
 
-0.7.0
+0.8.0
 -----
 
 (Not yet released)
+
+0.7.0
+-----
+
+No release notes.
 
 0.6.0
 -----
