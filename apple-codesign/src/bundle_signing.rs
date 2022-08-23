@@ -578,8 +578,6 @@ impl SingleBundleSigner {
 
             let mut settings = settings.clone();
 
-            settings.import_settings_from_macho(&macho_data)?;
-
             // The identifier for the main executable is defined in the bundle's Info.plist.
             if let Some(ident) = self
                 .bundle
@@ -591,6 +589,8 @@ impl SingleBundleSigner {
             } else {
                 info!("unable to determine binary identifier from bundle's Info.plist (CFBundleIdentifier not set?)");
             }
+
+            settings.import_settings_from_macho(&macho_data)?;
 
             settings.set_code_resources_data(SettingsScope::Main, resources_data);
 
