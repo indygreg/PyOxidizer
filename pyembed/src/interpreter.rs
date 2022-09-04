@@ -329,16 +329,26 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
         // importer (importlib._bootstrap_external), mutating `sys.meta_path`
         // and `sys.path_hooks`.
         //
-        // If enabled, OxidizedFinder should still be the initial entry on
-        // `sys.meta_path`. And if it were capable, OxidizedFinder would have
-        // serviced all imports so far.
+        // We normally expect `OxidizedFinder` to be the initial entry on `sys.meta_path`,
+        // as that is where we place it. And if it were capable, `OxidizedFinder` would
+        // have serviced all imports so far.
         //
-        // Here, we undo the mutations caused by initializing of the "external"
-        // importers if we're not configured to perform filesystem importing.
-        // Ideally there would be a field on PyConfig to prevent the initializing
-        // of these importers. But there isn't. There is an `_install_importlib`
-        // field. However, when disabled it disables a lot of "main" initialization
-        // and isn't usable for us.
+        // However, initialization of the stdlib external importer could result in
+        // additional mutations to `sys.meta_path` and `sys.path_hooks`. For example,
+        // if `.pth` files are being processed by the import of `site`, a `.pth` file
+        // could inject its own importers. This is commonly seen with the
+        // `_distutils_hack` meta path importer provided by `setuptools`.
+        //
+        // Here, we undo the mutations caused by initializing of the "external" importers if
+        // we're not configured to perform filesystem importing. Ideally there would be a
+        // field on `PyConfig` to prevent the initializing of these importers. But there isn't.
+        // There is an `_install_importlib` field. However, when disabled it disables a lot of
+        // "main" initialization and isn't usable for us.
+        //
+        // TODO consider importing `site` ourselves instead of letting the built-in init code
+        // do it. This should give us even more control over importer handling. It is unknown
+        // whether it is safe to defer the import of this module post completion of
+        // _Py_InitializeMain.
 
         if !self.config.filesystem_importer {
             remove_external_importers(sys_module).map_err(|err| {
@@ -349,28 +359,32 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
         // We aren't able to hold a &PyAny to OxidizedFinder through multi-phase interpreter
         // initialization. So recover an instance now if it is available.
         let oxidized_finder = if oxidized_finder_loaded {
-            let finder = sys_module
+            sys_module
                 .getattr("meta_path")
                 .map_err(|err| {
                     NewInterpreterError::new_from_pyerr(py, err, "obtaining sys.meta_path")
                 })?
-                .get_item(0)
+                .iter()
                 .map_err(|err| {
-                    NewInterpreterError::new_from_pyerr(py, err, "obtaining sys.meta_path[0]")
-                })?;
-
-            if !OxidizedFinder::is_type_of(finder) {
-                return Err(NewInterpreterError::Simple(
-                    "OxidizedFinder not found on sys.meta_path[0] (this should never happen)",
-                ));
-            }
-
-            Some(finder)
+                    NewInterpreterError::new_from_pyerr(
+                        py,
+                        err,
+                        "obtaining iterator for sys.meta_path",
+                    )
+                })?
+                .find(|finder| {
+                    // This should never fail.
+                    if let Ok(finder) = finder {
+                        OxidizedFinder::is_type_of(finder)
+                    } else {
+                        false
+                    }
+                })
         } else {
             None
         };
 
-        if let Some(finder) = oxidized_finder {
+        if let Some(Ok(finder)) = oxidized_finder {
             install_path_hook(finder, sys_module).map_err(|err| {
                 NewInterpreterError::new_from_pyerr(
                     py,

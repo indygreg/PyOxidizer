@@ -41,6 +41,14 @@ Bug Fixes
 * The paths to Python modules when using Python 3.10 is now properly resolved.
   Before, buggy version string parsing caused various code to look for Python
   modules in a ``3.1`` directory instead of ``3.10``. (#569, #600).
+* Changed interpreter initialization logic around ``sys.meta_path`` handling to
+  be more resistant to additional entries. If ``site`` is imported during
+  interpreter initialization, a ``.pth`` file in ``site-packages`` could have
+  the side-effect of registering additional entries on ``sys.meta_path``.
+  Before, this could confuse our interpreter initialization code and result in
+  ``OxidizedFinder not found on sys.meta_path[0] (this should never happen)``
+  errors. Our overly strict code is now more tolerant of unknown entries on
+  ``sys.meta_path`` and this error should no longer occur. (#602)
 
 Changes
 ^^^^^^^
