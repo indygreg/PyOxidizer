@@ -118,8 +118,6 @@ mod certificate;
 pub use certificate::*;
 mod code_directory;
 pub use code_directory::*;
-mod code_hash;
-pub use code_hash::*;
 pub mod code_requirement;
 pub use code_requirement::*;
 mod code_resources;

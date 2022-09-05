@@ -9,7 +9,6 @@
 use {
     crate::{
         code_directory::{CodeDirectoryBlob, CodeSignatureFlags, ExecutableSegmentFlags},
-        code_hash::paged_digests,
         code_requirement::{CodeRequirementExpression, CodeRequirements, RequirementType},
         embedded_signature::{
             BlobData, CodeSigningSlot, Digest, EntitlementsBlob, EntitlementsDerBlob,
@@ -520,14 +519,11 @@ impl<'data> MachOSigner<'data> {
             runtime
         };
 
-        let code_hashes = paged_digests(
-            macho.digested_code_data()?,
-            *settings.digest_type(),
-            page_size as _,
-        )?
-        .into_iter()
-        .map(|v| Digest { data: v.into() })
-        .collect::<Vec<_>>();
+        let code_hashes = macho
+            .code_digests(*settings.digest_type(), page_size as _)?
+            .into_iter()
+            .map(|v| Digest { data: v.into() })
+            .collect::<Vec<_>>();
 
         let mut special_hashes = HashMap::new();
 

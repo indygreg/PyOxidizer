@@ -14,8 +14,7 @@ data.
 
 use {
     crate::{
-        code_hash::paged_digests,
-        embedded_signature::EmbeddedSignature,
+        embedded_signature::{DigestType, EmbeddedSignature},
         error::AppleCodesignError,
         signing_settings::{SettingsScope, SigningSettings},
     },
@@ -227,6 +226,18 @@ impl<'a> MachOBinary<'a> {
         Ok(&self.data[0..code_limit as _])
     }
 
+    /// Compute digests over code in this binary.
+    pub fn code_digests(
+        &self,
+        digest: DigestType,
+        page_size: usize,
+    ) -> Result<Vec<Vec<u8>>, AppleCodesignError> {
+        self.digested_code_data()?
+            .chunks(page_size)
+            .map(|chunk| digest.digest_data(chunk))
+            .collect::<Result<Vec<_>, AppleCodesignError>>()
+    }
+
     /// Resolve the load command for the code signature.
     pub fn code_signature_load_command(&self) -> Option<LinkeditDataCommand> {
         self.macho.load_commands.iter().find_map(|lc| {
@@ -343,14 +354,16 @@ impl<'a> MachOBinary<'a> {
         // Reserve room for the code digests, which are proportional to binary size.
         // We could avoid doing the actual digesting work here. But until people
         // complain, don't worry about it.
-        size += paged_digests(self.digested_code_data()?, *settings.digest_type(), 4096)?
+        size += self
+            .code_digests(*settings.digest_type(), 4096)?
             .into_iter()
             .map(|x| x.len())
             .sum::<usize>();
 
         if let Some(digests) = settings.extra_digests(SettingsScope::Main) {
             for digest in digests {
-                size += paged_digests(self.digested_code_data()?, *digest, 4096)?
+                size += self
+                    .code_digests(*digest, 4096)?
                     .into_iter()
                     .map(|x| x.len())
                     .sum::<usize>();

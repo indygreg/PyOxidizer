@@ -22,6 +22,8 @@
 * pkcs8 crate upgraded from 0.8 to 0.9.
 * spki crate upgraded from 0.5 to 0.6.
 * yubikey crate upgraded from 0.4 to 0.6.
+* (API) The ``code_hash`` module had its content folded into the new function
+  ``MachOBinary::code_digests()``.
 
 0.17.0
 ======

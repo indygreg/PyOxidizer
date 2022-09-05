@@ -13,8 +13,6 @@ mod certificate;
 #[allow(unused)]
 mod code_directory;
 #[allow(unused)]
-mod code_hash;
-#[allow(unused)]
 mod code_requirement;
 #[allow(unused)]
 mod code_resources;
@@ -63,7 +61,6 @@ use {
             create_self_signed_code_signing_certificate, AppleCertificate, CertificateProfile,
         },
         code_directory::{CodeDirectoryBlob, CodeSignatureFlags},
-        code_hash::paged_digests,
         code_requirement::CodeRequirements,
         cryptography::{parse_pfx_data, InMemoryPrivateKey, PrivateKey},
         embedded_signature::{Blob, CodeSigningSlot, DigestType, RequirementSetBlob},
@@ -1055,7 +1052,7 @@ fn command_compute_code_hashes(args: &ArgMatches) -> Result<(), AppleCodesignErr
     let mach = MachFile::parse(&data)?;
     let macho = mach.nth_macho(index)?;
 
-    let hashes = paged_digests(macho.digested_code_data()?, hash_type, page_size)?;
+    let hashes = macho.code_digests(hash_type, page_size)?;
 
     for hash in hashes {
         println!("{}", hex::encode(hash));
