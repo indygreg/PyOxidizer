@@ -226,6 +226,17 @@ impl<'a> MachOBinary<'a> {
         Ok(&self.data[0..code_limit as _])
     }
 
+    /// Obtain the size in bytes of all code digests given a digest type and page size.
+    pub fn code_digests_size(
+        &self,
+        digest: DigestType,
+        page_size: usize,
+    ) -> Result<usize, AppleCodesignError> {
+        let empty = digest.digest_data(b"")?;
+
+        Ok(self.digested_code_data()?.chunks(page_size).count() * empty.len())
+    }
+
     /// Compute digests over code in this binary.
     pub fn code_digests(
         &self,
@@ -354,19 +365,11 @@ impl<'a> MachOBinary<'a> {
         // Reserve room for the code digests, which are proportional to binary size.
         // We could avoid doing the actual digesting work here. But until people
         // complain, don't worry about it.
-        size += self
-            .code_digests(*settings.digest_type(), 4096)?
-            .into_iter()
-            .map(|x| x.len())
-            .sum::<usize>();
+        size += self.code_digests_size(*settings.digest_type(), 4096)?;
 
         if let Some(digests) = settings.extra_digests(SettingsScope::Main) {
             for digest in digests {
-                size += self
-                    .code_digests(*digest, 4096)?
-                    .into_iter()
-                    .map(|x| x.len())
-                    .sum::<usize>();
+                size += self.code_digests_size(*digest, 4096)?;
             }
         }
 
