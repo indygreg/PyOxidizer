@@ -7,6 +7,10 @@
 
 (Not yet released)
 
+* Mach-O digesting code now digests file-level data without looking at segment
+  boundaries. This fixes a bug where we were computing the incorrect digests when
+  Mach-O segments weren't aligned at 4096 byte boundaries. (Go binaries commonly
+  don't have 4k aligned segment boundaries.) (#634)
 * (API) ``app_store_connect`` module has been split up into multiple modules
   to facilitate better grouping.
 * (API) Various changes for upgrades of crates related to cryptography.

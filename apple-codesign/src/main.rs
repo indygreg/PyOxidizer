@@ -63,7 +63,7 @@ use {
             create_self_signed_code_signing_certificate, AppleCertificate, CertificateProfile,
         },
         code_directory::{CodeDirectoryBlob, CodeSignatureFlags},
-        code_hash::segment_digests,
+        code_hash::paged_digests,
         code_requirement::CodeRequirements,
         cryptography::{parse_pfx_data, InMemoryPrivateKey, PrivateKey},
         embedded_signature::{Blob, CodeSigningSlot, DigestType, RequirementSetBlob},
@@ -1055,11 +1055,7 @@ fn command_compute_code_hashes(args: &ArgMatches) -> Result<(), AppleCodesignErr
     let mach = MachFile::parse(&data)?;
     let macho = mach.nth_macho(index)?;
 
-    let hashes = segment_digests(
-        macho.digestable_segment_data().into_iter(),
-        hash_type,
-        page_size,
-    )?;
+    let hashes = paged_digests(macho.digested_code_data()?, hash_type, page_size)?;
 
     for hash in hashes {
         println!("{}", hex::encode(hash));

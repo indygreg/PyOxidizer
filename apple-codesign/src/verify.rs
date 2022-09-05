@@ -24,7 +24,7 @@
 use {
     crate::{
         code_directory::CodeDirectoryBlob,
-        code_hash::segment_digests,
+        code_hash::paged_digests,
         embedded_signature::{CodeSigningSlot, DigestType, EmbeddedSignature},
         error::AppleCodesignError,
         macho::{MachFile, MachOBinary},
@@ -419,57 +419,61 @@ fn verify_code_directory(
         }),
     }
 
-    match segment_digests(
-        macho.digestable_segment_data().into_iter(),
-        cd.digest_type,
-        cd.page_size as _,
-    ) {
-        Ok(digests) => {
-            let mut cd_iter = cd.code_digests.iter().enumerate();
-            let mut actual_iter = digests.iter().enumerate();
+    match macho.digested_code_data() {
+        Ok(data) => match paged_digests(data, cd.digest_type, cd.page_size as _) {
+            Ok(digests) => {
+                let mut cd_iter = cd.code_digests.iter().enumerate();
+                let mut actual_iter = digests.iter().enumerate();
 
-            loop {
-                match (cd_iter.next(), actual_iter.next()) {
-                    (None, None) => {
-                        break;
-                    }
-                    (Some((cd_index, cd_digest)), Some((_, actual_digest))) => {
-                        if &cd_digest.data != actual_digest {
+                loop {
+                    match (cd_iter.next(), actual_iter.next()) {
+                        (None, None) => {
+                            break;
+                        }
+                        (Some((cd_index, cd_digest)), Some((_, actual_digest))) => {
+                            if &cd_digest.data != actual_digest {
+                                problems.push(VerificationProblem {
+                                    context: context.clone(),
+                                    problem: VerificationProblemType::CodeDigestMismatch(
+                                        cd_index,
+                                        cd_digest.to_vec(),
+                                        actual_digest.clone(),
+                                    ),
+                                });
+                            }
+                        }
+                        (None, Some((actual_index, actual_digest))) => {
                             problems.push(VerificationProblem {
                                 context: context.clone(),
-                                problem: VerificationProblemType::CodeDigestMismatch(
-                                    cd_index,
-                                    cd_digest.to_vec(),
+                                problem: VerificationProblemType::CodeDigestMissingEntry(
+                                    actual_index,
                                     actual_digest.clone(),
                                 ),
                             });
                         }
-                    }
-                    (None, Some((actual_index, actual_digest))) => {
-                        problems.push(VerificationProblem {
-                            context: context.clone(),
-                            problem: VerificationProblemType::CodeDigestMissingEntry(
-                                actual_index,
-                                actual_digest.clone(),
-                            ),
-                        });
-                    }
-                    (Some((cd_index, cd_digest)), None) => {
-                        problems.push(VerificationProblem {
-                            context: context.clone(),
-                            problem: VerificationProblemType::CodeDigestExtraEntry(
-                                cd_index,
-                                cd_digest.to_vec(),
-                            ),
-                        });
+                        (Some((cd_index, cd_digest)), None) => {
+                            problems.push(VerificationProblem {
+                                context: context.clone(),
+                                problem: VerificationProblemType::CodeDigestExtraEntry(
+                                    cd_index,
+                                    cd_digest.to_vec(),
+                                ),
+                            });
+                        }
                     }
                 }
             }
-        }
+            Err(e) => {
+                problems.push(VerificationProblem {
+                    context: context.clone(),
+                    problem: VerificationProblemType::CodeDigestError(e),
+                });
+            }
+        },
         Err(e) => {
             problems.push(VerificationProblem {
                 context: context.clone(),
-                problem: VerificationProblemType::CodeDigestError(e),
+                problem: VerificationProblemType::MachOParseError(e),
             });
         }
     }

@@ -14,14 +14,14 @@ data.
 
 use {
     crate::{
-        code_hash::segment_digests,
+        code_hash::paged_digests,
         embedded_signature::EmbeddedSignature,
         error::AppleCodesignError,
         signing_settings::{SettingsScope, SigningSettings},
     },
     cryptographic_message_syntax::time_stamp_message_http,
     goblin::mach::{
-        constants::{SEG_LINKEDIT, SEG_PAGEZERO, SEG_TEXT},
+        constants::{SEG_LINKEDIT, SEG_TEXT},
         header::MH_EXECUTE,
         load_command::{
             CommandVariant, LinkeditDataCommand, LC_BUILD_VERSION, SIZEOF_LINKEDIT_DATA_COMMAND,
@@ -218,47 +218,13 @@ impl<'a> MachOBinary<'a> {
         }
     }
 
-    /// Obtain slices of segment data suitable for digesting.
+    /// Obtain Mach-O binary data to be digested in code digests.
     ///
-    /// The slices are likely digested as part of computing digests
-    /// embedded in the code directory.
-    pub fn digestable_segment_data(&self) -> Vec<&[u8]> {
-        let mut last_segment_end_offset = None;
+    /// Returns the raw data whose digests will be captured by the Code Directory code digests.
+    pub fn digested_code_data(&self) -> Result<&[u8], AppleCodesignError> {
+        let code_limit = self.code_limit_binary_offset()?;
 
-        self.macho
-            .segments
-            .iter()
-            .filter(|segment| !matches!(segment.name(), Ok(SEG_PAGEZERO)))
-            .flat_map(|segment| {
-                let mut segments = vec![];
-
-                let our_start_offset = segment.fileoff;
-                let our_end_offset = segment.fileoff + segment.filesize;
-
-                // There can be gaps between segments. Emit that gap as its own virtual segment.
-                if let Some(last_segment_end_offset) = last_segment_end_offset {
-                    if our_start_offset > last_segment_end_offset {
-                        let missing_data =
-                            &self.data[last_segment_end_offset as usize..our_start_offset as usize];
-                        segments.push(missing_data);
-                    }
-                }
-
-                last_segment_end_offset = Some(our_end_offset);
-
-                // The __LINKEDIT segment is only digested up to the code signature.
-                if matches!(segment.name(), Ok(SEG_LINKEDIT)) {
-                    segments.push(
-                        self.linkedit_data_before_signature()
-                            .expect("__LINKEDIT data should resolve"),
-                    );
-                } else {
-                    segments.push(segment.data);
-                }
-
-                segments
-            })
-            .collect::<Vec<_>>()
+        Ok(&self.data[0..code_limit as _])
     }
 
     /// Resolve the load command for the code signature.
@@ -377,18 +343,14 @@ impl<'a> MachOBinary<'a> {
         // Reserve room for the code digests, which are proportional to binary size.
         // We could avoid doing the actual digesting work here. But until people
         // complain, don't worry about it.
-        size += segment_digests(
-            self.digestable_segment_data().into_iter(),
-            *settings.digest_type(),
-            4096,
-        )?
-        .into_iter()
-        .map(|x| x.len())
-        .sum::<usize>();
+        size += paged_digests(self.digested_code_data()?, *settings.digest_type(), 4096)?
+            .into_iter()
+            .map(|x| x.len())
+            .sum::<usize>();
 
         if let Some(digests) = settings.extra_digests(SettingsScope::Main) {
             for digest in digests {
-                size += segment_digests(self.digestable_segment_data().into_iter(), *digest, 4096)?
+                size += paged_digests(self.digested_code_data()?, *digest, 4096)?
                     .into_iter()
                     .map(|x| x.len())
                     .sum::<usize>();

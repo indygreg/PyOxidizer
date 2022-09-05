@@ -35,19 +35,3 @@ pub fn paged_digests(
         .map(|chunk| hash.digest_data(chunk))
         .collect::<Result<Vec<_>, AppleCodesignError>>()
 }
-
-/// Compute digests over raw data segments.
-///
-/// For each segment within `segments`, we compute paged digests of size `page_size`.
-pub fn segment_digests<'a>(
-    segments: impl Iterator<Item = &'a [u8]>,
-    hash_type: DigestType,
-    page_size: usize,
-) -> Result<Vec<Vec<u8>>, AppleCodesignError> {
-    Ok(segments
-        .map(|data| paged_digests(data, hash_type, page_size))
-        .collect::<Result<Vec<_>, AppleCodesignError>>()?
-        .into_iter()
-        .flatten()
-        .collect::<Vec<_>>())
-}
