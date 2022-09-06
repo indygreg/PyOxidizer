@@ -107,6 +107,7 @@ dependencies = [
  "plist",
  "rand 0.8.5",
  "rasn",
+ "rayon",
  "regex",
  "reqwest",
  "ring",

@@ -27,6 +27,7 @@ use {
         },
         parse_magic_and_ctx, Mach, MachO,
     },
+    rayon::prelude::*,
     scroll::Pread,
     x509_certificate::DigestAlgorithm,
 };
@@ -243,10 +244,20 @@ impl<'a> MachOBinary<'a> {
         digest: DigestType,
         page_size: usize,
     ) -> Result<Vec<Vec<u8>>, AppleCodesignError> {
-        self.digested_code_data()?
-            .chunks(page_size)
-            .map(|chunk| digest.digest_data(chunk))
-            .collect::<Result<Vec<_>, AppleCodesignError>>()
+        let data = self.digested_code_data()?;
+
+        // Premature parallelism can be slower due to overhead of having to spin up threads.
+        // So only do parallel digests if we have enough data to warrant it.
+        if data.len() > 64 * 1024 * 1024 {
+            data.par_chunks(page_size)
+                .map(|c| digest.digest_data(c))
+                .collect::<Result<Vec<_>, AppleCodesignError>>()
+        } else {
+            self.digested_code_data()?
+                .chunks(page_size)
+                .map(|chunk| digest.digest_data(chunk))
+                .collect::<Result<Vec<_>, AppleCodesignError>>()
+        }
     }
 
     /// Resolve the load command for the code signature.

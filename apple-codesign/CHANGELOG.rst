@@ -11,6 +11,10 @@
   boundaries. This fixes a bug where we were computing the incorrect digests when
   Mach-O segments weren't aligned at 4096 byte boundaries. (Go binaries commonly
   don't have 4k aligned segment boundaries.) (#634)
+* Optimizations to computing cryptographic digests of binaries. We eliminate a
+  a redundant digest that was used to compute the final size of the code digests.
+  The ``rayon`` crate is now used to perform digests in parallel, yielding a
+  ~linear speedup with the number of CPUs available.
 * (API) ``app_store_connect`` module has been split up into multiple modules
   to facilitate better grouping.
 * (API) Various changes for upgrades of crates related to cryptography.
