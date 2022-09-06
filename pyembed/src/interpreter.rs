@@ -657,7 +657,7 @@ fn set_pyimport_inittab(config: &OxidizedPythonInterpreterConfig) {
         let ptr = PyInit_oxidized_importer as *const ();
         extensions.push(pyffi::_inittab {
             name: OXIDIZED_IMPORTER_NAME.as_ptr() as *mut _,
-            initfun: Some(unsafe {
+            initfunc: Some(unsafe {
                 std::mem::transmute::<*const (), extern "C" fn() -> *mut pyffi::PyObject>(ptr)
             }),
         });
@@ -669,7 +669,7 @@ fn set_pyimport_inittab(config: &OxidizedPythonInterpreterConfig) {
             let ptr = extension.init_func as *const ();
             extensions.push(pyffi::_inittab {
                 name: extension.name.as_ptr() as *mut _,
-                initfun: Some(unsafe {
+                initfunc: Some(unsafe {
                     std::mem::transmute::<*const (), extern "C" fn() -> *mut pyffi::PyObject>(ptr)
                 }),
             });
@@ -679,7 +679,7 @@ fn set_pyimport_inittab(config: &OxidizedPythonInterpreterConfig) {
     // Add sentinel record with NULLs.
     extensions.push(pyffi::_inittab {
         name: std::ptr::null_mut(),
-        initfun: None,
+        initfunc: None,
     });
 
     // And finally replace the static in Python's code with our instance.

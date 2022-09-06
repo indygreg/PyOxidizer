@@ -213,6 +213,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "memoffset"
+version = "0.6.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5aa361d4faea93603064a027415f07bd8e1d5c88c9fbf68bf56a285428fd79ce"
+dependencies = [
+ "autocfg",
+]
+
+[[package]]
 name = "memory-module-sys"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -289,13 +298,14 @@ dependencies = [
 
 [[package]]
 name = "pyo3"
-version = "0.16.6"
+version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0220c44442c9b239dd4357aa856ac468a4f5e1f0df19ddb89b2522952eb4c6ca"
+checksum = "12f72538a0230791398a0986a6518ebd88abc3fded89007b506ed072acc831e1"
 dependencies = [
  "cfg-if",
  "indoc",
  "libc",
+ "memoffset",
  "parking_lot",
  "pyo3-build-config",
  "pyo3-ffi",
@@ -305,9 +315,9 @@ dependencies = [
 
 [[package]]
 name = "pyo3-build-config"
-version = "0.16.6"
+version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c819d397859445928609d0ec5afc2da5204e0d0f73d6bf9e153b04e83c9cdc2"
+checksum = "fc4cf18c20f4f09995f3554e6bcf9b09bd5e4d6b67c562fdfaafa644526ba479"
 dependencies = [
  "once_cell",
  "target-lexicon",
@@ -315,9 +325,9 @@ dependencies = [
 
 [[package]]
 name = "pyo3-ffi"
-version = "0.16.6"
+version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca882703ab55f54702d7bfe1189b41b0af10272389f04cae38fe4cd56c65f75f"
+checksum = "a41877f28d8ebd600b6aa21a17b40c3b0fc4dfe73a27b6e81ab3d895e401b0e9"
 dependencies = [
  "libc",
  "pyo3-build-config",
@@ -325,9 +335,9 @@ dependencies = [
 
 [[package]]
 name = "pyo3-macros"
-version = "0.16.6"
+version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "568749402955ad7be7bad9a09b8593851cd36e549ac90bfd44079cea500f3f21"
+checksum = "2e81c8d4bcc2f216dc1b665412df35e46d12ee8d3d046b381aad05f1fcf30547"
 dependencies = [
  "proc-macro2",
  "pyo3-macros-backend",
@@ -337,9 +347,9 @@ dependencies = [
 
 [[package]]
 name = "pyo3-macros-backend"
-version = "0.16.6"
+version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "611f64e82d98f447787e82b8e7b0ebc681e1eb78fc1252668b2c605ffb4e1eb8"
+checksum = "85752a767ee19399a78272cc2ab625cd7d373b2e112b4b13db28de71fa892784"
 dependencies = [
  "proc-macro2",
  "quote",

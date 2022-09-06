@@ -63,6 +63,7 @@ Changes
   See https://github.com/indygreg/python-build-standalone/releases/tag/20220630
   and https://github.com/indygreg/python-build-standalone/releases/tag/20220802
   for additional changes.
+* PyO3 Rust crate(s) upgraded from 0.16.5 to 0.17.1.
 
 0.22.0
 ------
