@@ -202,6 +202,7 @@ impl Notarizer {
                 self.notarize_bundle(&bundle, wait_limit)
             }
             PathType::Xar => self.notarize_flat_package(path, wait_limit),
+            PathType::Zip => self.notarize_flat_package(path, wait_limit),
             PathType::Dmg => self.notarize_dmg(path, wait_limit),
             PathType::MachO | PathType::Other => Err(AppleCodesignError::NotarizeUnsupportedPath(
                 path.to_path_buf(),
@@ -248,7 +249,7 @@ impl Notarizer {
         )
     }
 
-    /// Attempt to notarize a flat package (`.pkg`) installer.
+    /// Attempt to notarize a flat package (`.pkg`) installer or a .zip file.
     pub fn notarize_flat_package(
         &self,
         pkg_path: &Path,

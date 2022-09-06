@@ -74,6 +74,20 @@ pub fn path_is_xar(path: impl AsRef<Path>) -> Result<bool, AppleCodesignError> {
     }
 }
 
+/// Test whether a given path is likely a ZIP file.
+pub fn path_is_zip(path: impl AsRef<Path>) -> Result<bool, AppleCodesignError> {
+    let mut fh = File::open(path.as_ref())?;
+
+    let mut header = [0u8; 4];
+
+    let count = fh.read(&mut header)?;
+    if count < 4 {
+        Ok(false)
+    } else {
+        Ok(header.as_ref() == [0x50, 0x4b, 0x03, 0x04])
+    }
+}
+
 /// Describes the type of entity at a path.
 ///
 /// This represents a best guess.
@@ -82,6 +96,7 @@ pub enum PathType {
     Dmg,
     Bundle,
     Xar,
+    Zip,
     Other,
 }
 
@@ -95,6 +110,8 @@ impl PathType {
                 Ok(PathType::Dmg)
             } else if path_is_xar(path)? {
                 Ok(PathType::Xar)
+            } else if path_is_zip(path)? {
+                Ok(PathType::Zip)
             } else {
                 match MachOType::from_path(path)? {
                     Some(MachOType::Mach | MachOType::MachO) => Ok(Self::MachO),
@@ -803,7 +820,7 @@ impl SignatureReader {
                 Ok(Self::MachO(path.to_path_buf(), data))
             }
             PathType::Xar => Ok(Self::FlatPackage(path.to_path_buf())),
-            PathType::Other => Err(AppleCodesignError::UnrecognizedPathType),
+            PathType::Zip | PathType::Other => Err(AppleCodesignError::UnrecognizedPathType),
         }
     }
 

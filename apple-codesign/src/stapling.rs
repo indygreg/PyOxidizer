@@ -326,7 +326,7 @@ impl Stapler {
                 let xar = XarReader::new(File::options().read(true).write(true).open(path)?)?;
                 self.staple_xar(xar)
             }
-            PathType::Other => Err(AppleCodesignError::StapleUnsupportedPath(
+            PathType::Zip | PathType::Other => Err(AppleCodesignError::StapleUnsupportedPath(
                 path.to_path_buf(),
             )),
         }

@@ -42,7 +42,7 @@ impl<'key> UnifiedSigner<'key> {
             PathType::Dmg => self.sign_dmg(input_path, output_path),
             PathType::MachO => self.sign_macho(input_path, output_path),
             PathType::Xar => self.sign_xar(input_path, output_path),
-            PathType::Other => Err(AppleCodesignError::UnrecognizedPathType),
+            PathType::Zip | PathType::Other => Err(AppleCodesignError::UnrecognizedPathType),
         }
     }
 
