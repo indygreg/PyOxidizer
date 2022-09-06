@@ -7,14 +7,22 @@
 use {
     anyhow::{anyhow, Result},
     pulldown_cmark::{Event as MarkdownEvent, LinkType, Parser as MarkdownParser, Tag},
-    rustdoc_types::{Crate, GenericArg, GenericArgs, ItemEnum, ItemKind, Type},
-    std::{fmt::Write, path::Path},
+    rustdoc_types::{Crate, GenericArg, GenericArgs, ItemEnum, Type},
+    std::{
+        fmt::Write,
+        path::{Path, PathBuf},
+    },
 };
+
+struct TypeReference {
+    filename: PathBuf,
+    name: String,
+}
 
 fn resolve_type_name(typ: &Type) -> Result<String> {
     match typ {
-        Type::ResolvedPath { name, args, .. } => {
-            if let Some(args) = args {
+        Type::ResolvedPath(path) => {
+            if let Some(args) = &path.args {
                 if let GenericArgs::AngleBracketed { args, .. } = args.as_ref() {
                     let mut type_names = vec![];
 
@@ -31,15 +39,15 @@ fn resolve_type_name(typ: &Type) -> Result<String> {
                     }
 
                     if type_names.is_empty() {
-                        Ok(name.to_string())
+                        Ok(path.name.clone())
                     } else {
-                        Ok(format!("{}<{}>", name, type_names.join(", ")))
+                        Ok(format!("{}<{}>", path.name, type_names.join(", ")))
                     }
                 } else {
                     return Err(anyhow!("do not know how to handle args"));
                 }
             } else {
-                Ok(name.to_string())
+                Ok(path.name.clone())
             }
         }
         Type::Primitive(value) => Ok(value.to_string()),
@@ -95,18 +103,25 @@ fn docstring_to_rst(docs: &str) -> Result<Vec<String>> {
     Ok(lines)
 }
 
-fn struct_to_rst(docs: &Crate, path: Vec<String>, rst_prefix: &str) -> Result<Vec<String>> {
+fn struct_to_rst(docs: &Crate, type_ref: TypeReference, rst_prefix: &str) -> Result<Vec<String>> {
     let index = docs
-        .paths
+        .index
         .iter()
-        .find_map(|(id, summary)| {
-            if summary.kind == ItemKind::Struct && summary.path == path {
-                Some(id)
+        .find_map(|(id, item)| {
+            if let Some(span) = &item.span {
+                if span.filename == type_ref.filename
+                    && item.name.as_ref() == Some(&type_ref.name)
+                    && matches!(item.inner, ItemEnum::Struct(_))
+                {
+                    Some(id)
+                } else {
+                    None
+                }
             } else {
                 None
             }
         })
-        .ok_or_else(|| anyhow!("unable to find {:?} struct", path))?;
+        .ok_or_else(|| anyhow!("unable to find {:?} struct", type_ref.name))?;
 
     let main_struct = docs
         .index
@@ -165,18 +180,25 @@ fn struct_to_rst(docs: &Crate, path: Vec<String>, rst_prefix: &str) -> Result<Ve
     Ok(lines)
 }
 
-fn enum_to_rst(docs: &Crate, path: Vec<String>, rst_prefix: &str) -> Result<Vec<String>> {
+fn enum_to_rst(docs: &Crate, type_ref: TypeReference, rst_prefix: &str) -> Result<Vec<String>> {
     let index = docs
-        .paths
+        .index
         .iter()
-        .find_map(|(id, summary)| {
-            if summary.kind == ItemKind::Enum && summary.path == path {
-                Some(id)
+        .find_map(|(id, item)| {
+            if let Some(span) = &item.span {
+                if span.filename == type_ref.filename
+                    && item.name.as_ref() == Some(&type_ref.name)
+                    && matches!(item.inner, ItemEnum::Enum(_))
+                {
+                    Some(id)
+                } else {
+                    None
+                }
             } else {
                 None
             }
         })
-        .ok_or_else(|| anyhow!("unable to find {:?} enum", path))?;
+        .ok_or_else(|| anyhow!("unable to find {:?} enum", type_ref.name))?;
 
     let main_enum = docs
         .index
@@ -231,21 +253,21 @@ fn types_to_rst(
     repo_root: &Path,
     json_file: &str,
     rst_prefix: &str,
-    struct_paths: Vec<Vec<String>>,
-    enum_paths: Vec<Vec<String>>,
+    structs: Vec<TypeReference>,
+    enums: Vec<TypeReference>,
 ) -> Result<Vec<String>> {
     let fh = std::fs::File::open(repo_root.join("target").join("doc").join(json_file))?;
     let docs: Crate = serde_json::from_reader(fh)?;
 
     let mut lines = vec![];
 
-    for path in struct_paths {
-        lines.extend(struct_to_rst(&docs, path, rst_prefix)?.into_iter());
+    for item in structs {
+        lines.extend(struct_to_rst(&docs, item, rst_prefix)?.into_iter());
         lines.push("".to_string());
     }
 
-    for path in enum_paths {
-        lines.extend(enum_to_rst(&docs, path, rst_prefix)?.into_iter());
+    for item in enums {
+        lines.extend(enum_to_rst(&docs, item, rst_prefix)?.into_iter());
         lines.push("".to_string());
     }
 
@@ -297,89 +319,77 @@ pub fn generate_sphinx_files(repo_root: &Path) -> Result<()> {
             "".to_string(),
         ];
 
-        let pyembed_structs = vec![vec![
-            "pyembed".to_string(),
-            "OxidizedPythonInterpreterConfig".to_string(),
-        ]];
+        let pyembed_structs = vec![TypeReference {
+            filename: "pyembed/src/config.rs".into(),
+            name: "OxidizedPythonInterpreterConfig".into(),
+        }];
 
-        let python_packaging_structs = vec![vec![
-            "python_packaging".to_string(),
-            "interpreter".to_string(),
-            "PythonInterpreterConfig".to_string(),
-        ]];
+        let python_packaging_structs = vec![TypeReference {
+            filename: "python-packaging/src/interpreter.rs".into(),
+            name: "PythonInterpreterConfig".into(),
+        }];
 
         let python_packaging_enums = vec![
-            vec![
-                "python_packaging".to_string(),
-                "interpreter".to_string(),
-                "MemoryAllocatorBackend".to_string(),
-            ],
-            vec![
-                "python_packaging".to_string(),
-                "interpreter".to_string(),
-                "PythonInterpreterProfile".to_string(),
-            ],
-            vec![
-                "python_packaging".to_string(),
-                "interpreter".to_string(),
-                "Allocator".to_string(),
-            ],
-            vec![
-                "python_packaging".to_string(),
-                "resource".to_string(),
-                "BytecodeOptimizationLevel".to_string(),
-            ],
-            vec![
-                "python_packaging".to_string(),
-                "interpreter".to_string(),
-                "BytesWarning".to_string(),
-            ],
-            vec![
-                "python_packaging".to_string(),
-                "interpreter".to_string(),
-                "CheckHashPycsMode".to_string(),
-            ],
-            vec![
-                "python_packaging".to_string(),
-                "interpreter".to_string(),
-                "CoerceCLocale".to_string(),
-            ],
-            vec![
-                "python_packaging".to_string(),
-                "interpreter".to_string(),
-                "MultiprocessingStartMethod".to_string(),
-            ],
-            vec![
-                "python_packaging".to_string(),
-                "interpreter".to_string(),
-                "TerminfoResolution".to_string(),
-            ],
+            TypeReference {
+                filename: "python-packaging/src/interpreter.rs".into(),
+                name: "MemoryAllocatorBackend".into(),
+            },
+            TypeReference {
+                filename: "python-packaging/src/interpreter.rs".into(),
+                name: "PythonInterpreterProfile".into(),
+            },
+            TypeReference {
+                filename: "python-packaging/src/interpreter.rs".into(),
+                name: "Allocator".into(),
+            },
+            TypeReference {
+                filename: "python-packaging/src/resource.rs".into(),
+                name: "BytecodeOptimizationLevel".into(),
+            },
+            TypeReference {
+                filename: "python-packaging/src/interpreter.rs".into(),
+                name: "BytesWarning".into(),
+            },
+            TypeReference {
+                filename: "python-packaging/src/interpreter.rs".into(),
+                name: "CheckHashPycsMode".into(),
+            },
+            TypeReference {
+                filename: "python-packaging/src/interpreter.rs".into(),
+                name: "CoerceCLocale".into(),
+            },
+            TypeReference {
+                filename: "python-packaging/src/interpreter.rs".into(),
+                name: "MultiprocessingStartMethod".into(),
+            },
+            TypeReference {
+                filename: "python-packaging/src/interpreter.rs".into(),
+                name: "TerminfoResolution".into(),
+            },
         ];
 
         lines.push("Structs:".to_string());
         lines.push("".to_string());
 
-        for path in pyembed_structs
+        for item in pyembed_structs
             .iter()
             .chain(python_packaging_structs.iter())
         {
-            let name = path
-                .iter()
-                .last()
-                .ok_or_else(|| anyhow!("failed to resolve struct name"))?;
-            lines.push(format!("* :ref:`{} <{}_struct_{}>`", name, prefix, name));
+            lines.push(format!(
+                "* :ref:`{} <{}_struct_{}>`",
+                item.name, prefix, item.name
+            ));
         }
 
         lines.push("".to_string());
         lines.push("Enums:".to_string());
         lines.push("".to_string());
 
-        for path in python_packaging_enums.iter() {
-            let name = path
-                .iter()
-                .last()
-                .ok_or_else(|| anyhow!("failed to resolve struct name"))?;
-            lines.push(format!("* :ref:`{} <{}_enum_{}>`", name, prefix, name));
+        for item in python_packaging_enums.iter() {
+            lines.push(format!(
+                "* :ref:`{} <{}_enum_{}>`",
+                item.name, prefix, item.name
+            ));
         }
 
         lines.push("".to_string());
