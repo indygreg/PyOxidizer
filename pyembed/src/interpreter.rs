@@ -19,8 +19,8 @@ use {
         OXIDIZED_IMPORTER_NAME_STR,
     },
     pyo3::{
-        exceptions::PyRuntimeError, ffi as pyffi, prelude::*, types::PyDict, PyTypeInfo,
-        ToBorrowedObject,
+        exceptions::PyRuntimeError, ffi as pyffi, prelude::*, types::PyDict, AsPyPointer,
+        PyTypeInfo,
     },
     python_packaging::interpreter::{MultiprocessingStartMethod, TerminfoResolution},
     std::{
@@ -405,9 +405,8 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
             let args = args_objs.to_object(py);
             let argvb = b"argvb\0";
 
-            let res = args.with_borrowed_ptr(py, |args_ptr| unsafe {
-                pyffi::PySys_SetObject(argvb.as_ptr() as *const c_char, args_ptr)
-            });
+            let res =
+                unsafe { pyffi::PySys_SetObject(argvb.as_ptr() as *const c_char, args.as_ptr()) };
 
             match res {
                 0 => (),
@@ -418,10 +417,10 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
         // As a convention, sys.oxidized is set to indicate we are running from
         // a self-contained application.
         let oxidized = b"oxidized\0";
+        let py_true = true.into_py(py);
 
-        let res = true.into_py(py).with_borrowed_ptr(py, |py_true| unsafe {
-            pyffi::PySys_SetObject(oxidized.as_ptr() as *const c_char, py_true)
-        });
+        let res =
+            unsafe { pyffi::PySys_SetObject(oxidized.as_ptr() as *const c_char, py_true.as_ptr()) };
 
         match res {
             0 => (),
@@ -431,9 +430,9 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
         if self.config.sys_frozen {
             let frozen = b"frozen\0";
 
-            match true.into_py(py).with_borrowed_ptr(py, |py_true| unsafe {
-                pyffi::PySys_SetObject(frozen.as_ptr() as *const c_char, py_true)
-            }) {
+            match unsafe {
+                pyffi::PySys_SetObject(frozen.as_ptr() as *const c_char, py_true.as_ptr())
+            } {
                 0 => (),
                 _ => return Err(NewInterpreterError::Simple("unable to set sys.frozen")),
             }
@@ -443,9 +442,9 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
             let meipass = b"_MEIPASS\0";
             let value = self.config.origin().display().to_string().to_object(py);
 
-            match value.with_borrowed_ptr(py, |py_value| unsafe {
-                pyffi::PySys_SetObject(meipass.as_ptr() as *const c_char, py_value)
-            }) {
+            match unsafe {
+                pyffi::PySys_SetObject(meipass.as_ptr() as *const c_char, value.as_ptr())
+            } {
                 0 => (),
                 _ => return Err(NewInterpreterError::Simple("unable to set sys._MEIPASS")),
             }
