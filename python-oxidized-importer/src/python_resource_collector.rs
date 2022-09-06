@@ -57,13 +57,12 @@ impl PyTempDir {
 
 impl Drop for PyTempDir {
     fn drop(&mut self) {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-
-        if self.cleanup.call0(py).is_err() {
-            let cleanup = self.cleanup.as_ptr();
-            unsafe { pyffi::PyErr_WriteUnraisable(cleanup) }
-        }
+        Python::with_gil(|py| {
+            if self.cleanup.call0(py).is_err() {
+                let cleanup = self.cleanup.as_ptr();
+                unsafe { pyffi::PyErr_WriteUnraisable(cleanup) }
+            }
+        });
     }
 }
 
