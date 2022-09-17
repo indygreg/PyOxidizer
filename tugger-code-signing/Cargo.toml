@@ -26,8 +26,8 @@ version = "0.14.0-pre"
 path = "../apple-bundles"
 
 [dependencies.apple-codesign]
-version = "0.18.0"
-# path = "../apple-codesign"
+version = "0.19.0-pre"
+path = "../apple-codesign"
 
 [dependencies.cryptographic-message-syntax]
 version = "0.19.0-pre"
