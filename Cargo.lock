@@ -1818,7 +1818,7 @@ dependencies = [
  "once_cell",
  "os_str_bytes",
  "pgp",
- "pgp-cleartext 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pgp-cleartext 0.4.0-pre",
  "pin-project",
  "regex",
  "reqwest",
@@ -1862,7 +1862,7 @@ dependencies = [
  "once_cell",
  "os_str_bytes",
  "pgp",
- "pgp-cleartext 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pgp-cleartext 0.3.0",
  "pin-project",
  "regex",
  "reqwest",
@@ -3857,6 +3857,8 @@ dependencies = [
 [[package]]
 name = "pgp-cleartext"
 version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "81c83151c8d3859f8b021485cc5bd42428ee492af96cc390ee320b29e5980d14"
 dependencies = [
  "chrono",
  "digest 0.10.5",
@@ -3869,9 +3871,7 @@ dependencies = [
 
 [[package]]
 name = "pgp-cleartext"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81c83151c8d3859f8b021485cc5bd42428ee492af96cc390ee320b29e5980d14"
+version = "0.4.0-pre"
 dependencies = [
  "chrono",
  "digest 0.10.5",
