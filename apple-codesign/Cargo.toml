@@ -103,8 +103,8 @@ version = "0.7.0"
 version = "0.10.0"
 
 [dependencies.x509-certificate]
-# path = "../x509-certificate"
-version = "0.15.0"
+path = "../x509-certificate"
+version = "0.16.0-pre"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 security-framework = { version = "2.6", features = ["OSX_10_12"] }
