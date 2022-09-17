@@ -95,8 +95,8 @@ path = "../cryptographic-message-syntax"
 version = "0.19.0-pre"
 
 [dependencies.tugger-apple]
-# path = "../tugger-apple"
-version = "0.7.0"
+path = "../tugger-apple"
+version = "0.8.0-pre"
 
 [dependencies.tugger-file-manifest]
 path = "../tugger-file-manifest"
