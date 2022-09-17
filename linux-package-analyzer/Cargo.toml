@@ -38,8 +38,8 @@ version = "0.15.0"
 # path = "../debian-packaging"
 
 [dependencies.rpm-repository]
-version = "0.2.0-pre"
-path = "../rpm-repository"
+version = "0.1.0"
+# path = "../rpm-repository"
 
 # rpm-rs seems to be unmaintained and its old dependencies are holding us back.
 # Disabled until we figure out a path forward.
