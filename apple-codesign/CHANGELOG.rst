@@ -5,7 +5,7 @@
 0.18.0
 ======
 
-(Not yet released)
+(Released 2022-09-17)
 
 * Mach-O digesting code now digests file-level data without looking at segment
   boundaries. This fixes a bug where we were computing the incorrect digests when
