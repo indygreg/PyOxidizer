@@ -34,8 +34,8 @@ xz2 = { version = "0.1", features = ["static"] }
 zstd = "0.11"
 
 [dependencies.debian-packaging]
-version = "0.15.0"
-# path = "../debian-packaging"
+version = "0.16.0-pre"
+path = "../debian-packaging"
 
 [dependencies.rpm-repository]
 version = "0.1.0"
