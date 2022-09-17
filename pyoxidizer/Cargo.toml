@@ -96,8 +96,8 @@ version = "0.10.0"
 # path = "../tugger-file-manifest"
 
 [dependencies.tugger-rust-toolchain]
-version = "0.12.0-pre"
-path = "../tugger-rust-toolchain"
+version = "0.11.0"
+# path = "../tugger-rust-toolchain"
 
 [dependencies.tugger-windows]
 version = "0.10.0-pre"
