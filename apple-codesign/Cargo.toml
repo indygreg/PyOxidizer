@@ -87,8 +87,8 @@ version = "0.13.0"
 version = "0.9.0"
 
 [dependencies.apple-xar]
-# path = "../apple-xar"
-version = "0.9.0"
+path = "../apple-xar"
+version = "0.10.0-pre"
 
 [dependencies.cryptographic-message-syntax]
 path = "../cryptographic-message-syntax"
