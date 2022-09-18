@@ -12,12 +12,12 @@ use {
     once_cell::sync::Lazy,
     python_packaging::resource::{LibraryDependency, PythonExtensionModule},
     serde::Deserialize,
+    simple_file_manifest::FileData,
     std::{
         collections::{BTreeMap, HashMap},
         fs::{create_dir_all, read_dir, read_to_string},
         path::{Path, PathBuf},
     },
-    tugger_file_manifest::FileData,
 };
 
 static MODIFIED_DISTUTILS_FILES: Lazy<BTreeMap<&'static str, &'static [u8]>> = Lazy::new(|| {

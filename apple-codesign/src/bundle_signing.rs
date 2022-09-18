@@ -17,12 +17,12 @@ use {
     },
     apple_bundles::{BundlePackageType, DirectoryBundle, DirectoryBundleFile},
     log::{info, warn},
+    simple_file_manifest::create_symlink,
     std::{
         collections::BTreeMap,
         io::Write,
         path::{Path, PathBuf},
     },
-    tugger_file_manifest::create_symlink,
 };
 
 /// Copy a bundle's contents to a destination directory.

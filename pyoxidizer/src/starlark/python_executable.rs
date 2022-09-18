@@ -26,6 +26,7 @@ use {
     linked_hash_map::LinkedHashMap,
     log::{info, warn},
     python_packaging::resource::PythonModuleSource,
+    simple_file_manifest::FileData,
     starlark::{
         environment::TypeValues,
         eval::call_stack::CallStack,
@@ -59,7 +60,6 @@ use {
         wix_msi_builder::WiXMsiBuilderValue,
     },
     tugger_code_signing::SigningDestination,
-    tugger_file_manifest::FileData,
     tugger_wix::target_triple_to_wix_arch,
 };
 
@@ -106,7 +106,7 @@ pub fn build_internal(
         std::fs::File::create(&dest_path).context(format!("creating {}", dest_path.display()))?;
     fh.write_all(&build.exe_data)
         .context(format!("writing {}", dest_path.display()))?;
-    tugger_file_manifest::set_executable(&mut fh).context("making binary executable")?;
+    simple_file_manifest::set_executable(&mut fh).context("making binary executable")?;
 
     Ok((
         ResolvedTarget {

@@ -44,13 +44,13 @@ use {
             PythonResourceCollector,
         },
     },
+    simple_file_manifest::{File, FileData, FileEntry, FileManifest},
     std::{
         collections::{BTreeMap, BTreeSet, HashMap},
         path::{Path, PathBuf},
         str::FromStr,
         sync::Arc,
     },
-    tugger_file_manifest::{File, FileData, FileEntry, FileManifest},
     tugger_windows::{find_visual_cpp_redistributable, VcRedistributablePlatform},
 };
 

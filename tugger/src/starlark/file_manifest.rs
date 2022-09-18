@@ -9,6 +9,7 @@ use {
     },
     anyhow::anyhow,
     log::warn,
+    simple_file_manifest::FileManifest,
     starlark::{
         environment::TypeValues,
         eval::call_stack::CallStack,
@@ -31,7 +32,6 @@ use {
         sync::{Arc, Mutex, MutexGuard},
     },
     tugger_code_signing::SigningDestination,
-    tugger_file_manifest::FileManifest,
 };
 
 fn error_context<F, T>(label: &str, f: F) -> Result<T, ValueError>
@@ -40,7 +40,7 @@ where
 {
     f().map_err(|e| {
         ValueError::Runtime(RuntimeError {
-            code: "TUGGER_FILE_MANIFEST",
+            code: "SIMPLE_FILE_MANIFEST",
             message: format!("{:?}", e),
             label: label.to_string(),
         })
@@ -109,7 +109,7 @@ impl FileManifestValue {
     pub fn inner(&self, label: &str) -> Result<MutexGuard<FileManifest>, ValueError> {
         self.inner.try_lock().map_err(|e| {
             ValueError::Runtime(RuntimeError {
-                code: "TUGGER_FILE_MANIFEST",
+                code: "SIMPLE_FILE_MANIFEST",
                 message: format!("error obtaining lock: {}", e),
                 label: label.to_string(),
             })
@@ -424,8 +424,8 @@ starlark_module! { file_manifest_module =>
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::starlark::testutil::*, anyhow::Result, tugger_common::testutil::*,
-        tugger_file_manifest::FileEntry,
+        super::*, crate::starlark::testutil::*, anyhow::Result, simple_file_manifest::FileEntry,
+        tugger_common::testutil::*,
     };
 
     #[test]

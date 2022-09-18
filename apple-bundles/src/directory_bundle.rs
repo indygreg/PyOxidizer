@@ -7,11 +7,11 @@
 use {
     crate::BundlePackageType,
     anyhow::{anyhow, Context, Result},
+    simple_file_manifest::{is_executable, FileEntry, FileManifest},
     std::{
         collections::HashSet,
         path::{Path, PathBuf},
     },
-    tugger_file_manifest::{is_executable, FileEntry, FileManifest},
 };
 
 /// An Apple bundle backed by a filesystem/directory.

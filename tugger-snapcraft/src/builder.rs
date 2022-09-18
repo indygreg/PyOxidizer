@@ -7,11 +7,11 @@ use {
     anyhow::{anyhow, Context, Result},
     duct::cmd,
     log::warn,
+    simple_file_manifest::{FileEntry, FileManifest},
     std::{
         io::{BufRead, BufReader},
         path::Path,
     },
-    tugger_file_manifest::{FileEntry, FileManifest},
 };
 
 /// Represents an invocation of the `snapcraft` command.

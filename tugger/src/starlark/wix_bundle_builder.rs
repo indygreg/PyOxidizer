@@ -9,6 +9,7 @@ use {
         wix_msi_builder::WiXMsiBuilderValue,
     },
     anyhow::Context,
+    simple_file_manifest::FileEntry,
     starlark::{
         environment::TypeValues,
         eval::call_stack::CallStack,
@@ -27,7 +28,6 @@ use {
     },
     std::path::{Path, PathBuf},
     tugger_code_signing::SigningDestination,
-    tugger_file_manifest::FileEntry,
     tugger_windows::VcRedistributablePlatform,
     tugger_wix::{MsiPackage, WiXBundleInstallerBuilder},
 };

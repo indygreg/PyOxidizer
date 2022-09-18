@@ -807,7 +807,7 @@ starlark_module! { snapcraft_module =>
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::starlark::testutil::*, anyhow::Result, tugger_file_manifest::FileManifest,
+        super::*, crate::starlark::testutil::*, anyhow::Result, simple_file_manifest::FileManifest,
     };
 
     #[test]

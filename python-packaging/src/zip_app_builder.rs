@@ -15,11 +15,11 @@ use {
         resource::{BytecodeOptimizationLevel, PythonModuleBytecode, PythonModuleSource},
     },
     anyhow::{anyhow, Context, Result},
+    simple_file_manifest::{set_executable, FileEntry, FileManifest},
     std::{
         io::{Seek, Write},
         path::Path,
     },
-    tugger_file_manifest::{set_executable, FileEntry, FileManifest},
     zip::CompressionMethod,
 };
 

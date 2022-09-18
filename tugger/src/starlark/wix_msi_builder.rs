@@ -12,6 +12,7 @@ use {
         file_manifest::FileManifestValue,
     },
     anyhow::{anyhow, Context, Result},
+    simple_file_manifest::FileEntry,
     starlark::{
         environment::TypeValues,
         eval::call_stack::CallStack,
@@ -33,7 +34,6 @@ use {
         sync::{Arc, Mutex, MutexGuard},
     },
     tugger_code_signing::SigningDestination,
-    tugger_file_manifest::FileEntry,
     tugger_windows::VcRedistributablePlatform,
     tugger_wix::WiXSimpleMsiBuilder,
 };

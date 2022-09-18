@@ -1084,8 +1084,8 @@ mod tests {
         crate::resource::{
             PythonPackageDistributionResource, PythonPackageDistributionResourceFlavor,
         },
+        simple_file_manifest::FileData,
         std::borrow::Cow,
-        tugger_file_manifest::FileData,
     };
 
     #[test]

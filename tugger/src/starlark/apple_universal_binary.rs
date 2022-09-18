@@ -5,6 +5,7 @@
 use {
     crate::starlark::file_content::{FileContentValue, FileContentWrapper},
     anyhow::{anyhow, Context},
+    simple_file_manifest::FileEntry,
     starlark::{
         environment::TypeValues,
         values::{
@@ -23,7 +24,6 @@ use {
         sync::{Arc, Mutex},
     },
     tugger_apple::UniversalBinaryBuilder,
-    tugger_file_manifest::FileEntry,
 };
 
 fn error_context<F, T>(label: &str, f: F) -> Result<T, ValueError>

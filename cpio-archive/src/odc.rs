@@ -12,14 +12,14 @@ use {
     crate::{CpioHeader, CpioReader, CpioResult, Error},
     chrono::{DateTime, Utc},
     is_executable::IsExecutable,
+    simple_file_manifest::{
+        FileManifest, S_IFDIR, S_IRGRP, S_IROTH, S_IRUSR, S_IWUSR, S_IXGRP, S_IXOTH, S_IXUSR,
+    },
     std::{
         collections::HashSet,
         ffi::CStr,
         io::{Read, Take, Write},
         path::Path,
-    },
-    tugger_file_manifest::{
-        FileManifest, S_IFDIR, S_IRGRP, S_IROTH, S_IRUSR, S_IWUSR, S_IXGRP, S_IXOTH, S_IXUSR,
     },
 };
 

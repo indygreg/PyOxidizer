@@ -16,13 +16,13 @@ use {
         python_source::has_dunder_file,
     },
     anyhow::{anyhow, Result},
+    simple_file_manifest::{File, FileData},
     std::{
         borrow::Cow,
         collections::HashMap,
         hash::BuildHasher,
         path::{Path, PathBuf},
     },
-    tugger_file_manifest::{File, FileData},
 };
 
 #[cfg(feature = "serialization")]

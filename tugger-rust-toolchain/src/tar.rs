@@ -5,11 +5,11 @@
 use {
     anyhow::{anyhow, Context, Result},
     sha2::Digest,
+    simple_file_manifest::{FileEntry, FileManifest},
     std::{
         io::{BufRead, Read, Write},
         path::{Path, PathBuf},
     },
-    tugger_file_manifest::{FileEntry, FileManifest},
 };
 
 #[derive(Clone, Copy, Debug)]

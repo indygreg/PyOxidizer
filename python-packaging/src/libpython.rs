@@ -10,11 +10,11 @@
 
 use {
     crate::licensing::LicensedComponents,
+    simple_file_manifest::FileData,
     std::{
         collections::{BTreeMap, BTreeSet},
         path::PathBuf,
     },
-    tugger_file_manifest::FileData,
 };
 
 /// Holds state necessary to build and link a libpython.

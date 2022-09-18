@@ -16,6 +16,7 @@ use {
     },
     anyhow::{anyhow, Context, Result},
     log::warn,
+    simple_file_manifest::{FileEntry, FileManifest},
     starlark::{
         environment::TypeValues,
         values::{
@@ -30,7 +31,6 @@ use {
     },
     std::{ops::DerefMut, path::Path},
     tugger::starlark::file_manifest::FileManifestValue,
-    tugger_file_manifest::{FileEntry, FileManifest},
 };
 
 #[allow(clippy::too_many_arguments)]
@@ -224,8 +224,8 @@ mod tests {
         super::super::testutil::*,
         super::*,
         python_packaging::resource::{PythonModuleSource, PythonPackageResource},
+        simple_file_manifest::FileData,
         std::path::PathBuf,
-        tugger_file_manifest::FileData,
     };
 
     const DEFAULT_CACHE_TAG: &str = "cpython-39";

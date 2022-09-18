@@ -67,6 +67,7 @@ use {
     cryptographic_message_syntax::CmsError,
     log::warn,
     reqwest::{IntoUrl, Url},
+    simple_file_manifest::{File, FileData, FileEntry},
     std::{
         borrow::Cow,
         ops::Deref,
@@ -74,7 +75,6 @@ use {
         sync::Arc,
     },
     thiserror::Error,
-    tugger_file_manifest::{File, FileData, FileEntry},
     tugger_windows_codesign::{
         CodeSigningCertificate, FileBasedCodeSigningCertificate, SystemStore,
     },

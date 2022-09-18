@@ -15,7 +15,7 @@ use {
             PythonPackageResource,
         },
     },
-    tugger_file_manifest::{FileEntry, FileManifest},
+    simple_file_manifest::{FileEntry, FileManifest},
 };
 
 pub trait AddToFileManifest {
@@ -76,7 +76,7 @@ impl AddToFileManifest for PythonExtensionModule {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, itertools::Itertools, std::path::PathBuf, tugger_file_manifest::FileData};
+    use {super::*, itertools::Itertools, simple_file_manifest::FileData, std::path::PathBuf};
 
     const DEFAULT_CACHE_TAG: &str = "cpython-39";
 

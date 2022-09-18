@@ -683,7 +683,7 @@ impl PythonPackagingPolicy {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, tugger_file_manifest::File};
+    use {super::*, simple_file_manifest::File};
 
     #[test]
     fn test_add_collection_context_file() -> Result<()> {

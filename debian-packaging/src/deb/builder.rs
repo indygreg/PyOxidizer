@@ -8,12 +8,12 @@ use {
     crate::{control::ControlFile, deb::DebCompression, error::Result},
     md5::Digest,
     os_str_bytes::OsStrBytes,
+    simple_file_manifest::{FileEntry, FileManifest},
     std::{
         io::{BufWriter, Cursor, Read, Write},
         path::Path,
         time::SystemTime,
     },
-    tugger_file_manifest::{FileEntry, FileManifest},
 };
 
 /// A builder for a `.deb` package file.

@@ -14,8 +14,8 @@ use {
         licensing::{LicensedComponent, LicensedComponents},
         resource_collection::CompiledResourcesCollection,
     },
+    simple_file_manifest::{FileEntry, FileManifest},
     std::path::{Path, PathBuf},
-    tugger_file_manifest::{FileEntry, FileManifest},
 };
 
 /// Describes extra behavior for a linker invocation.

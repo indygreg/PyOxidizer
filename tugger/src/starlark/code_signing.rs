@@ -7,6 +7,7 @@ use {
     anyhow::{anyhow, Context, Result},
     linked_hash_map::LinkedHashMap,
     log::{debug, info, warn},
+    simple_file_manifest::{FileEntry, FileManifest},
     starlark::{
         environment::TypeValues,
         eval::call_stack::CallStack,
@@ -30,7 +31,6 @@ use {
         SignableCandidate, SignedOutput, Signer, SigningCertificate, SigningDestination,
         SigningError,
     },
-    tugger_file_manifest::{FileEntry, FileManifest},
 };
 
 /// Holds additional code signing settings to influence code signing.

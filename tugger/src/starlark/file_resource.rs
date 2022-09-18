@@ -4,6 +4,7 @@
 
 use {
     crate::starlark::file_manifest::FileManifestValue,
+    simple_file_manifest::{FileEntry, FileManifest},
     starlark::{
         environment::TypeValues,
         values::{
@@ -22,7 +23,6 @@ use {
     },
     std::collections::HashSet,
     tugger_common::glob::evaluate_glob,
-    tugger_file_manifest::{FileEntry, FileManifest},
 };
 
 fn error_context<F, T>(label: &str, f: F) -> Result<T, ValueError>

@@ -67,8 +67,8 @@ version = "0.14.0-pre"
 dependencies = [
  "anyhow",
  "plist",
+ "simple-file-manifest",
  "tempfile",
- "tugger-file-manifest",
  "walkdir",
 ]
 
@@ -129,6 +129,7 @@ dependencies = [
  "serde_yaml",
  "sha2 0.10.6",
  "signature",
+ "simple-file-manifest",
  "spake2",
  "spki 0.6.0",
  "subtle",
@@ -136,7 +137,6 @@ dependencies = [
  "thiserror",
  "tokio",
  "tugger-apple",
- "tugger-file-manifest",
  "tungstenite",
  "uuid",
  "x509",
@@ -1342,8 +1342,8 @@ version = "0.6.0-pre"
 dependencies = [
  "chrono",
  "is_executable",
+ "simple-file-manifest",
  "thiserror",
- "tugger-file-manifest",
 ]
 
 [[package]]
@@ -1664,6 +1664,7 @@ dependencies = [
  "serde",
  "sha-1 0.10.0",
  "sha2 0.10.6",
+ "simple-file-manifest",
  "smallvec",
  "strum",
  "strum_macros",
@@ -1671,7 +1672,6 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tokio",
- "tugger-file-manifest",
  "url",
  "xz2",
  "zstd",
@@ -4045,6 +4045,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.10.6",
+ "simple-file-manifest",
  "starlark",
  "starlark-dialect-build-targets",
  "tar",
@@ -4053,7 +4054,6 @@ dependencies = [
  "tugger-binary-analysis",
  "tugger-code-signing",
  "tugger-common",
- "tugger-file-manifest",
  "tugger-rust-toolchain",
  "tugger-windows",
  "tugger-wix",
@@ -4093,7 +4093,7 @@ dependencies = [
  "pyo3",
  "python-packaging",
  "python-packed-resources",
- "tugger-file-manifest",
+ "simple-file-manifest",
  "winapi",
  "zip",
 ]
@@ -4113,10 +4113,10 @@ dependencies = [
  "regex",
  "serde",
  "sha2 0.10.6",
+ "simple-file-manifest",
  "spdx",
  "tempfile",
  "time 0.3.14",
- "tugger-file-manifest",
  "walkdir",
  "zip",
 ]
@@ -5046,6 +5046,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "simple-file-manifest"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5dd19be0257552dd56d1bb6946f89f193c6e5b9f13cc9327c4bc84a357507c74"
+
+[[package]]
 name = "simple_asn1"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5678,6 +5684,7 @@ dependencies = [
  "log",
  "plist",
  "python-packaging",
+ "simple-file-manifest",
  "starlark",
  "starlark-dialect-build-targets",
  "tar",
@@ -5686,7 +5693,6 @@ dependencies = [
  "tugger-apple",
  "tugger-code-signing",
  "tugger-common",
- "tugger-file-manifest",
  "tugger-snapcraft",
  "tugger-windows",
  "tugger-windows-codesign",
@@ -5729,9 +5735,9 @@ dependencies = [
  "log",
  "p12",
  "reqwest",
+ "simple-file-manifest",
  "tempfile",
  "thiserror",
- "tugger-file-manifest",
  "tugger-windows-codesign",
  "x509-certificate",
  "yasna",
@@ -5755,13 +5761,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tugger-file-manifest"
-version = "0.11.0-pre"
-dependencies = [
- "tempfile",
-]
-
-[[package]]
 name = "tugger-rust-toolchain"
 version = "0.12.0-pre"
 dependencies = [
@@ -5774,11 +5773,11 @@ dependencies = [
  "once_cell",
  "pgp",
  "sha2 0.10.6",
+ "simple-file-manifest",
  "tar",
  "tempfile",
  "toml",
  "tugger-common",
- "tugger-file-manifest",
  "xz2",
  "zstd",
 ]
@@ -5793,8 +5792,8 @@ dependencies = [
  "remove_dir_all 0.7.0",
  "serde",
  "serde_yaml",
+ "simple-file-manifest",
  "tugger-common",
- "tugger-file-manifest",
 ]
 
 [[package]]
@@ -5837,9 +5836,9 @@ dependencies = [
  "log",
  "msi",
  "once_cell",
+ "simple-file-manifest",
  "tempfile",
  "tugger-common",
- "tugger-file-manifest",
  "tugger-windows",
  "tugger-windows-codesign",
  "url",

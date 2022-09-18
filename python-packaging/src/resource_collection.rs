@@ -26,12 +26,12 @@ use {
     },
     anyhow::{anyhow, Context, Result},
     python_packed_resources::Resource,
+    simple_file_manifest::{File, FileData, FileEntry, FileManifest},
     std::{
         borrow::Cow,
         collections::{BTreeMap, BTreeSet, HashMap},
         path::PathBuf,
     },
-    tugger_file_manifest::{File, FileData, FileEntry, FileManifest},
 };
 
 /// Represents a single file install.
@@ -1877,7 +1877,7 @@ mod tests {
             resource::{LibraryDependency, PythonPackageDistributionResourceFlavor},
             testutil::FakeBytecodeCompiler,
         },
-        tugger_file_manifest::FileEntry,
+        simple_file_manifest::FileEntry,
     };
 
     const DEFAULT_CACHE_TAG: &str = "cpython-39";

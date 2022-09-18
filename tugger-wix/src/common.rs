@@ -7,6 +7,7 @@ use {
     duct::cmd,
     log::warn,
     once_cell::sync::Lazy,
+    simple_file_manifest::FileManifest,
     std::{
         io::{BufRead, BufReader, Write},
         path::{Path, PathBuf},
@@ -15,7 +16,6 @@ use {
         http::{download_to_path, RemoteContent},
         zipfile::extract_zip,
     },
-    tugger_file_manifest::FileManifest,
     uuid::Uuid,
     xml::{
         common::XmlVersion,
@@ -453,8 +453,8 @@ pub(crate) fn extract_wix<P: AsRef<Path>>(dest_dir: P) -> Result<PathBuf> {
 mod tests {
     use {
         super::*,
+        simple_file_manifest::{FileEntry, FileManifest},
         tugger_common::testutil::*,
-        tugger_file_manifest::{FileEntry, FileManifest},
         xml::EmitterConfig,
     };
 

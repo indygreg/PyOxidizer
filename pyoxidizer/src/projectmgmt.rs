@@ -29,13 +29,13 @@ use {
         resource::PythonResource,
         wheel::WheelArchive,
     },
+    simple_file_manifest::{FileData, FileManifest},
     std::{
         collections::HashMap,
         fs::create_dir_all,
         io::{Cursor, Read},
         path::{Path, PathBuf},
     },
-    tugger_file_manifest::{FileData, FileManifest},
 };
 
 /// Attempt to resolve the default Rust target for a build.

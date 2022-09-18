@@ -13,8 +13,5 @@ readme = "README.md"
 [dependencies]
 chrono = "0.4"
 is_executable = "1.0"
+simple-file-manifest = "0.11"
 thiserror = "1.0"
-
-[dependencies.tugger-file-manifest]
-path = "../tugger-file-manifest"
-version = "0.11.0-pre"

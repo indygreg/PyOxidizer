@@ -23,8 +23,8 @@ use {
             AddResourceAction, PrePackagedResource, PythonResourceAddCollectionContext,
         },
     },
+    simple_file_manifest::File,
     std::{collections::HashMap, path::Path, sync::Arc},
-    tugger_file_manifest::File,
     tugger_windows::VcRedistributablePlatform,
 };
 

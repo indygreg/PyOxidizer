@@ -22,12 +22,12 @@ use {
         },
     },
     anyhow::{Context, Result},
+    simple_file_manifest::{File, FileData, FileEntry, FileManifest},
     std::{
         collections::HashSet,
         ffi::OsStr,
         path::{Path, PathBuf},
     },
-    tugger_file_manifest::{File, FileData, FileEntry, FileManifest},
 };
 
 #[cfg(unix)]

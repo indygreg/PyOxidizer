@@ -4,7 +4,7 @@
 
 /*! Error handling. */
 
-use {thiserror::Error, tugger_file_manifest::FileManifestError};
+use {simple_file_manifest::FileManifestError, thiserror::Error};
 
 /// Primary crate error type.
 #[derive(Debug, Error)]

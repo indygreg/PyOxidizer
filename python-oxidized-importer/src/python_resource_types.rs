@@ -18,8 +18,8 @@ use {
         PythonPackageDistributionResource as RawPythonPackageDistributionResource,
         PythonPackageResource as RawPythonPackageResource,
     },
+    simple_file_manifest::FileData,
     std::cell::{Ref, RefCell},
-    tugger_file_manifest::FileData,
 };
 
 #[pyclass(module = "oxidized_importer")]

@@ -25,7 +25,6 @@ members = [
     'tugger-binary-analysis',
     'tugger-code-signing',
     'tugger-common',
-    'tugger-file-manifest',
     'tugger-rust-toolchain',
     'tugger-snapcraft',
     'tugger-windows',

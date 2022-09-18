@@ -21,6 +21,7 @@ use {
         policy::PythonPackagingPolicy, resource::PythonResource,
     },
     sha2::{Digest, Sha256},
+    simple_file_manifest::FileEntry,
     std::{
         collections::HashMap,
         fmt::{Display, Formatter},
@@ -32,7 +33,6 @@ use {
         sync::{Arc, Mutex},
     },
     tugger_common::http::get_http_client,
-    tugger_file_manifest::FileEntry,
     url::Url,
     uuid::Uuid,
 };

@@ -35,13 +35,13 @@ use {
         },
     },
     serde::Deserialize,
+    simple_file_manifest::{FileData, FileEntry},
     std::{
         collections::{hash_map::RandomState, BTreeMap, HashMap},
         io::{BufRead, BufReader, Read},
         path::{Path, PathBuf},
         sync::Arc,
     },
-    tugger_file_manifest::{FileData, FileEntry},
 };
 
 // This needs to be kept in sync with *compiler.py

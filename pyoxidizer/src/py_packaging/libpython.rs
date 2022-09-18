@@ -16,6 +16,7 @@ use {
     duct::cmd,
     log::warn,
     python_packaging::libpython::LibPythonBuildContext,
+    simple_file_manifest::FileData,
     std::{
         collections::BTreeSet,
         ffi::OsStr,
@@ -24,7 +25,6 @@ use {
         io::{BufRead, BufReader, Cursor},
         path::{Path, PathBuf},
     },
-    tugger_file_manifest::FileData,
 };
 
 #[cfg(target_family = "unix")]

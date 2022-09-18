@@ -69,11 +69,6 @@ The following crates compose Tugger's crate *fleet*:
    Debian packaging primitives. Parsing and serializing control files.
    Writing ``.deb`` files.
 
-``tugger-file-manifest``
-   A virtual manifest of a collection of files. Virtual file manifests
-   are used throughout Tugger to represent a collection of files, their
-   content, and file metadata.
-
 ``tugger-rpm``
    RPM packaging primitives.
 

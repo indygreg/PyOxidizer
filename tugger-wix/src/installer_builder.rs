@@ -5,11 +5,11 @@
 use {
     crate::{common::extract_wix, *},
     anyhow::{anyhow, Context, Result},
+    simple_file_manifest::{FileEntry, FileManifest},
     std::{
         collections::BTreeMap,
         path::{Path, PathBuf},
     },
-    tugger_file_manifest::{FileEntry, FileManifest},
     tugger_windows_codesign::{is_file_signable, SigntoolSign},
     xml::EmitterConfig,
 };

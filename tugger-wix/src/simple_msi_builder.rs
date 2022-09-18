@@ -5,12 +5,12 @@
 use {
     crate::{WiXInstallerBuilder, WxsBuilder},
     anyhow::{anyhow, Result},
+    simple_file_manifest::FileManifest,
     std::{
         borrow::Cow,
         io::Write,
         path::{Path, PathBuf},
     },
-    tugger_file_manifest::FileManifest,
     tugger_windows::{find_visual_cpp_redistributable, VcRedistributablePlatform},
     tugger_windows_codesign::SigntoolSign,
     uuid::Uuid,

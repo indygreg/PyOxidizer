@@ -15,8 +15,8 @@ use {
     },
     anyhow::{anyhow, Context, Result},
     once_cell::sync::Lazy,
+    simple_file_manifest::{File, FileEntry, FileManifest},
     std::{borrow::Cow, io::Read, path::Path},
-    tugger_file_manifest::{File, FileEntry, FileManifest},
     zip::ZipArchive,
 };
 

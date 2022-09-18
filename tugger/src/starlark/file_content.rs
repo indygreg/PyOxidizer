@@ -4,6 +4,7 @@
 
 use {
     anyhow::{anyhow, Context},
+    simple_file_manifest::{FileData, FileEntry},
     starlark::{
         environment::TypeValues,
         values::{
@@ -23,7 +24,6 @@ use {
         path::PathBuf,
         sync::{Arc, Mutex, MutexGuard},
     },
-    tugger_file_manifest::{FileData, FileEntry},
 };
 
 fn error_context<F, T>(label: &str, f: F) -> Result<T, ValueError>

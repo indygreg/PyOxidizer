@@ -16,6 +16,7 @@ anyhow = "1.0"
 duct = "0.13"
 log = "0.4"
 once_cell = "1.7"
+simple-file-manifest = "0.11"
 url = "2.2"
 uuid = { version = "1.1", features = ["v4", "v5"] }
 xml-rs = "0.8"
@@ -31,10 +32,6 @@ path = "../tugger-windows-codesign"
 [dependencies.tugger-windows]
 version = "0.10.0-pre"
 path = "../tugger-windows"
-
-[dependencies.tugger-file-manifest]
-version = "0.11.0-pre"
-path = "../tugger-file-manifest"
 
 [dev-dependencies]
 tempfile = "3.2"

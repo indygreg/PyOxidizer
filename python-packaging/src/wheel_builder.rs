@@ -12,12 +12,12 @@ use {
     anyhow::{anyhow, Context, Result},
     once_cell::sync::Lazy,
     sha2::Digest,
+    simple_file_manifest::{FileEntry, FileManifest},
     std::{
         cmp::Ordering,
         io::{Seek, Write},
         path::{Path, PathBuf},
     },
-    tugger_file_manifest::{FileEntry, FileManifest},
 };
 
 /// Wheel filename component escape regular expression.

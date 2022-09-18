@@ -37,7 +37,6 @@ static RELEASE_ORDER: Lazy<Vec<&'static str>> = Lazy::new(|| {
         "x509-certificate",
         "cryptographic-message-syntax",
         "apple-xar",
-        "tugger-file-manifest",
         "cpio-archive",
         "apple-flat-package",
         "starlark-dialect-build-targets",

@@ -7,12 +7,12 @@ use {
     python_packaging::{
         resource::PythonResource, resource_collection::PythonResourceAddCollectionContext,
     },
+    simple_file_manifest::File,
     starlark::values::{
         error::{RuntimeError, UnsupportedOperation, ValueError},
         {Mutable, TypedValue, Value, ValueResult},
     },
     std::sync::{Arc, Mutex, MutexGuard},
-    tugger_file_manifest::File,
 };
 
 #[derive(Debug)]

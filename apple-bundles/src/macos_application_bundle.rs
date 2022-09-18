@@ -11,8 +11,8 @@ for documentation of the macOS Application Bundle format.
 use {
     crate::BundlePackageType,
     anyhow::{anyhow, Context, Result},
+    simple_file_manifest::{FileEntry, FileManifest, FileManifestError},
     std::path::{Path, PathBuf},
-    tugger_file_manifest::{FileEntry, FileManifest, FileManifestError},
 };
 
 /// Primitive used to iteratively construct a macOS Application Bundle.
@@ -46,7 +46,7 @@ use {
 ///
 /// ```
 /// use apple_bundles::MacOsApplicationBundleBuilder;
-/// use tugger_file_manifest::FileEntry;
+/// use simple_file_manifest::FileEntry;
 ///
 /// # fn main() -> anyhow::Result<()> {
 /// let mut builder = MacOsApplicationBundleBuilder::new("MyProgram")?;

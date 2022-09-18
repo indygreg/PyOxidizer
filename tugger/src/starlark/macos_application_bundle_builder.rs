@@ -10,6 +10,7 @@ use {
     },
     anyhow::{anyhow, Context},
     apple_bundles::MacOsApplicationBundleBuilder,
+    simple_file_manifest::FileEntry,
     starlark::{
         environment::TypeValues,
         eval::call_stack::CallStack,
@@ -29,7 +30,6 @@ use {
     },
     std::path::{Path, PathBuf},
     tugger_code_signing::SigningDestination,
-    tugger_file_manifest::FileEntry,
 };
 
 fn error_context<F, T>(label: &str, f: F) -> Result<T, ValueError>
