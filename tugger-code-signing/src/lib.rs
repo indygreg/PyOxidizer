@@ -1360,8 +1360,7 @@ fn copy_file_needed(source: &Path, dest: &Path) -> Result<bool, std::io::Error> 
 mod tests {
     use super::*;
 
-    const APPLE_P12_DATA: &[u8] =
-        include_bytes!("../../apple-codesign/src/apple-codesign-testuser.p12");
+    const APPLE_P12_DATA: &[u8] = include_bytes!("apple-codesign-testuser.p12");
 
     const WINDOWS_PFX_DEFAULT_DATA: &[u8] = include_bytes!("windows-testuser-default.pfx");
     const WINDOWS_PFX_NO_EXTRAS_DATA: &[u8] = include_bytes!("windows-testuser-no-extras.pfx");

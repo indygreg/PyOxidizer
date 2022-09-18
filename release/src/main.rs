@@ -33,12 +33,9 @@ static IGNORE_PACKAGES: Lazy<Vec<&'static str>> = Lazy::new(|| {
 /// Order that packages should be released in.
 static RELEASE_ORDER: Lazy<Vec<&'static str>> = Lazy::new(|| {
     vec![
-        "apple-xar",
         "cpio-archive",
-        "apple-flat-package",
         "starlark-dialect-build-targets",
         "tugger-common",
-        "apple-bundles",
         "debian-packaging",
         "debian-repo-tool",
         "rpm-repository",
@@ -48,7 +45,6 @@ static RELEASE_ORDER: Lazy<Vec<&'static str>> = Lazy::new(|| {
         //"tugger-rpm",
         "tugger-snapcraft",
         "tugger-apple",
-        "apple-codesign",
         "tugger-windows",
         "tugger-windows-codesign",
         "tugger-code-signing",

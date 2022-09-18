@@ -142,7 +142,6 @@ ci-run-all branch="ci-test":
   just ci-run oxidized_importer.yml {{branch}}
   just ci-run pyoxidizer.yml {{branch}}
   just ci-run pyoxy.yml {{branch}}
-  just ci-run rcodesign.yml {{branch}}
   just ci-run sphinx.yml {{branch}}
   just ci-run workspace.yml {{branch}}
   just ci-run workspace-python.yml {{branch}}
@@ -158,9 +157,6 @@ _remote-sign-exe ref workflow run_id artifact exe_name rcodesign_branch="main":
 
 # Trigger remote code signing workflow for pyoxy executable.
 remote-sign-pyoxy ref run_id rcodesign_branch="main": (_remote-sign-exe ref "rcodesign.yml" run_id "exe-pyoxy-macos-universal" "pyoxy" rcodesign_branch)
-
-# Trigger remote code signing workflow for rcodesign executable.
-remote-sign-rcodesign ref run_id rcodesign_branch="main": (_remote-sign-exe ref "rcodesign.yml" run_id "exe-rcodesign-macos-universal" "rcodesign" rcodesign_branch)
 
 # Obtain built executables from GitHub Actions.
 assemble-exe-artifacts exe commit dest:
@@ -267,66 +263,6 @@ _release name title_name:
 
   just {{name}}-release-prepare ${COMMIT} ${TAG}
   just {{name}}-release-upload ${COMMIT} ${TAG}
-
-apple-codesign-release-prepare commit tag:
-  #!/usr/bin/env bash
-  set -exo pipefail
-
-  rm -rf dist/apple-codesign*
-  just assemble-exe-artifacts rcodesign {{commit}} dist/apple-codesign-artifacts
-
-  for triple in aarch64-apple-darwin aarch64-unknown-linux-musl i686-pc-windows-msvc x86_64-apple-darwin x86_64-pc-windows-msvc x86_64-unknown-linux-musl; do
-    release_name=apple-codesign-{{tag}}-${triple}
-    source=dist/apple-codesign-artifacts/exe-rcodesign-${triple}
-    dest=dist/apple-codesign-stage/${release_name}
-
-    exe=rcodesign
-    sign_command=
-    archive_action=_tar_directory
-
-    case ${triple} in
-      *apple*)
-        sign_command="just _codesign-exe ${dest}/${exe}"
-        ;;
-      *windows*)
-        exe=rcodesign.exe
-        archive_action=_zip_directory
-        ;;
-      *)
-        ;;
-    esac
-
-    mkdir -p ${dest}
-    cp -a ${source}/${exe} ${dest}/${exe}
-    chmod +x ${dest}/${exe}
-
-    if [ -n "${sign_command}" ]; then
-      ${sign_command}
-    fi
-
-    cargo run --bin pyoxidizer -- rust-project-licensing \
-      --system-rust \
-      --target-triple ${triple} \
-      --all-features \
-      --unified-license \
-      apple-codesign > ${dest}/COPYING
-
-    mkdir -p dist/apple-codesign
-
-    just ${archive_action} dist/apple-codesign-stage ${release_name} dist/apple-codesign
-  done
-
-  # Create universal binary.
-  just _release_universal_binary apple-codesign {{tag}} rcodesign
-  just _tar_directory dist/apple-codesign-stage apple-codesign-{{tag}}-macos-universal dist/apple-codesign
-
-  just _create_shasums dist/apple-codesign
-
-apple-codesign-release-upload commit tag:
-  just _upload_release apple-codesign 'Apple Codesign' {{commit}} {{tag}}
-
-apple-codesign-release:
-  just _release apple-codesign 'Apple Codesign'
 
 # Prepare PyOxy release artifacts.
 pyoxy-release-prepare commit tag:

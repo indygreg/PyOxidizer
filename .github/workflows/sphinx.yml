@@ -14,7 +14,6 @@ jobs:
       fail-fast: false
       matrix:
         dir:
-          - apple-codesign/docs
           - python-oxidized-importer/docs
           - pyembed/docs
           - pyoxy/docs

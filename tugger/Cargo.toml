@@ -13,6 +13,7 @@ build = "build.rs"
 
 [dependencies]
 anyhow = "1.0"
+apple-bundles = "0.14"
 atty = "0.2"
 codemap = "0.1"
 codemap-diagnostic = "0.1"
@@ -27,14 +28,6 @@ tar = "0.4"
 tempfile = "3.2"
 time = "0.3"
 walkdir = "2"
-
-[dependencies.apple-bundles]
-version = "0.14.0-pre"
-path = "../apple-bundles"
-
-[dev-dependencies.apple-codesign]
-version = "0.19.0-pre"
-path = "../apple-codesign"
 
 [dependencies.python-packaging]
 version = "0.15.0-pre"
@@ -69,6 +62,7 @@ version = "0.15.0-pre"
 path = "../tugger-wix"
 
 [dev-dependencies]
+apple-codesign = "0.19"
 chrono = "0.4"
 tempfile = "3.2"
 x509-certificate = "0.15"

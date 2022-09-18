@@ -63,18 +63,21 @@ checksum = "98161a4e3e2184da77bb14f02184cdd111e83bbbcc9979dfee3c44b9a85f5602"
 
 [[package]]
 name = "apple-bundles"
-version = "0.14.0-pre"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "96c0347dcf7947f1a737f11441285b07f638b7a4b39379b65cdd0198f8d6f8a9"
 dependencies = [
  "anyhow",
  "plist",
  "simple-file-manifest",
- "tempfile",
  "walkdir",
 ]
 
 [[package]]
 name = "apple-codesign"
-version = "0.19.0-pre"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7668a418f0d8a03c957b1a3fac8f74ed65e3db6d2b24d8fda171123297733a59"
 dependencies = [
  "anyhow",
  "apple-bundles",
@@ -101,7 +104,6 @@ dependencies = [
  "glob",
  "goblin",
  "hex",
- "indoc",
  "jsonwebtoken",
  "log",
  "md-5 0.10.4",
@@ -136,14 +138,12 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tokio",
- "tugger-apple",
  "tungstenite",
  "uuid",
  "x509",
  "x509-certificate",
  "xml-rs",
  "yasna",
- "yubikey",
  "zeroize",
  "zip",
  "zip_structs",
@@ -151,10 +151,12 @@ dependencies = [
 
 [[package]]
 name = "apple-flat-package"
-version = "0.10.0-pre"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "22ff1f0964ff49725ea4c0571deaa5fe0acadfd979d5a005ab137490a6e99a35"
 dependencies = [
  "apple-xar",
- "cpio-archive",
+ "cpio-archive 0.5.0",
  "flate2",
  "scroll",
  "serde",
@@ -175,7 +177,9 @@ dependencies = [
 
 [[package]]
 name = "apple-xar"
-version = "0.10.0-pre"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6930771c2d73763b4c897865beba0b62b168f5999d84d93fa10c07f6c4f04fa4"
 dependencies = [
  "base64",
  "bcder",
@@ -1338,6 +1342,18 @@ checksum = "27e77cfc4543efb4837662cb7cd53464ae66f0fd5c708d71e0f338b1c11d62d3"
 
 [[package]]
 name = "cpio-archive"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "422d3f6e51093f728814e49d4bc4820b11d7a92b4c3c99ef5a396012ddb6fafe"
+dependencies = [
+ "chrono",
+ "is_executable",
+ "thiserror",
+ "tugger-file-manifest",
+]
+
+[[package]]
+name = "cpio-archive"
 version = "0.6.0-pre"
 dependencies = [
  "chrono",
@@ -1921,7 +1937,6 @@ checksum = "85789ce7dfbd0f0624c07ef653a08bb2ebf43d3e16531361f46d36dd54334fed"
 dependencies = [
  "der 0.6.0",
  "elliptic-curve",
- "rfc6979",
  "signature",
 ]
 
@@ -1967,8 +1982,6 @@ dependencies = [
  "ff",
  "generic-array",
  "group",
- "hkdf",
- "pem-rfc7468 0.6.0",
  "pkcs8 0.9.0",
  "rand_core 0.6.4",
  "sec1",
@@ -3413,18 +3426,6 @@ checksum = "51f44edd08f51e2ade572f141051021c5af22677e42b7dd28a88155151c33594"
 dependencies = [
  "ecdsa",
  "elliptic-curve",
- "sha2 0.10.6",
-]
-
-[[package]]
-name = "p384"
-version = "0.11.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dfc8c5bf642dde52bb9e87c0ecd8ca5a76faac2eeed98dedb7c717997e1080aa"
-dependencies = [
- "ecdsa",
- "elliptic-curve",
- "sha2 0.10.6",
 ]
 
 [[package]]
@@ -3475,15 +3476,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pbkdf2"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83a0692ec44e4cf1ef28ca317f14f8f07da2d95ec3fa01f86e4467b725e60917"
-dependencies = [
- "digest 0.10.5",
-]
-
-[[package]]
 name = "pbr"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3493,25 +3485,6 @@ dependencies = [
  "libc",
  "time 0.1.44",
  "winapi",
-]
-
-[[package]]
-name = "pcsc"
-version = "2.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e29e4de78a433aeecd06fb5bd55a0f9fde11dc85a14c22d482972c7edc4fdc4"
-dependencies = [
- "bitflags",
- "pcsc-sys",
-]
-
-[[package]]
-name = "pcsc-sys"
-version = "1.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e1b7bfecba2c0f1b5efb0e7caf7533ab1c295024165bcbb066231f60d33e23ea"
-dependencies = [
- "pkg-config",
 ]
 
 [[package]]
@@ -4431,17 +4404,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rfc6979"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88c86280f057430a52f4861551b092a01b419b8eacefc7c995eacb9dc132fe32"
-dependencies = [
- "crypto-bigint 0.4.8",
- "hmac 0.12.1",
- "zeroize",
-]
-
-[[package]]
 name = "ring"
 version = "0.16.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4809,15 +4771,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "secrecy"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9bd1c54ea06cfd2f6b63219704de0b9b4f72dcc2b8fdef820be6cd799780e91e"
-dependencies = [
- "zeroize",
-]
-
-[[package]]
 name = "security-framework"
 version = "2.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5045,7 +4998,6 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "deb766570a2825fa972bceff0d195727876a9cdf2460ab2e52d455dc2de47fd9"
 dependencies = [
- "digest 0.10.5",
  "rand_core 0.6.4",
 ]
 
@@ -5267,15 +5219,6 @@ name = "subtle"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6bdef32e8150c2a081110b42772ffe7d7c9032b606bc226c8260fd97e0976601"
-
-[[package]]
-name = "subtle-encoding"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7dcb1ed7b8330c5eed5441052651dd7a12c75e2ed88f2ec024ae1fa3a5e59945"
-dependencies = [
- "zeroize",
-]
 
 [[package]]
 name = "symbolic-common"
@@ -5763,6 +5706,12 @@ dependencies = [
  "url",
  "zip",
 ]
+
+[[package]]
+name = "tugger-file-manifest"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4eb47a7c6d38b6994490284e7572edbe226364e85cf1ab18525cfabeb0ea70be"
 
 [[package]]
 name = "tugger-rust-toolchain"
@@ -6397,40 +6346,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "346d34a236c9d3e5f3b9b74563f238f955bbd05fa0b8b4efa53c130c43982f4c"
 dependencies = [
  "time 0.3.14",
-]
-
-[[package]]
-name = "yubikey"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "350b1730eb4a5734a5167bda0d400f2a28d05a9e69003c3f37163bb240f2d9c6"
-dependencies = [
- "chrono",
- "cookie-factory",
- "der-parser",
- "des 0.8.1",
- "elliptic-curve",
- "hmac 0.12.1",
- "log",
- "nom 7.1.1",
- "num-bigint-dig",
- "num-integer",
- "num-traits",
- "p256",
- "p384",
- "pbkdf2",
- "pcsc",
- "rand_core 0.6.4",
- "rsa",
- "secrecy",
- "sha1",
- "sha2 0.10.6",
- "subtle",
- "subtle-encoding",
- "uuid",
- "x509",
- "x509-parser",
- "zeroize",
 ]
 
 [[package]]
