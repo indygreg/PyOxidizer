@@ -2833,9 +2833,9 @@ checksum = "f9b7d56ba4a8344d6be9729995e6b06f928af29998cdf79fe390cbf6b1fee838"
 
 [[package]]
 name = "konst"
-version = "0.2.15"
+version = "0.2.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3a0f20e801b88a84a6486eb13b44e446bdbfd0f104da5a83d07072fcd8b7bc8a"
+checksum = "eb468fcae45fa8d093a2f996ee8b7e6a80021eea3ce55556a8ae00d0297a39b0"
 dependencies = [
  "konst_macro_rules",
 ]
@@ -5568,9 +5568,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-stream"
-version = "0.1.9"
+version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df54d54117d6fdc4e4fea40fe1e4e566b3505700e148a6827e59b34b0d2600d9"
+checksum = "f6edf2d6bc038a43d31353570e27270603f4648d18f5ed10c0e179abe43255af"
 dependencies = [
  "futures-core",
  "pin-project-lite",
