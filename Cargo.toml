@@ -5,11 +5,9 @@ members = [
     'apple-flat-package',
     'apple-xar',
     'cpio-archive',
-    'cryptographic-message-syntax',
     'debian-packaging',
     "debian-repo-tool",
     'linux-package-analyzer',
-    'pgp-cleartext',
     'pyembed-bench',
     'pyembed',
     'pyoxidizer',
@@ -30,6 +28,5 @@ members = [
     'tugger-windows',
     'tugger-windows-codesign',
     'tugger-wix',
-    'x509-certificate',
 ]
 resolver = "2"

@@ -15,6 +15,7 @@ base64 = "0.13"
 bcder = "0.7"
 bzip2 = "0.4"
 chrono = { version = "0.4", features = ["serde"] }
+cryptographic-message-syntax = "0.18"
 digest = "0.10"
 log = "0.4"
 md-5 = "0.10"
@@ -29,13 +30,6 @@ sha2 = "0.10"
 signature = "1.3"
 thiserror = "1.0"
 url = "2.2"
+x509-certificate = "0.15"
 xml-rs = "0.8"
 xz2 = { version = "0.1", features = ["static"] }
-
-[dependencies.cryptographic-message-syntax]
-path = "../cryptographic-message-syntax"
-version = "0.19.0-pre"
-
-[dependencies.x509-certificate]
-path = "../x509-certificate"
-version = "0.16.0-pre"

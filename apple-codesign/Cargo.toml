@@ -25,6 +25,7 @@ bitflags = "1.2"
 bytes = "1.0"
 clap = "3.1"
 chrono = "0.4"
+cryptographic-message-syntax = "0.18"
 der = "0.6"
 dialoguer = "0.10"
 difference = "2.0"
@@ -71,6 +72,7 @@ thiserror = "1.0"
 tokio = { version = "1.19", features = ["rt"] }
 tungstenite = { version = "0.17", features = ["rustls-tls-native-roots"] }
 uuid = { version = "1.1", features = ["v4"] }
+x509-certificate = "0.15"
 x509 = "0.2"
 xml-rs = "0.8"
 yasna = "0.5"
@@ -91,17 +93,9 @@ version = "0.10.0-pre"
 path = "../apple-xar"
 version = "0.10.0-pre"
 
-[dependencies.cryptographic-message-syntax]
-path = "../cryptographic-message-syntax"
-version = "0.19.0-pre"
-
 [dependencies.tugger-apple]
 path = "../tugger-apple"
 version = "0.8.0-pre"
-
-[dependencies.x509-certificate]
-path = "../x509-certificate"
-version = "0.16.0-pre"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 security-framework = { version = "2.6", features = ["OSX_10_12"] }
