@@ -7,7 +7,7 @@
 use {
     anyhow::{anyhow, Result},
     pulldown_cmark::{Event as MarkdownEvent, LinkType, Parser as MarkdownParser, Tag},
-    rustdoc_types::{Crate, GenericArg, GenericArgs, ItemEnum, Type},
+    rustdoc_types::{Crate, GenericArg, GenericArgs, ItemEnum, StructKind, Type},
     std::{
         fmt::Write,
         path::{Path, PathBuf},
@@ -147,32 +147,34 @@ fn struct_to_rst(docs: &Crate, type_ref: TypeReference, rst_prefix: &str) -> Res
     }
 
     if let ItemEnum::Struct(inner) = &main_struct.inner {
-        for field_id in &inner.fields {
-            let field_item = docs
-                .index
-                .get(field_id)
-                .ok_or_else(|| anyhow!("field index not found"))?;
+        if let StructKind::Plain { fields, .. } = &inner.kind {
+            for field_id in fields {
+                let field_item = docs
+                    .index
+                    .get(field_id)
+                    .ok_or_else(|| anyhow!("field index not found"))?;
 
-            let field_name = field_item
-                .name
-                .as_ref()
-                .ok_or_else(|| anyhow!("field name not defined"))?;
+                let field_name = field_item
+                    .name
+                    .as_ref()
+                    .ok_or_else(|| anyhow!("field name not defined"))?;
 
-            lines.push(format!(
-                ".. _{}_struct_{}_{}:",
-                rst_prefix, struct_name, field_name
-            ));
-            lines.push("".to_string());
-            lines.push(format!("``{}`` Field", field_name));
-            lines.push("-".repeat(field_name.len() + 4 + 6));
-            lines.push("".to_string());
-
-            if let ItemEnum::StructField(typ) = &field_item.inner {
-                if let Some(docs) = &field_item.docs {
-                    lines.extend(docstring_to_rst(docs)?.into_iter());
-                }
-                lines.push(format!("Type: ``{}``", resolve_type_name(typ)?));
+                lines.push(format!(
+                    ".. _{}_struct_{}_{}:",
+                    rst_prefix, struct_name, field_name
+                ));
                 lines.push("".to_string());
+                lines.push(format!("``{}`` Field", field_name));
+                lines.push("-".repeat(field_name.len() + 4 + 6));
+                lines.push("".to_string());
+
+                if let ItemEnum::StructField(typ) = &field_item.inner {
+                    if let Some(docs) = &field_item.docs {
+                        lines.extend(docstring_to_rst(docs)?.into_iter());
+                    }
+                    lines.push(format!("Type: ``{}``", resolve_type_name(typ)?));
+                    lines.push("".to_string());
+                }
             }
         }
     }
