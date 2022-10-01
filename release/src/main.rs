@@ -145,7 +145,8 @@ fn cargo_toml_package_version(path: &Path) -> Result<String> {
     Ok(manifest
         .package
         .ok_or_else(|| anyhow!("no [package]"))?
-        .version)
+        .version()
+        .to_string())
 }
 
 enum PackageLocation {
@@ -393,10 +394,11 @@ fn release_package(
     let manifest = Manifest::from_path(&manifest_path)
         .with_context(|| format!("reading {}", manifest_path.display()))?;
 
-    let version = &manifest
+    let version = manifest
         .package
+        .as_ref()
         .ok_or_else(|| anyhow!("no [package]"))?
-        .version;
+        .version();
 
     println!("{}: existing Cargo.toml version: {}", package, version);
 
@@ -773,10 +775,11 @@ fn update_package_version(
     let manifest = Manifest::from_path(&manifest_path)
         .with_context(|| format!("reading {}", manifest_path.display()))?;
 
-    let version = &manifest
+    let version = manifest
         .package
+        .as_ref()
         .ok_or_else(|| anyhow!("no [package]"))?
-        .version;
+        .version();
 
     println!("{}: existing Cargo.toml version: {}", package, version);
     let mut next_version = semver::Version::parse(version).context("parsing package version")?;
