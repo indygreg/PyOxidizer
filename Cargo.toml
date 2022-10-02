@@ -1,6 +1,5 @@
 [workspace]
 members = [
-    'cpio-archive',
     'debian-packaging',
     "debian-repo-tool",
     'linux-package-analyzer',
