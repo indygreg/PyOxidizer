@@ -1,8 +1,5 @@
 [workspace]
 members = [
-    'debian-packaging',
-    "debian-repo-tool",
-    'linux-package-analyzer',
     'pyembed-bench',
     'pyembed',
     'pyoxidizer',
@@ -11,7 +8,6 @@ members = [
     'python-packaging',
     'python-packed-resources',
     'release',
-    'rpm-repository',
     'starlark-dialect-build-targets',
     'tugger',
     'tugger-apple',

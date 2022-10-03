@@ -35,10 +35,6 @@ static RELEASE_ORDER: Lazy<Vec<&'static str>> = Lazy::new(|| {
     vec![
         "starlark-dialect-build-targets",
         "tugger-common",
-        "debian-packaging",
-        "debian-repo-tool",
-        "rpm-repository",
-        //"linux-package-analyzer",
         "tugger-rust-toolchain",
         "tugger-binary-analysis",
         //"tugger-rpm",
