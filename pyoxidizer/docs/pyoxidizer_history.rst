@@ -59,9 +59,12 @@ Bug Fixes
 Changes
 ^^^^^^^
 
-* Default CPython distributions upgraded. CPython 3.10.4 upgraded to 3.10.6.
-  See https://github.com/indygreg/python-build-standalone/releases/tag/20220630
-  and https://github.com/indygreg/python-build-standalone/releases/tag/20220802
+* Default CPython distributions upgraded. CPython 3.8.13 -> 3.8.15; 3.9.13 ->
+  3.9.15; 3.10.4 -> 3.10.8.
+  See https://github.com/indygreg/python-build-standalone/releases/tag/20220630,
+  https://github.com/indygreg/python-build-standalone/releases/tag/20220802,
+  https://github.com/indygreg/python-build-standalone/releases/tag/20221002, and
+  https://github.com/indygreg/python-build-standalone/releases/tag/20221106
   for additional changes.
 * PyO3 Rust crate(s) upgraded from 0.16.5 to 0.17.1.
 * The mechanism for passing custom arguments to the linker for exporting
