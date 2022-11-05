@@ -3927,7 +3927,7 @@ dependencies = [
  "anyhow",
  "cargo-lock",
  "cargo_toml",
- "clap 3.2.23",
+ "clap 4.0.19",
  "duct",
  "git2",
  "once_cell",

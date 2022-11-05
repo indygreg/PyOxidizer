@@ -12,7 +12,7 @@ repository = "https://github.com/indygreg/PyOxidizer.git"
 anyhow = "1"
 cargo-lock = "8"
 cargo_toml = "0"
-clap = "3"
+clap = "4"
 duct = "0"
 # We don't need network functionality.
 git2 = { version = "0", default-features = false }
