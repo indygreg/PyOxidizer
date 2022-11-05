@@ -134,7 +134,7 @@ fn add_env_args(app: Command) -> Command {
             .long("var")
             .action(ArgAction::Append)
             .value_names(&["name", "value"])
-            .multiple_values(true)
+            .number_of_values(2)
             .help("Define a variable in Starlark environment")
             .long_help(VAR_HELP),
     )
@@ -143,7 +143,7 @@ fn add_env_args(app: Command) -> Command {
             .long("var-env")
             .action(ArgAction::Append)
             .value_names(&["name", "env"])
-            .multiple_values(true)
+            .number_of_values(2)
             .help("Define an environment variable in Starlark environment")
             .long_help(ENV_VAR_HELP),
     )
@@ -345,8 +345,6 @@ pub fn run_cli() -> Result<()> {
                 Arg::new("pip-install")
                     .long("pip-install")
                     .action(ArgAction::Append)
-                    .multiple_values(true)
-                    .number_of_values(1)
                     .help("Python package to install via `pip install`"),
             )
             .arg(

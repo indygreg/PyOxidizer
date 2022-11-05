@@ -61,7 +61,7 @@ fn run_normal(exe: &Path) -> Result<i32> {
             .arg(
                 Arg::new("args")
                     .help("Arguments to Python interpreter")
-                    .action(ArgAction::Set)
+                    .action(ArgAction::Append)
                     .multiple_values(true)
                     .value_parser(value_parser!(OsString))
                     .last(true),
