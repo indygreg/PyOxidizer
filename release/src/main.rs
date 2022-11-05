@@ -5,7 +5,7 @@
 use {
     anyhow::{anyhow, Context, Result},
     cargo_toml::Manifest,
-    clap::{Arg, ArgMatches, Command},
+    clap::{Arg, ArgAction, ArgMatches, Command},
     duct::cmd,
     git2::{Repository, Status},
     once_cell::sync::Lazy,
@@ -865,16 +865,16 @@ enum VersionBump {
 }
 
 fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Result<()> {
-    let publish = !args.is_present("no_publish");
+    let publish = !args.get_flag("no_publish");
 
-    let version_bump = if args.is_present("patch") {
+    let version_bump = if args.get_flag("patch") {
         VersionBump::Patch
     } else {
         VersionBump::Minor
     };
 
     let (do_pre, pre_start_name, post_start_name) =
-        if let Some(start_at) = args.value_of("start_at") {
+        if let Some(start_at) = args.get_one::<String>("start_at") {
             let mut parts = start_at.splitn(2, ':');
 
             let prefix = parts
@@ -897,7 +897,7 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
             (true, None, None)
         };
 
-    let up_to = args.value_of("up_to");
+    let up_to = args.get_one::<String>("up_to");
 
     let head_commit = repo.head()?.peel_to_commit()?;
     println!(
@@ -993,7 +993,7 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
             }
 
             // This is the final package we're releasing. Stop here.
-            if Some(*package) == up_to {
+            if Some(*package) == up_to.map(|x| &**x) {
                 eprintln!("stopping release process at {}", package);
                 break;
             }
@@ -1016,7 +1016,7 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
             .with_context(|| format!("incrementing version for {}", package))?;
         }
 
-        if Some(*package) == up_to {
+        if Some(*package) == up_to.map(|x| &**x) {
             break;
         }
     }
@@ -1164,19 +1164,24 @@ fn main_impl() -> Result<()> {
                 .arg(
                     Arg::new("no_publish")
                         .long("no-publish")
+                        .action(ArgAction::SetTrue)
                         .help("Do not publish release"),
                 )
-                .arg(Arg::new("patch").help("Bump the patch version instead of the minor version"))
+                .arg(
+                    Arg::new("patch")
+                        .action(ArgAction::SetTrue)
+                        .help("Bump the patch version instead of the minor version"),
+                )
                 .arg(
                     Arg::new("start_at")
                         .long("start-at")
-                        .takes_value(true)
+                        .action(ArgAction::Set)
                         .help("Where to resume the release process"),
                 )
                 .arg(
                     Arg::new("up_to")
                         .long("up-to")
-                        .takes_value(true)
+                        .action(ArgAction::Set)
                         .help("Name of final package to release"),
                 ),
         )
