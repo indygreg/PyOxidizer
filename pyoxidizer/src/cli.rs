@@ -8,7 +8,7 @@ use {
         project_building, projectmgmt,
     },
     anyhow::{anyhow, Context, Result},
-    clap::{Arg, ArgAction, ArgMatches, Command},
+    clap::{value_parser, Arg, ArgAction, ArgMatches, Command},
     std::{
         collections::HashMap,
         path::{Path, PathBuf},
@@ -468,22 +468,25 @@ pub fn run_cli() -> Result<()> {
             .arg(
                 Arg::new("all_features")
                     .long("all-features")
+                    .action(ArgAction::SetTrue)
                     .help("Activate all crate features during evaluation"),
             )
             .arg(
                 Arg::new("target_triple")
                     .long("target-triple")
-                    .takes_value(true)
+                    .action(ArgAction::Set)
                     .help("Rust target triple to simulate building for"),
             )
             .arg(
                 Arg::new("unified_license")
                     .long("unified-license")
+                    .action(ArgAction::SetTrue)
                     .help("Print a unified license document"),
             )
             .arg(
                 Arg::new("project_path")
-                    .takes_value(true)
+                    .action(ArgAction::Set)
+                    .value_parser(value_parser!(PathBuf))
                     .required(true)
                     .help("The path to the Rust project to evaluate"),
             ),
@@ -676,17 +679,18 @@ pub fn run_cli() -> Result<()> {
         }
 
         "rust-project-licensing" => {
-            let project_path =
-                Path::new(args.value_of("project_path").expect("argument is required"));
-            let all_features = args.is_present("all_features");
-            let target_triple = args.value_of("target_triple");
-            let unified_license = args.is_present("unified_license");
+            let project_path = args
+                .get_one::<PathBuf>("project_path")
+                .expect("argument is required");
+            let all_features = args.get_flag("all_features");
+            let target_triple = args.get_one::<String>("target_triple");
+            let unified_license = args.get_flag("unified_license");
 
             projectmgmt::rust_project_licensing(
                 &env,
                 project_path,
                 all_features,
-                target_triple,
+                target_triple.map(|x| x.as_str()),
                 unified_license,
             )
         }
