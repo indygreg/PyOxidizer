@@ -153,22 +153,22 @@ fn add_python_distribution_args(app: Command) -> Command {
     app.arg(
         Arg::new("target_triple")
             .long("--target-triple")
+            .action(ArgAction::Set)
             .help("Rust target triple being targeted")
-            .takes_value(true)
             .default_value(default_target_triple()),
     )
     .arg(
         Arg::new("flavor")
             .long("--flavor")
+            .action(ArgAction::Set)
             .help("Python distribution flavor")
-            .takes_value(true)
             .default_value("standalone"),
     )
     .arg(
         Arg::new("python_version")
             .long("--python-version")
-            .help("Python version (X.Y) to use")
-            .takes_value(true),
+            .action(ArgAction::Set)
+            .help("Python version (X.Y) to use"),
     )
 }
 
@@ -603,10 +603,12 @@ pub fn run_cli() -> Result<()> {
 
         "generate-python-embedding-artifacts" => {
             let target_triple = args
-                .value_of("target_triple")
+                .get_one::<String>("target_triple")
                 .expect("target_triple should have default");
-            let flavor = args.value_of("flavor").expect("flavor should have default");
-            let python_version = args.value_of("python_version");
+            let flavor = args
+                .get_one::<String>("flavor")
+                .expect("flavor should have default");
+            let python_version = args.get_one::<String>("python_version");
             let dest_path = args
                 .get_one::<PathBuf>("dest_path")
                 .expect("dest_path should be required");
@@ -615,7 +617,7 @@ pub fn run_cli() -> Result<()> {
                 &env,
                 target_triple,
                 flavor,
-                python_version,
+                python_version.map(|x| x.as_str()),
                 dest_path,
             )
         }
