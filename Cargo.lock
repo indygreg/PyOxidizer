@@ -3648,7 +3648,7 @@ version = "0.3.0-pre"
 dependencies = [
  "anyhow",
  "assert_cmd",
- "clap 3.2.23",
+ "clap 4.0.19",
  "glob",
  "libtest-mimic",
  "predicates",
