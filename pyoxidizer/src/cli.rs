@@ -416,13 +416,14 @@ pub fn run_cli() -> Result<()> {
             .long_about(RUN_BUILD_SCRIPT_ABOUT)
             .arg(
                 Arg::new("build-script-name")
+                    .action(ArgAction::Set)
                     .required(true)
                     .help("Value to use for Rust build script"),
             )
             .arg(
                 Arg::new("target")
                     .long("target")
-                    .takes_value(true)
+                    .action(ArgAction::Set)
                     .help("The config file target to resolve"),
             ),
     ));
@@ -654,10 +655,15 @@ pub fn run_cli() -> Result<()> {
 
         "run-build-script" => {
             let starlark_vars = starlark_vars(args)?;
-            let build_script = args.value_of("build-script-name").unwrap();
-            let target = args.value_of("target");
+            let build_script = args.get_one::<String>("build-script-name").unwrap();
+            let target = args.get_one::<String>("target");
 
-            project_building::run_from_build(&env, build_script, target, starlark_vars)
+            project_building::run_from_build(
+                &env,
+                build_script,
+                target.map(|x| x.as_str()),
+                starlark_vars,
+            )
         }
 
         "run" => {
