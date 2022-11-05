@@ -376,16 +376,19 @@ pub fn run_cli() -> Result<()> {
             .arg(
                 Arg::new("download-default")
                     .long("--download-default")
+                    .action(ArgAction::SetTrue)
                     .help("Download and extract the default distribution for this platform"),
             )
             .arg(
                 Arg::new("archive-path")
                     .long("--archive-path")
+                    .action(ArgAction::Set)
                     .value_name("DISTRIBUTION_PATH")
                     .help("Path to a Python distribution archive"),
             )
             .arg(
                 Arg::new("dest_path")
+                    .action(ArgAction::Set)
                     .required(true)
                     .value_name("DESTINATION_PATH")
                     .help("Path to directory where distribution should be extracted"),
@@ -632,9 +635,9 @@ pub fn run_cli() -> Result<()> {
         }
 
         "python-distribution-extract" => {
-            let download_default = args.is_present("download-default");
-            let archive_path = args.value_of("archive-path");
-            let dest_path = args.value_of("dest_path").unwrap();
+            let download_default = args.get_flag("download-default");
+            let archive_path = args.get_one::<String>("archive-path");
+            let dest_path = args.get_one::<String>("dest_path").unwrap();
 
             if !download_default && archive_path.is_none() {
                 Err(anyhow!("must specify --download-default or --archive-path"))
@@ -643,7 +646,11 @@ pub fn run_cli() -> Result<()> {
                     "must only specify one of --download-default or --archive-path"
                 ))
             } else {
-                projectmgmt::python_distribution_extract(download_default, archive_path, dest_path)
+                projectmgmt::python_distribution_extract(
+                    download_default,
+                    archive_path.map(|x| x.as_str()),
+                    dest_path,
+                )
             }
         }
 
