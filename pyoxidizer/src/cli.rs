@@ -227,6 +227,8 @@ pub fn run_cli() -> Result<()> {
     let app = app.subcommand(
         Command::new("analyze").about("Analyze a built binary").arg(
             Arg::new("path")
+                .action(ArgAction::Set)
+                .value_parser(value_parser!(PathBuf))
                 .required(true)
                 .help("Path to executable to analyze"),
         ),
@@ -349,6 +351,7 @@ pub fn run_cli() -> Result<()> {
             .long_about(INIT_RUST_PROJECT_ABOUT)
             .arg(
                 Arg::new("path")
+                    .action(ArgAction::Set)
                     .required(true)
                     .value_name("PATH")
                     .help("Path of project directory to create"),
@@ -360,6 +363,7 @@ pub fn run_cli() -> Result<()> {
             .about("List targets available to resolve in a configuration file")
             .arg(
                 Arg::new("path")
+                    .action(ArgAction::Set)
                     .default_value(".")
                     .value_name("PATH")
                     .help("Path to project to evaluate"),
@@ -393,6 +397,7 @@ pub fn run_cli() -> Result<()> {
             .about("Show information about a Python distribution archive")
             .arg(
                 Arg::new("path")
+                    .action(ArgAction::Set)
                     .required(true)
                     .value_name("PATH")
                     .help("Path to Python distribution archive to analyze"),
@@ -404,6 +409,7 @@ pub fn run_cli() -> Result<()> {
             .about("Show licenses for a given Python distribution")
             .arg(
                 Arg::new("path")
+                    .action(ArgAction::Set)
                     .required(true)
                     .value_name("PATH")
                     .help("Path to Python distribution to analyze"),
@@ -527,9 +533,9 @@ pub fn run_cli() -> Result<()> {
 
     match command {
         "analyze" => {
-            let path = args.value_of("path").unwrap();
-            let path = PathBuf::from(path);
-            tugger_binary_analysis::analyze_file(path);
+            let path = args.get_one::<PathBuf>("path").unwrap();
+
+            tugger_binary_analysis::analyze_file(path.clone());
 
             Ok(())
         }
@@ -613,13 +619,13 @@ pub fn run_cli() -> Result<()> {
         }
 
         "list-targets" => {
-            let path = args.value_of("path").unwrap();
+            let path = args.get_one::<String>("path").unwrap();
 
             projectmgmt::list_targets(&env, Path::new(path))
         }
 
         "init-rust-project" => {
-            let path = args.value_of("path").unwrap();
+            let path = args.get_one::<String>("path").unwrap();
             let project_path = Path::new(path);
 
             projectmgmt::init_rust_project(&env, project_path)
@@ -642,13 +648,13 @@ pub fn run_cli() -> Result<()> {
         }
 
         "python-distribution-info" => {
-            let dist_path = args.value_of("path").unwrap();
+            let dist_path = args.get_one::<String>("path").unwrap();
 
             projectmgmt::python_distribution_info(&env, dist_path)
         }
 
         "python-distribution-licenses" => {
-            let path = args.value_of("path").unwrap();
+            let path = args.get_one::<String>("path").unwrap();
 
             projectmgmt::python_distribution_licenses(&env, path)
         }
