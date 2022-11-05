@@ -434,17 +434,19 @@ pub fn run_cli() -> Result<()> {
             .arg(
                 Arg::new("target_triple")
                     .long("target-triple")
-                    .takes_value(true)
+                    .action(ArgAction::Set)
                     .help("Rust target triple to build for"),
             )
             .arg(
                 Arg::new("release")
                     .long("release")
+                    .action(ArgAction::SetTrue)
                     .help("Run a release binary"),
             )
             .arg(
                 Arg::new("path")
                     .long("path")
+                    .action(ArgAction::Set)
                     .default_value(".")
                     .value_name("PATH")
                     .help("Directory containing project to build"),
@@ -452,12 +454,12 @@ pub fn run_cli() -> Result<()> {
             .arg(
                 Arg::new("target")
                     .long("target")
-                    .takes_value(true)
+                    .action(ArgAction::Set)
                     .help("Build target to run"),
             )
             .arg(
                 Arg::new("extra")
-                    .multiple_occurrences(true)
+                    .action(ArgAction::Append)
                     .multiple_values(true),
             ),
     ));
@@ -660,18 +662,22 @@ pub fn run_cli() -> Result<()> {
 
         "run" => {
             let starlark_vars = starlark_vars(args)?;
-            let target_triple = args.value_of("target_triple");
-            let release = args.is_present("release");
-            let path = args.value_of("path").unwrap();
-            let target = args.value_of("target");
-            let extra: Vec<&str> = args.values_of("extra").unwrap_or_default().collect();
+            let target_triple = args.get_one::<String>("target_triple");
+            let release = args.get_flag("release");
+            let path = args.get_one::<String>("path").unwrap();
+            let target = args.get_one::<String>("target");
+            let extra = args
+                .get_many::<String>("extra")
+                .unwrap_or_default()
+                .map(|x| x.as_str())
+                .collect::<Vec<_>>();
 
             projectmgmt::run(
                 &env,
                 Path::new(path),
-                target_triple,
+                target_triple.map(|x| x.as_str()),
                 release,
-                target,
+                target.map(|x| x.as_str()),
                 starlark_vars,
                 &extra,
                 verbose,
