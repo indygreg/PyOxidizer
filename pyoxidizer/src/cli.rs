@@ -8,7 +8,7 @@ use {
         project_building, projectmgmt,
     },
     anyhow::{anyhow, Context, Result},
-    clap::{Arg, ArgMatches, Command},
+    clap::{Arg, ArgAction, ArgMatches, Command},
     std::{
         collections::HashMap,
         path::{Path, PathBuf},
@@ -213,13 +213,14 @@ pub fn run_cli() -> Result<()> {
             Arg::new("system_rust")
                 .long("--system-rust")
                 .global(true)
+                .action(ArgAction::SetTrue)
                 .help("Use a system install of Rust instead of a self-managed Rust installation"),
         )
         .arg(
             Arg::new("verbose")
                 .long("verbose")
                 .global(true)
-                .multiple_occurrences(true)
+                .action(ArgAction::Count)
                 .help("Increase logging verbosity. Can be specified multiple times"),
         );
 
@@ -492,7 +493,7 @@ pub fn run_cli() -> Result<()> {
 
     let verbose = matches.is_present("verbose");
 
-    let log_level = match matches.occurrences_of("verbose") {
+    let log_level = match matches.get_count("verbose") {
         0 => log::LevelFilter::Warn,
         1 => log::LevelFilter::Info,
         2 => log::LevelFilter::Debug,
@@ -510,7 +511,7 @@ pub fn run_cli() -> Result<()> {
 
     builder.init();
 
-    if matches.is_present("system_rust") {
+    if matches.get_flag("system_rust") {
         env.unmanage_rust().context("unmanaging Rust")?;
     }
 
