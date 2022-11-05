@@ -313,6 +313,8 @@ pub fn run_cli() -> Result<()> {
             .long_about(GENERATE_PYTHON_EMBEDDING_ARTIFACTS_ABOUT)
             .arg(
                 Arg::new("dest_path")
+                    .action(ArgAction::Set)
+                    .value_parser(value_parser!(PathBuf))
                     .value_name("DESTINATION_PATH")
                     .required(true)
                     .help("Output directory for written files"),
@@ -594,10 +596,9 @@ pub fn run_cli() -> Result<()> {
                 .expect("target_triple should have default");
             let flavor = args.value_of("flavor").expect("flavor should have default");
             let python_version = args.value_of("python_version");
-            let dest_path = Path::new(
-                args.value_of("dest_path")
-                    .expect("dest_path should be required"),
-            );
+            let dest_path = args
+                .get_one::<PathBuf>("dest_path")
+                .expect("dest_path should be required");
 
             projectmgmt::generate_python_embedding_artifacts(
                 &env,
