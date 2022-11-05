@@ -132,8 +132,8 @@ fn add_env_args(app: Command) -> Command {
     app.arg(
         Arg::new("vars")
             .long("var")
+            .action(ArgAction::Append)
             .value_names(&["name", "value"])
-            .multiple_occurrences(true)
             .multiple_values(true)
             .help("Define a variable in Starlark environment")
             .long_help(VAR_HELP),
@@ -141,8 +141,8 @@ fn add_env_args(app: Command) -> Command {
     .arg(
         Arg::new("vars_env")
             .long("var-env")
+            .action(ArgAction::Append)
             .value_names(&["name", "env"])
-            .multiple_occurrences(true)
             .multiple_values(true)
             .help("Define an environment variable in Starlark environment")
             .long_help(ENV_VAR_HELP),
@@ -175,7 +175,7 @@ fn add_python_distribution_args(app: Command) -> Command {
 fn starlark_vars(args: &ArgMatches) -> Result<HashMap<String, Option<String>>> {
     let mut res = HashMap::new();
 
-    if let Some(mut vars) = args.values_of("vars") {
+    if let Some(mut vars) = args.get_many::<String>("vars") {
         while let (Some(name), Some(value)) = (vars.next(), vars.next()) {
             if res.contains_key(name) {
                 return Err(anyhow!("Starlark variable {} already defined", name));
@@ -185,7 +185,7 @@ fn starlark_vars(args: &ArgMatches) -> Result<HashMap<String, Option<String>>> {
         }
     }
 
-    if let Some(mut vars) = args.values_of("vars_env") {
+    if let Some(mut vars) = args.get_many::<String>("vars_env") {
         while let (Some(name), Some(env)) = (vars.next(), vars.next()) {
             if res.contains_key(name) {
                 return Err(anyhow!("Starlark variable {} already defined", name));
