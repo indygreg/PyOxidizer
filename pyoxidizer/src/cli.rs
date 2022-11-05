@@ -325,20 +325,20 @@ pub fn run_cli() -> Result<()> {
             .arg(
                 Arg::new("python-code")
                     .long("python-code")
-                    .takes_value(true)
+                    .action(ArgAction::Set)
                     .help("Default Python code to execute in built executable"),
             )
             .arg(
                 Arg::new("pip-install")
                     .long("pip-install")
-                    .takes_value(true)
-                    .multiple_occurrences(true)
+                    .action(ArgAction::Append)
                     .multiple_values(true)
                     .number_of_values(1)
                     .help("Python package to install via `pip install`"),
             )
             .arg(
                 Arg::new("path")
+                    .action(ArgAction::Set)
                     .required(true)
                     .value_name("PATH")
                     .help("Directory where configuration file should be created"),
@@ -609,16 +609,21 @@ pub fn run_cli() -> Result<()> {
         }
 
         "init-config-file" => {
-            let code = args.value_of("python-code");
-            let pip_install = if args.is_present("pip-install") {
-                args.values_of("pip-install").unwrap().collect()
-            } else {
-                Vec::new()
-            };
-            let path = args.value_of("path").unwrap();
+            let code = args.get_one::<String>("python-code");
+            let pip_install = args
+                .get_many::<String>("pip-install")
+                .unwrap_or_default()
+                .map(|x| x.as_str())
+                .collect::<Vec<_>>();
+            let path = args.get_one::<String>("path").unwrap();
             let config_path = Path::new(path);
 
-            projectmgmt::init_config_file(&env.pyoxidizer_source, config_path, code, &pip_install)
+            projectmgmt::init_config_file(
+                &env.pyoxidizer_source,
+                config_path,
+                code.map(|x| x.as_str()),
+                &pip_install,
+            )
         }
 
         "list-targets" => {
