@@ -241,18 +241,20 @@ pub fn run_cli() -> Result<()> {
             .arg(
                 Arg::new("target_triple")
                     .long("target-triple")
-                    .takes_value(true)
+                    .action(ArgAction::Set)
                     .help("Rust target triple to build for"),
             )
             .arg(
                 Arg::new("release")
                     .long("release")
+                    .action(ArgAction::SetTrue)
                     .help("Build a release binary"),
             )
             .arg(
                 Arg::new("path")
                     .long("path")
-                    .takes_value(true)
+                    .action(ArgAction::Set)
+                    .value_parser(value_parser!(PathBuf))
                     .default_value(".")
                     .value_name("PATH")
                     .help("Directory containing project to build"),
@@ -260,7 +262,7 @@ pub fn run_cli() -> Result<()> {
             .arg(
                 Arg::new("targets")
                     .value_name("TARGET")
-                    .multiple_occurrences(true)
+                    .action(ArgAction::Append)
                     .multiple_values(true)
                     .help("Target to resolve"),
             ),
@@ -556,17 +558,17 @@ pub fn run_cli() -> Result<()> {
 
         "build" => {
             let starlark_vars = starlark_vars(args)?;
-            let release = args.is_present("release");
-            let target_triple = args.value_of("target_triple");
-            let path = args.value_of("path").unwrap();
+            let release = args.get_flag("release");
+            let target_triple = args.get_one::<String>("target_triple");
+            let path = args.get_one::<PathBuf>("path").unwrap();
             let resolve_targets = args
-                .values_of("targets")
-                .map(|values| values.map(|x| x.to_string()).collect());
+                .get_many::<String>("targets")
+                .map(|x| x.cloned().collect::<Vec<_>>());
 
             projectmgmt::build(
                 &env,
-                Path::new(path),
-                target_triple,
+                path,
+                target_triple.map(|x| x.as_str()),
                 resolve_targets,
                 starlark_vars,
                 release,
