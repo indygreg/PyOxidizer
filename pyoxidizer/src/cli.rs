@@ -519,7 +519,7 @@ pub fn run_cli() -> Result<()> {
 
     let matches = app.get_matches();
 
-    let verbose = matches.is_present("verbose");
+    let verbose = matches.contains_id("verbose");
 
     let log_level = match matches.get_count("verbose") {
         0 => log::LevelFilter::Warn,
@@ -584,7 +584,7 @@ pub fn run_cli() -> Result<()> {
             let scan_distribution = args.get_flag("scan_distribution");
             let target_triple = args.get_one::<String>("target_triple").unwrap();
             let classify_files = !args.get_flag("no_classify_files");
-            let emit_files = !args.is_present("no_emit_files");
+            let emit_files = !args.get_flag("no_emit_files");
 
             if path.is_none() && !scan_distribution {
                 Err(anyhow!("must specify a path or --scan-distribution"))
