@@ -9,7 +9,7 @@ use {
     anyhow::{anyhow, Context, Result},
     pyembed::MainPythonInterpreter,
     std::{
-        ffi::OsStr,
+        ffi::{OsStr, OsString},
         fs::File,
         io::{BufRead, BufReader, Read},
         path::Path,
@@ -27,7 +27,10 @@ use {
 ///
 /// If the interpreter raises a Python exception, this will be handled by
 /// Python and it will not materialize as an `Err`.
-pub fn run_yaml_str(yaml: &str, exe: &Path, args: &[&OsStr]) -> Result<i32> {
+pub fn run_yaml_str<T>(yaml: &str, exe: &Path, args: &[T]) -> Result<i32>
+where
+    T: Into<OsString> + AsRef<OsStr>,
+{
     let mut config: Config =
         serde_yaml::from_str(yaml).context("parsing YAML to data structure")?;
 
@@ -40,11 +43,9 @@ pub fn run_yaml_str(yaml: &str, exe: &Path, args: &[&OsStr]) -> Result<i32> {
     if config.argv.is_none() {
         // argv[0] is the program name.
         config.argv = Some(
-            vec![exe.as_os_str()]
-                .iter()
-                .chain(args.iter())
-                .map(|x| x.to_os_string())
-                .collect::<Vec<_>>(),
+            std::iter::once(exe.as_os_str().to_os_string())
+                .chain(args.iter().map(|x| x.into()))
+                .collect::<Vec<OsString>>(),
         );
     }
 
@@ -66,7 +67,10 @@ enum ParserState {
 /// The path of the executable and additional arguments to it are also passed.
 /// These will be defined as `sys.argv` unless the read config overwrites
 /// the parameters.
-pub fn run_yaml_reader(reader: impl Read, exe_path: &Path, args: &[&OsStr]) -> Result<i32> {
+pub fn run_yaml_reader<T>(reader: impl Read, exe_path: &Path, args: &[T]) -> Result<i32>
+where
+    T: Into<OsString> + AsRef<OsStr>,
+{
     let reader = BufReader::new(reader);
 
     let mut yaml_lines = vec![];
@@ -112,6 +116,9 @@ pub fn run_yaml_reader(reader: impl Read, exe_path: &Path, args: &[&OsStr]) -> R
 }
 
 /// Run a YAML file.
-pub fn run_yaml_path(yaml_path: &Path, args: &[&OsStr]) -> Result<i32> {
+pub fn run_yaml_path<T>(yaml_path: &Path, args: &[T]) -> Result<i32>
+where
+    T: Into<OsString> + AsRef<OsStr>,
+{
     run_yaml_reader(File::open(yaml_path)?, yaml_path, args)
 }
