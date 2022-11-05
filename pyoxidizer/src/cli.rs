@@ -276,35 +276,44 @@ pub fn run_cli() -> Result<()> {
             .arg(
                 Arg::new("distributions_dir")
                     .long("distributions-dir")
-                    .takes_value(true)
+                    .action(ArgAction::Set)
+                    .value_parser(value_parser!(PathBuf))
                     .value_name("PATH")
                     .help("Directory to extract downloaded Python distributions into"),
             )
             .arg(
                 Arg::new("scan_distribution")
                     .long("--scan-distribution")
+                    .action(ArgAction::SetTrue)
                     .help("Scan the Python distribution instead of a path"),
             )
             .arg(
                 Arg::new("target_triple")
                     .long("target-triple")
-                    .takes_value(true)
+                    .action(ArgAction::Set)
                     .default_value(default_target_triple())
                     .help("Target triple of Python distribution to use"),
             )
             .arg(
                 Arg::new("no_classify_files")
                     .long("no-classify-files")
+                    .action(ArgAction::SetTrue)
                     .help("Whether to skip classifying files as typed resources"),
             )
             .arg(
                 Arg::new("no_emit_files")
                     .long("no-emit-files")
+                    .action(ArgAction::SetTrue)
                     .help("Whether to skip emitting File resources"),
             )
-            .arg(Arg::new("path").value_name("PATH").required(true).help(
-                "Filesystem path to scan for resources. Must be a directory or Python wheel",
-            )),
+            .arg(
+                Arg::new("path")
+                    .action(ArgAction::Set)
+                    .value_parser(value_parser!(PathBuf))
+                    .value_name("PATH")
+                    .required(true)
+                    .help("Filesystem path to scan for resources. Must be a directory or Python wheel")
+            ),
     );
 
     let app = app.subcommand(add_python_distribution_args(
@@ -568,11 +577,11 @@ pub fn run_cli() -> Result<()> {
         "cache-clear" => projectmgmt::cache_clear(&env),
 
         "find-resources" => {
-            let path = args.value_of("path").map(Path::new);
-            let distributions_dir = args.value_of("distributions_dir").map(Path::new);
-            let scan_distribution = args.is_present("scan_distribution");
-            let target_triple = args.value_of("target_triple").unwrap();
-            let classify_files = !args.is_present("no_classify_files");
+            let path = args.get_one::<PathBuf>("path");
+            let distributions_dir = args.get_one::<PathBuf>("distributions_dir");
+            let scan_distribution = args.get_flag("scan_distribution");
+            let target_triple = args.get_one::<String>("target_triple").unwrap();
+            let classify_files = !args.get_flag("no_classify_files");
             let emit_files = !args.is_present("no_emit_files");
 
             if path.is_none() && !scan_distribution {
@@ -580,8 +589,8 @@ pub fn run_cli() -> Result<()> {
             } else {
                 projectmgmt::find_resources(
                     &env,
-                    path,
-                    distributions_dir,
+                    path.map(|x| x.as_path()),
+                    distributions_dir.map(|x| x.as_path()),
                     scan_distribution,
                     target_triple,
                     classify_files,
