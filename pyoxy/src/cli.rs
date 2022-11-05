@@ -5,8 +5,11 @@
 use {
     crate::{interpreter::run_python, yaml::run_yaml_path},
     anyhow::{anyhow, Context, Result},
-    clap::{Arg, Command},
-    std::path::{Path, PathBuf},
+    clap::{value_parser, Arg, ArgAction, Command},
+    std::{
+        ffi::OsString,
+        path::{Path, PathBuf},
+    },
 };
 
 const PYOXY_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -37,9 +40,9 @@ fn run_normal(exe: &Path) -> Result<i32> {
             .arg(
                 Arg::new("args")
                     .help("Arguments to Python interpreter")
-                    .multiple_occurrences(true)
+                    .action(ArgAction::Append)
                     .multiple_values(true)
-                    .allow_invalid_utf8(true)
+                    .value_parser(value_parser!(OsString))
                     .last(true),
             ),
     );
@@ -51,15 +54,16 @@ fn run_normal(exe: &Path) -> Result<i32> {
             .arg(
                 Arg::new("yaml_path")
                     .value_name("FILE")
-                    .allow_invalid_utf8(true)
+                    .action(ArgAction::Set)
+                    .value_parser(value_parser!(PathBuf))
                     .help("Path to YAML file to evaluate"),
             )
             .arg(
                 Arg::new("args")
                     .help("Arguments to Python interpreter")
-                    .multiple_occurrences(true)
+                    .action(ArgAction::Set)
                     .multiple_values(true)
-                    .allow_invalid_utf8(true)
+                    .value_parser(value_parser!(OsString))
                     .last(true),
             ),
     );
@@ -69,19 +73,19 @@ fn run_normal(exe: &Path) -> Result<i32> {
     match matches.subcommand() {
         Some(("run-python", args)) => {
             let program_args = args
-                .values_of_os("args")
+                .get_many::<OsString>("args")
                 .unwrap_or_default()
                 .collect::<Vec<_>>();
 
             run_python(exe, &program_args)
         }
         Some(("run-yaml", args)) => {
-            let yaml_path = PathBuf::from(
-                args.value_of_os("yaml_path")
-                    .expect("yaml_path should be set"),
-            );
+            let yaml_path = args
+                .get_one::<PathBuf>("yaml_path")
+                .expect("yaml_path should be set");
+
             let program_args = args
-                .values_of_os("args")
+                .get_many::<OsString>("args")
                 .unwrap_or_default()
                 .collect::<Vec<_>>();
 
