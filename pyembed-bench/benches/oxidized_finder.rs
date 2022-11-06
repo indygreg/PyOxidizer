@@ -51,7 +51,7 @@ fn python_interpreter_import_all_modules(
     interp.with_gil(|py| -> Result<_> {
         for name in modules {
             // println!("{}", name);
-            py.import(name).map_err(|e| {
+            py.import(*name).map_err(|e| {
                 e.print(py);
                 anyhow!("error importing module {}", name)
             })?;
