@@ -152,21 +152,21 @@ fn add_env_args(app: Command) -> Command {
 fn add_python_distribution_args(app: Command) -> Command {
     app.arg(
         Arg::new("target_triple")
-            .long("--target-triple")
+            .long("target-triple")
             .action(ArgAction::Set)
             .help("Rust target triple being targeted")
             .default_value(default_target_triple()),
     )
     .arg(
         Arg::new("flavor")
-            .long("--flavor")
+            .long("flavor")
             .action(ArgAction::Set)
             .help("Python distribution flavor")
             .default_value("standalone"),
     )
     .arg(
         Arg::new("python_version")
-            .long("--python-version")
+            .long("python-version")
             .action(ArgAction::Set)
             .help("Python version (X.Y) to use"),
     )
@@ -211,7 +211,7 @@ pub fn run_cli() -> Result<()> {
         .arg_required_else_help(true)
         .arg(
             Arg::new("system_rust")
-                .long("--system-rust")
+                .long("system-rust")
                 .global(true)
                 .action(ArgAction::SetTrue)
                 .help("Use a system install of Rust instead of a self-managed Rust installation"),
@@ -285,7 +285,7 @@ pub fn run_cli() -> Result<()> {
             )
             .arg(
                 Arg::new("scan_distribution")
-                    .long("--scan-distribution")
+                    .long("scan-distribution")
                     .action(ArgAction::SetTrue)
                     .help("Scan the Python distribution instead of a path"),
             )
@@ -386,13 +386,13 @@ pub fn run_cli() -> Result<()> {
             .about("Extract a Python distribution archive to a directory")
             .arg(
                 Arg::new("download-default")
-                    .long("--download-default")
+                    .long("download-default")
                     .action(ArgAction::SetTrue)
                     .help("Download and extract the default distribution for this platform"),
             )
             .arg(
                 Arg::new("archive-path")
-                    .long("--archive-path")
+                    .long("archive-path")
                     .action(ArgAction::Set)
                     .value_name("DISTRIBUTION_PATH")
                     .help("Path to a Python distribution archive"),
