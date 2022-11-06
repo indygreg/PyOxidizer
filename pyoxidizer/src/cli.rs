@@ -205,7 +205,7 @@ pub fn run_cli() -> Result<()> {
 
     let app = Command::new("PyOxidizer")
         .version(PYOXIDIZER_VERSION)
-        .long_version(version.as_str())
+        .long_version(version)
         .author("Gregory Szorc <gregory.szorc@gmail.com>")
         .long_about("Build and distribute Python applications")
         .arg_required_else_help(true)
@@ -263,7 +263,7 @@ pub fn run_cli() -> Result<()> {
                 Arg::new("targets")
                     .value_name("TARGET")
                     .action(ArgAction::Append)
-                    .multiple_values(true)
+                    .num_args(0..)
                     .help("Target to resolve"),
             ),
     ));
@@ -478,11 +478,7 @@ pub fn run_cli() -> Result<()> {
                     .action(ArgAction::Set)
                     .help("Build target to run"),
             )
-            .arg(
-                Arg::new("extra")
-                    .action(ArgAction::Append)
-                    .multiple_values(true),
-            ),
+            .arg(Arg::new("extra").action(ArgAction::Append).num_args(0..)),
     ));
 
     let app = app.subcommand(

@@ -3591,7 +3591,7 @@ dependencies = [
  "cargo-lock",
  "cargo_toml",
  "cc",
- "clap 3.2.23",
+ "clap 4.0.19",
  "codemap",
  "codemap-diagnostic",
  "dirs",
