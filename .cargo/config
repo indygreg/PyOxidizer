@@ -72,28 +72,3 @@ opt-level = 3
 opt-level = 3
 [profile.test.package.zstd-sys]
 opt-level = 3
-
-# This configuration is copied from pyembed/.cargo/conf. See it for the
-# rationale.
-#
-# The reason we have two copies is so `cargo` invocations from the workspace
-# pick up these configs. Without them, we don't export symbols from generated
-# binaries. And in the case of the pyembed crate, that means we can't run unit
-# tests. This does mean that we will export symbols for other binaries in the
-# workspace. This likely isn't desired. So packaging and releasing should invoke
-# cargo outside of the workspace to prevent this behavior.
-
-[target.i686-unknown-linux-gnu]
-rustflags = ["-C", "link-args=-Wl,-export-dynamic"]
-
-[target.x86_64-unknown-linux-gnu]
-rustflags = ["-C", "link-args=-Wl,-export-dynamic"]
-
-[target.aarch64-unknown-linux-gnu]
-rustflags = ["-C", "link-args=-Wl,-export-dynamic"]
-
-[target.aarch64-apple-darwin]
-rustflags = ["-C", "link-args=-rdynamic"]
-
-[target.x86_64-apple-darwin]
-rustflags = ["-C", "link-args=-rdynamic"]
