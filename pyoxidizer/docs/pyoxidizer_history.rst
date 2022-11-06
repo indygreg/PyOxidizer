@@ -64,6 +64,12 @@ Changes
   and https://github.com/indygreg/python-build-standalone/releases/tag/20220802
   for additional changes.
 * PyO3 Rust crate(s) upgraded from 0.16.5 to 0.17.1.
+* The mechanism for passing custom arguments to the linker for exporting
+  symbols from built executables has transitioned from using ``.cargo/config``
+  files to emitting ``cargo:rustc-link-arg=FLAG`` lines from Cargo build
+  scripts. There should be no change in behavior. Generated Rust projects with a
+  ``.cargo/config`` overriding ``rustflags`` to pass linker arguments can safely
+  delete these lines, as they are no longer necessary.
 
 0.22.0
 ------

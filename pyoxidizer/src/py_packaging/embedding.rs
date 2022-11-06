@@ -35,6 +35,9 @@ pub enum LinkingAnnotation {
 
     /// A search path for native libraries.
     SearchNative(PathBuf),
+
+    /// An extra argument to the linker.
+    Argument(String),
 }
 
 impl LinkingAnnotation {
@@ -50,7 +53,34 @@ impl LinkingAnnotation {
             Self::SearchNative(path) => {
                 format!("cargo:rustc-link-search=native={}", path.display())
             }
+            Self::Argument(arg) => {
+                format!("cargo:rustc-link-arg={}", arg)
+            }
         }
+    }
+}
+
+/// Resolver linking annotations for a given target triple.
+pub fn linking_annotations_for_target(target_triple: &str) -> Vec<LinkingAnnotation> {
+    // By default Rust will not export dynamic symbols from built executables. Python
+    // symbols need to be exported so external Python extension modules (which are
+    // shared libraries) can resolve them. This requires passing extra linker arguments
+    // to export the symbols.
+
+    // TODO we may not need to do this when dynamically linking libpython. But, we
+    // may need to do this because our binary provides extension modules whose symbols
+    // may need to be visible by the Python interpreter? We implemented this as
+    // unconditional to preserve backwards compatible behavior. But we should investigate
+    // whether this is really needed. If we revisit this, we also need to consider the
+    // emission of these flags by the pyembed crate's build script, which may override
+    // any behavior we set here.
+
+    if target_triple.contains("-linux-") {
+        vec![LinkingAnnotation::Argument("-Wl,-export-dynamic".into())]
+    } else if target_triple.contains("-apple-darwin") {
+        vec![LinkingAnnotation::Argument("-rdynamic".into())]
+    } else {
+        vec![]
     }
 }
 
@@ -67,7 +97,12 @@ pub trait LinkablePython {
     /// be located.
     ///
     /// `alias` denotes whether to alias the library name to `pythonXY`.
-    fn linking_annotations(&self, dest_dir: &Path, alias: bool) -> Result<Vec<LinkingAnnotation>>;
+    fn linking_annotations(
+        &self,
+        dest_dir: &Path,
+        alias: bool,
+        target_triple: &str,
+    ) -> Result<Vec<LinkingAnnotation>>;
 }
 
 /// Link against a shared library on the filesystem.
@@ -115,7 +150,12 @@ impl LinkablePython for LinkSharedLibraryPath {
         Ok(())
     }
 
-    fn linking_annotations(&self, _dest_dir: &Path, alias: bool) -> Result<Vec<LinkingAnnotation>> {
+    fn linking_annotations(
+        &self,
+        _dest_dir: &Path,
+        alias: bool,
+        target_triple: &str,
+    ) -> Result<Vec<LinkingAnnotation>> {
         let lib_dir = self
             .library_path
             .parent()
@@ -131,6 +171,7 @@ impl LinkablePython for LinkSharedLibraryPath {
         ];
 
         annotations.extend(self.linking_annotations.iter().cloned());
+        annotations.extend(linking_annotations_for_target(target_triple));
 
         Ok(annotations)
     }
@@ -172,7 +213,12 @@ impl LinkablePython for LinkStaticLibraryData {
         Ok(())
     }
 
-    fn linking_annotations(&self, dest_dir: &Path, alias: bool) -> Result<Vec<LinkingAnnotation>> {
+    fn linking_annotations(
+        &self,
+        dest_dir: &Path,
+        alias: bool,
+        target_triple: &str,
+    ) -> Result<Vec<LinkingAnnotation>> {
         let mut annotations = vec![
             LinkingAnnotation::LinkLibraryStatic(if alias {
                 format!("pythonXY:{}", self.library_name())
@@ -183,6 +229,7 @@ impl LinkablePython for LinkStaticLibraryData {
         ];
 
         annotations.extend(self.linking_annotations.iter().cloned());
+        annotations.extend(linking_annotations_for_target(target_triple));
 
         Ok(annotations)
     }
@@ -204,10 +251,15 @@ impl LinkablePython for LibpythonLinkSettings {
         }
     }
 
-    fn linking_annotations(&self, dest_dir: &Path, alias: bool) -> Result<Vec<LinkingAnnotation>> {
+    fn linking_annotations(
+        &self,
+        dest_dir: &Path,
+        alias: bool,
+        target_triple: &str,
+    ) -> Result<Vec<LinkingAnnotation>> {
         match self {
-            Self::ExistingDynamic(l) => l.linking_annotations(dest_dir, alias),
-            Self::StaticData(l) => l.linking_annotations(dest_dir, alias),
+            Self::ExistingDynamic(l) => l.linking_annotations(dest_dir, alias, target_triple),
+            Self::StaticData(l) => l.linking_annotations(dest_dir, alias, target_triple),
         }
     }
 }
@@ -308,7 +360,11 @@ impl<'a> EmbeddedPythonContext<'a> {
             suppress_build_script_link_lines: true,
             extra_build_script_lines: self
                 .link_settings
-                .linking_annotations(dest_dir.as_ref(), self.target_triple.contains("-windows-"))?
+                .linking_annotations(
+                    dest_dir.as_ref(),
+                    self.target_triple.contains("-windows-"),
+                    &self.target_triple,
+                )?
                 .iter()
                 .map(|la| la.to_cargo_annotation())
                 .collect::<Vec<_>>(),

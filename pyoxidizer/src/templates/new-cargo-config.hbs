@@ -1,29 +1,3 @@
-# By default Rust will not export dynamic symbols from built executables.
-# Python symbols need to be exported from executables in order for that
-# executable to load Python extension modules, which are shared libraries.
-# Otherwise, the extension module / shared library is unable to resolve
-# Python symbols. This file contains target-specific configuration
-# overrides to export dynamic symbols from executables.
-#
-# Ideally we would achieve this functionality via the build.rs build
-# script. This is now possible as of Cargo 1.56, which stabilizes
-# `cargo:rustc-link-arg=FLAG` in build scripts.
-
-[target.i686-unknown-linux-gnu]
-rustflags = ["-C", "link-args=-Wl,-export-dynamic"]
-
-[target.x86_64-unknown-linux-gnu]
-rustflags = ["-C", "link-args=-Wl,-export-dynamic"]
-
-[target.aarch64-unknown-linux-gnu]
-rustflags = ["-C", "link-args=-Wl,-export-dynamic"]
-
-[target.aarch64-apple-darwin]
-rustflags = ["-C", "link-args=-rdynamic"]
-
-[target.x86_64-apple-darwin]
-rustflags = ["-C", "link-args=-rdynamic"]
-
 # The Windows standalone_static distributions use the static CRT (/MT compiler
 # flag). By default, Rust will build with the dynamically linked / DLL CRT
 # (/MD compiler flag). `pyoxidizer build` should adjust RUSTFLAGS automatically
