@@ -7,6 +7,21 @@ use std::path::PathBuf;
 fn main() {
     println!("cargo:rerun-if-env-changed=PYO3_CONFIG_FILE");
 
+    // By default Rust will not export dynamic symbols from built executables.
+    // If we're linking libpython, we need its symbols to be exported in order to
+    // load Python extension modules.
+    if let Ok(os) = std::env::var("CARGO_CFG_TARGET_OS") {
+        match os.as_str() {
+            "linux" => {
+                println!("cargo:rustc-link-arg=-Wl,-export-dynamic");
+            }
+            "macos" => {
+                println!("cargo:rustc-link-arg=-rdynamic");
+            }
+            _ => {}
+        }
+    }
+
     // If a PyO3 config file is defined, we look for PyOxidizer's packed resources
     // in the same directory. If found, we make those resources available to the crate.
     if let Ok(config_path) = std::env::var("PYO3_CONFIG_FILE") {
