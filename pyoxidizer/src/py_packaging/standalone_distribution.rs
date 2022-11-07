@@ -1324,7 +1324,7 @@ impl PythonDistribution for StandaloneDistribution {
         dest_dir: &Path,
         extra_python_paths: &[&Path],
     ) -> Result<HashMap<String, String>> {
-        match libpython_link_mode {
+        let mut res = match libpython_link_mode {
             // We need to patch distutils if the distribution is statically linked.
             LibpythonLinkMode::Static => prepare_hacked_distutils(
                 &self.stdlib_path.join("distutils"),
@@ -1332,7 +1332,25 @@ impl PythonDistribution for StandaloneDistribution {
                 extra_python_paths,
             ),
             LibpythonLinkMode::Dynamic => Ok(HashMap::new()),
-        }
+        }?;
+
+        // Modern versions of setuptools vendor their own copy of distutils
+        // and use it by default. If we hacked distutils above, we need to ensure
+        // that hacked copy is used. Even if we don't hack distutils, there is an
+        // unknown change in behavior in a release after setuptools 63.2.0 causing
+        // extension module building to fail due to missing Python.h. In older
+        // versions the CFLAGS has an -I with the path to our standalone
+        // distribution. But in modern versions it uses the `/install/include/pythonX.Y`
+        // path from sysconfig with the proper prefixing. This bug was exposed when
+        // we attempted to upgrade PBS distributions from 20220802 to 20221002.
+        // We'll need to fix this before Python 3.12, which drops distutils from the
+        // stdlib.
+        //
+        // The actual value of the environment variable doesn't matter as long as it
+        // isn't "local". However, the setuptools docs suggest using "stdlib."
+        res.insert("SETUPTOOLS_USE_DISTUTILS".to_string(), "stdlib".to_string());
+
+        Ok(res)
     }
 
     /// Determines whether dynamically linked extension modules can be loaded from memory.

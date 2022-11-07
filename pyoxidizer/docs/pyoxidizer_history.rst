@@ -70,6 +70,13 @@ Changes
   scripts. There should be no change in behavior. Generated Rust projects with a
   ``.cargo/config`` overriding ``rustflags`` to pass linker arguments can safely
   delete these lines, as they are no longer necessary.
+* ``SETUPTOOLS_USE_DISTUTILS=stdlib`` is now unconditionally set when invoking
+  Python packaging tools. Previously, it was only set when statically linking
+  libpython. The new behavior ensures that we consistently use the distutils
+  from the Python stdlib and not the distutils in setuptools. The reason for
+  this change was to work around a change in behavior in modern
+  setuptools/distutils resulting in extension module building failing due to
+  new failures resolving the path to ``Python.h``.
 
 0.22.0
 ------
