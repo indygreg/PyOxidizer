@@ -33,6 +33,11 @@ Version History
 
 (Not yet released)
 
+Other Relevant Changes
+^^^^^^^^^^^^^^^^^^^^^^
+
+* Managed Rust toolchain upgraded from 1.61.0 to 1.65.0.
+
 .. _version_0_23_0:
 
 0.23.0

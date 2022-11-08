@@ -97,7 +97,7 @@ pub static MINIMUM_RUST_VERSION: Lazy<semver::Version> =
     Lazy::new(|| semver::Version::new(1, 61, 0));
 
 /// Version of Rust toolchain to use for our managed Rust install.
-pub const RUST_TOOLCHAIN_VERSION: &str = "1.61.0";
+pub const RUST_TOOLCHAIN_VERSION: &str = "1.65.0";
 
 /// Target triples for Linux.
 pub static LINUX_TARGET_TRIPLES: Lazy<Vec<&'static str>> = Lazy::new(|| {
