@@ -23,7 +23,7 @@ use {
 const PYOXIDIZER_CRATE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Version string of pyembed crate from its Cargo.toml.
-const PYEMBED_CRATE_VERSION: &str = "0.23.0-pre";
+const PYEMBED_CRATE_VERSION: &str = "0.23.0";
 
 /// URL of Git repository we were built from.
 const GIT_REPO_URL: &str = env!("GIT_REPO_URL");
