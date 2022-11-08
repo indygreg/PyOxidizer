@@ -373,7 +373,7 @@ dependencies = [
 
 [[package]]
 name = "python-packaging"
-version = "0.15.0-pre"
+version = "0.15.0"
 dependencies = [
  "anyhow",
  "byteorder",

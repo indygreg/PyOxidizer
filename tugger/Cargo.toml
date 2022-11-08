@@ -30,8 +30,8 @@ time = "0.3"
 walkdir = "2"
 
 [dependencies.python-packaging]
-version = "0.15.0-pre"
-path = "../python-packaging"
+version = "0.15.0"
+# path = "../python-packaging"
 
 [dependencies.starlark-dialect-build-targets]
 version = "0.7.0"

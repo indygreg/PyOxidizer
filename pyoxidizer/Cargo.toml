@@ -68,8 +68,8 @@ which = "4"
 zstd = "0.11"
 
 [dependencies.python-packaging]
-version = "0.15.0-pre"
-path = "../python-packaging"
+version = "0.15.0"
+# path = "../python-packaging"
 features = ["spdx-text"]
 
 [dependencies.python-packed-resources]
