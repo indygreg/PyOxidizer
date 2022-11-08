@@ -1,6 +1,6 @@
 [package]
 name = "starlark-dialect-build-targets"
-version = "0.8.0-pre"
+version = "0.7.0"
 authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
 license = "MPL-2.0"
 readme = "README.md"
