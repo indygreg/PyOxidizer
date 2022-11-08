@@ -68,5 +68,5 @@ tempfile = "3.2"
 x509-certificate = "0.15"
 
 [dev-dependencies.tugger-windows-codesign]
-version = "0.9.0"
-# path = "../tugger-windows-codesign"
+version = "0.10.0-pre"
+path = "../tugger-windows-codesign"
