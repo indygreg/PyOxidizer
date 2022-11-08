@@ -26,8 +26,8 @@ xz2 = { version = "0.1", features = ["static"] }
 zstd = "0.11"
 
 [dependencies.tugger-common]
-version = "0.10.0-pre"
-path = "../tugger-common"
+version = "0.9.0"
+# path = "../tugger-common"
 
 [dev-dependencies]
 dirs = "4.0"
