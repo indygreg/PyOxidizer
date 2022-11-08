@@ -3483,7 +3483,7 @@ dependencies = [
  "pyo3-build-config",
  "python-oxidized-importer",
  "python-packaging",
- "python-packed-resources",
+ "python-packed-resources 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rusty-fork",
  "serde",
  "snmalloc-sys",
@@ -3501,7 +3501,7 @@ dependencies = [
  "pyoxidizer",
  "python-oxidized-importer",
  "python-packaging",
- "python-packed-resources",
+ "python-packed-resources 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile",
  "zip",
 ]
@@ -3600,7 +3600,7 @@ dependencies = [
  "predicates",
  "pyo3-build-config",
  "python-packaging",
- "python-packed-resources",
+ "python-packed-resources 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "remove_dir_all 0.7.0",
  "rustc_version",
  "semver",
@@ -3655,7 +3655,7 @@ dependencies = [
  "once_cell",
  "pyo3",
  "python-packaging",
- "python-packed-resources",
+ "python-packed-resources 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "simple-file-manifest",
  "winapi",
  "zip",
@@ -3672,7 +3672,7 @@ dependencies = [
  "itertools",
  "mailparse",
  "once_cell",
- "python-packed-resources",
+ "python-packed-resources 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex",
  "serde",
  "sha2 0.10.6",
@@ -3686,7 +3686,17 @@ dependencies = [
 
 [[package]]
 name = "python-packed-resources"
-version = "0.11.0-pre"
+version = "0.11.0"
+dependencies = [
+ "anyhow",
+ "byteorder",
+]
+
+[[package]]
+name = "python-packed-resources"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "695d77eb6b85a3e4df60635978b04c76a7f7272f235acf2771194e69df158d22"
 dependencies = [
  "anyhow",
  "byteorder",

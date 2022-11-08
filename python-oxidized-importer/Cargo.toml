@@ -18,8 +18,8 @@ once_cell = "1.7"
 simple-file-manifest = "0.11"
 
 [dependencies.python-packed-resources]
-version = "0.11.0-pre"
-path = "../python-packed-resources"
+version = "0.11.0"
+# path = "../python-packed-resources"
 
 [dependencies.python-packaging]
 version = "0.15.0-pre"

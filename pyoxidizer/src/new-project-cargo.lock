@@ -390,7 +390,7 @@ dependencies = [
 
 [[package]]
 name = "python-packed-resources"
-version = "0.11.0-pre"
+version = "0.11.0"
 dependencies = [
  "anyhow",
  "byteorder",
