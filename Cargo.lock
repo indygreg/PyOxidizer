@@ -5211,7 +5211,7 @@ dependencies = [
  "tar",
  "tempfile",
  "time 0.3.17",
- "tugger-apple 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-apple 0.8.0-pre",
  "tugger-code-signing 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-common 0.10.0-pre",
  "tugger-snapcraft 0.15.0-pre",
@@ -5245,7 +5245,7 @@ dependencies = [
  "tar",
  "tempfile",
  "time 0.3.17",
- "tugger-apple 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-apple 0.7.0",
  "tugger-code-signing 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-common 0.9.0",
  "tugger-snapcraft 0.14.0",
@@ -5257,6 +5257,8 @@ dependencies = [
 [[package]]
 name = "tugger-apple"
 version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "670415a5b36664fbb80ebef9fb3fe32e809aa3cc62a7676e6c9dc35a51502aad"
 dependencies = [
  "anyhow",
  "goblin",
@@ -5266,9 +5268,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-apple"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "670415a5b36664fbb80ebef9fb3fe32e809aa3cc62a7676e6c9dc35a51502aad"
+version = "0.8.0-pre"
 dependencies = [
  "anyhow",
  "goblin",

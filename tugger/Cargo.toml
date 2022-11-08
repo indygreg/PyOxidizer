@@ -38,8 +38,8 @@ version = "0.8.0-pre"
 path = "../starlark-dialect-build-targets"
 
 [dependencies.tugger-apple]
-version = "0.7.0"
-# path = "../tugger-apple"
+version = "0.8.0-pre"
+path = "../tugger-apple"
 
 [dependencies.tugger-code-signing]
 version = "0.9.0"
