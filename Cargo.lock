@@ -3498,7 +3498,7 @@ dependencies = [
  "once_cell",
  "pyembed",
  "pyo3",
- "pyoxidizer",
+ "pyoxidizer 0.23.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "python-oxidized-importer 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "python-packaging 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "python-packed-resources 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3568,7 +3568,7 @@ dependencies = [
 
 [[package]]
 name = "pyoxidizer"
-version = "0.23.0-pre"
+version = "0.23.0"
 dependencies = [
  "anyhow",
  "apple-sdk",
@@ -3626,6 +3626,65 @@ dependencies = [
  "walkdir",
  "which",
  "xml-rs",
+ "zstd",
+]
+
+[[package]]
+name = "pyoxidizer"
+version = "0.23.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c79db63a564f4fc80506de030d673c8c348cc67644ddcffa0fe9dd94472f59bd"
+dependencies = [
+ "anyhow",
+ "apple-sdk",
+ "ar",
+ "cargo-lock",
+ "cargo_toml",
+ "cc",
+ "clap 4.0.22",
+ "codemap",
+ "codemap-diagnostic",
+ "dirs",
+ "duct",
+ "env_logger",
+ "fs2",
+ "fs_extra",
+ "git2",
+ "glob",
+ "guppy",
+ "handlebars",
+ "hex",
+ "itertools",
+ "linked-hash-map",
+ "log",
+ "once_cell",
+ "path-dedot",
+ "pyo3-build-config",
+ "python-packaging 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "python-packed-resources 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "remove_dir_all 0.7.0",
+ "rustc_version",
+ "semver",
+ "serde",
+ "serde_json",
+ "sha2 0.10.6",
+ "simple-file-manifest",
+ "starlark",
+ "starlark-dialect-build-targets 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tar",
+ "tempfile",
+ "tugger 0.17.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-binary-analysis 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-code-signing 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-common 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-rust-toolchain 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-windows 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-wix 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "url",
+ "uuid",
+ "version-compare",
+ "walkdir",
+ "which",
  "zstd",
 ]
 
