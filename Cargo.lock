@@ -3619,7 +3619,7 @@ dependencies = [
  "tugger-common 0.10.0-pre",
  "tugger-rust-toolchain 0.13.0-pre",
  "tugger-windows 0.10.0-pre",
- "tugger-wix 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-wix 0.16.0-pre",
  "url",
  "uuid",
  "version-compare",
@@ -3679,7 +3679,7 @@ dependencies = [
  "tugger-common 0.9.0",
  "tugger-rust-toolchain 0.12.0",
  "tugger-windows 0.9.0",
- "tugger-wix 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-wix 0.15.0",
  "url",
  "uuid",
  "version-compare",
@@ -5217,7 +5217,7 @@ dependencies = [
  "tugger-snapcraft 0.15.0-pre",
  "tugger-windows 0.10.0-pre",
  "tugger-windows-codesign 0.10.0-pre",
- "tugger-wix 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-wix 0.16.0-pre",
  "walkdir",
  "x509-certificate",
 ]
@@ -5250,7 +5250,7 @@ dependencies = [
  "tugger-common 0.9.0",
  "tugger-snapcraft 0.14.0",
  "tugger-windows 0.9.0",
- "tugger-wix 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-wix 0.15.0",
  "walkdir",
 ]
 
@@ -5527,25 +5527,6 @@ dependencies = [
 [[package]]
 name = "tugger-wix"
 version = "0.15.0"
-dependencies = [
- "anyhow",
- "duct",
- "log",
- "msi",
- "once_cell",
- "simple-file-manifest",
- "tempfile",
- "tugger-common 0.10.0-pre",
- "tugger-windows 0.10.0-pre",
- "tugger-windows-codesign 0.10.0-pre",
- "url",
- "uuid",
- "xml-rs",
-]
-
-[[package]]
-name = "tugger-wix"
-version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e530566c607f69eb9123025a7c9e3fcf168f84b258878a2766dd1d5405cf08a2"
 dependencies = [
@@ -5557,6 +5538,25 @@ dependencies = [
  "tugger-common 0.9.0",
  "tugger-windows 0.9.0",
  "tugger-windows-codesign 0.9.0",
+ "url",
+ "uuid",
+ "xml-rs",
+]
+
+[[package]]
+name = "tugger-wix"
+version = "0.16.0-pre"
+dependencies = [
+ "anyhow",
+ "duct",
+ "log",
+ "msi",
+ "once_cell",
+ "simple-file-manifest",
+ "tempfile",
+ "tugger-common 0.10.0-pre",
+ "tugger-windows 0.10.0-pre",
+ "tugger-windows-codesign 0.10.0-pre",
  "url",
  "uuid",
  "xml-rs",
