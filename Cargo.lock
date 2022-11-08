@@ -3615,7 +3615,7 @@ dependencies = [
  "trycmd",
  "tugger",
  "tugger-binary-analysis 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tugger-code-signing",
+ "tugger-code-signing 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-common 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-rust-toolchain 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5101,7 +5101,7 @@ dependencies = [
  "tempfile",
  "time 0.3.17",
  "tugger-apple 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tugger-code-signing",
+ "tugger-code-signing 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-common 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-snapcraft 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5159,7 +5159,30 @@ dependencies = [
 
 [[package]]
 name = "tugger-code-signing"
-version = "0.9.0-pre"
+version = "0.9.0"
+dependencies = [
+ "anyhow",
+ "apple-bundles 0.14.0",
+ "apple-codesign",
+ "bcder",
+ "cryptographic-message-syntax",
+ "goblin",
+ "log",
+ "p12",
+ "reqwest",
+ "simple-file-manifest",
+ "tempfile",
+ "thiserror",
+ "tugger-windows-codesign 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate",
+ "yasna",
+]
+
+[[package]]
+name = "tugger-code-signing"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2c20c741c54c188fe431843b3a0df562bdef961515f110c2365effbb48d724ee"
 dependencies = [
  "anyhow",
  "apple-bundles 0.14.0",
