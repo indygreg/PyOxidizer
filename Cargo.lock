@@ -3613,7 +3613,7 @@ dependencies = [
  "tar",
  "tempfile",
  "trycmd",
- "tugger 0.17.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger 0.18.0-pre",
  "tugger-binary-analysis 0.7.0-pre",
  "tugger-code-signing 0.10.0-pre",
  "tugger-common 0.10.0-pre",
@@ -3673,7 +3673,7 @@ dependencies = [
  "starlark-dialect-build-targets 0.7.0",
  "tar",
  "tempfile",
- "tugger 0.17.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger 0.17.0",
  "tugger-binary-analysis 0.6.0",
  "tugger-code-signing 0.9.0",
  "tugger-common 0.9.0",
@@ -5190,6 +5190,38 @@ dependencies = [
 [[package]]
 name = "tugger"
 version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "367ff16a8ed322fa47dff4a88ee50a66bb68be71195cbdca0862fe731f652dba"
+dependencies = [
+ "anyhow",
+ "apple-bundles 0.14.0",
+ "atty",
+ "codemap",
+ "codemap-diagnostic",
+ "console",
+ "dialoguer",
+ "linked-hash-map",
+ "log",
+ "plist",
+ "python-packaging 0.15.0",
+ "simple-file-manifest",
+ "starlark",
+ "starlark-dialect-build-targets 0.7.0",
+ "tar",
+ "tempfile",
+ "time 0.3.17",
+ "tugger-apple 0.7.0",
+ "tugger-code-signing 0.9.0",
+ "tugger-common 0.9.0",
+ "tugger-snapcraft 0.14.0",
+ "tugger-windows 0.9.0",
+ "tugger-wix 0.15.0",
+ "walkdir",
+]
+
+[[package]]
+name = "tugger"
+version = "0.18.0-pre"
 dependencies = [
  "anyhow",
  "apple-bundles 0.14.0",
@@ -5219,38 +5251,6 @@ dependencies = [
  "tugger-wix 0.16.0-pre",
  "walkdir",
  "x509-certificate",
-]
-
-[[package]]
-name = "tugger"
-version = "0.17.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "367ff16a8ed322fa47dff4a88ee50a66bb68be71195cbdca0862fe731f652dba"
-dependencies = [
- "anyhow",
- "apple-bundles 0.14.0",
- "atty",
- "codemap",
- "codemap-diagnostic",
- "console",
- "dialoguer",
- "linked-hash-map",
- "log",
- "plist",
- "python-packaging 0.15.0",
- "simple-file-manifest",
- "starlark",
- "starlark-dialect-build-targets 0.7.0",
- "tar",
- "tempfile",
- "time 0.3.17",
- "tugger-apple 0.7.0",
- "tugger-code-signing 0.9.0",
- "tugger-common 0.9.0",
- "tugger-snapcraft 0.14.0",
- "tugger-windows 0.9.0",
- "tugger-wix 0.15.0",
- "walkdir",
 ]
 
 [[package]]
