@@ -26,7 +26,14 @@ Blog Posts
 Version History
 ===============
 
-.. _version_0_22_0:
+.. _version_0_24_0:
+
+0.24.0
+------
+
+(Not yet released)
+
+.. _version_0_23_0:
 
 0.23.0
 ------
@@ -80,6 +87,8 @@ Changes
   this change was to work around a change in behavior in modern
   setuptools/distutils resulting in extension module building failing due to
   new failures resolving the path to ``Python.h``.
+
+.. _version_0_22_0:
 
 0.22.0
 ------
