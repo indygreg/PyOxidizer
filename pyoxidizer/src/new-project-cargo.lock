@@ -358,7 +358,7 @@ dependencies = [
 
 [[package]]
 name = "python-oxidized-importer"
-version = "0.8.0-pre"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "memmap2",
