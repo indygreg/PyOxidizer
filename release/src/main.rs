@@ -1169,6 +1169,7 @@ fn main_impl() -> Result<()> {
                 )
                 .arg(
                     Arg::new("patch")
+                        .long("patch")
                         .action(ArgAction::SetTrue)
                         .help("Bump the patch version instead of the minor version"),
                 )
