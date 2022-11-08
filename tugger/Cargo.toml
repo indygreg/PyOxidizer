@@ -54,8 +54,8 @@ version = "0.14.0"
 # path = "../tugger-snapcraft"
 
 [dependencies.tugger-windows]
-version = "0.10.0-pre"
-path = "../tugger-windows"
+version = "0.9.0"
+# path = "../tugger-windows"
 
 [dependencies.tugger-wix]
 version = "0.15.0-pre"
