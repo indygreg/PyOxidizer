@@ -93,8 +93,8 @@ version = "0.10.0-pre"
 path = "../tugger-common"
 
 [dependencies.tugger-rust-toolchain]
-version = "0.12.0"
-# path = "../tugger-rust-toolchain"
+version = "0.13.0-pre"
+path = "../tugger-rust-toolchain"
 
 [dependencies.tugger-windows]
 version = "0.9.0"

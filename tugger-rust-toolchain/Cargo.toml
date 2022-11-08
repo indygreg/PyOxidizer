@@ -1,6 +1,6 @@
 [package]
 name = "tugger-rust-toolchain"
-version = "0.12.0"
+version = "0.13.0-pre"
 authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
 edition = "2021"
 license = "MPL-2.0"
