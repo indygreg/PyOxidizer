@@ -31,7 +31,7 @@ Version History
 0.23.0
 ------
 
-(Not yet released.)
+Released November 7, 2022.
 
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

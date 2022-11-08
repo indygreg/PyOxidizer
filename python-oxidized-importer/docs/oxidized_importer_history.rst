@@ -12,7 +12,7 @@ Changelog
 0.8.0
 -----
 
-(Not yet released)
+Released November 7, 2022.
 
 0.7.0
 -----
