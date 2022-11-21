@@ -4,7 +4,10 @@
 
 use {
     git2::{Commit, Repository},
-    std::path::{Path, PathBuf},
+    std::{
+        path::{Path, PathBuf},
+        process::Command,
+    },
 };
 
 /// Canonical Git repository for PyOxidizer.
@@ -79,6 +82,22 @@ fn main() {
                     repo_path = path.display().to_string();
                     git_commit = commit.id().to_string();
                 }
+            }
+        }
+    } else if let Ok(output) = Command::new("sl").arg("root").current_dir(&cwd).output() {
+        if output.status.success() {
+            repo_path = String::from_utf8(output.stdout)
+                .expect("sl root should print UTF-8")
+                .trim()
+                .to_string();
+
+            if let Ok(output) = Command::new("sl")
+                .args(["log", "-r", ".", "-T", "{node}"])
+                .current_dir(&cwd)
+                .output()
+            {
+                git_commit =
+                    String::from_utf8(output.stdout).expect("sl log output should print UTF-8");
             }
         }
     }
