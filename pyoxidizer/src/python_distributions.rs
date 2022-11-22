@@ -44,8 +44,7 @@ impl PythonDistributionCollection {
                 DistributionFlavor::StandaloneStatic => !dist.supports_prebuilt_extension_modules,
                 DistributionFlavor::StandaloneDynamic => dist.supports_prebuilt_extension_modules,
             })
-            .cloned()
-            .next()
+            .next().cloned()
     }
 
     /// Obtain records for all registered distributions.

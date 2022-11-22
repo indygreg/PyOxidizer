@@ -1187,7 +1187,7 @@ impl<'a> SignableSigner<'a> {
                         source_file.display(),
                         sign_path.display()
                     );
-                    std::fs::copy(&source_file, &sign_path)?;
+                    std::fs::copy(source_file, &sign_path)?;
 
                     sign_path
                 } else {
@@ -1243,7 +1243,7 @@ impl<'a> SignableSigner<'a> {
                     }
                     SigningDestination::File(dest_file) => {
                         warn!("Mach-O signing success; writing to {}", dest_file.display());
-                        std::fs::write(&dest_file, &dest)?;
+                        std::fs::write(dest_file, &dest)?;
                         Ok(SignedOutput::File(dest_file.clone()))
                     }
                     SigningDestination::Directory(_) => {
@@ -1271,7 +1271,7 @@ impl<'a> SignableSigner<'a> {
                     }
                     SigningDestination::File(dest_file) => {
                         warn!("Mach-O signing success; writing to {}", dest_file.display());
-                        std::fs::write(&dest_file, &dest)?;
+                        std::fs::write(dest_file, &dest)?;
                         Ok(SignedOutput::File(dest_file.clone()))
                     }
                     SigningDestination::Directory(_) => {

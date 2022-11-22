@@ -44,7 +44,7 @@ fn resolve_type_name(typ: &Type) -> Result<String> {
                         Ok(format!("{}<{}>", path.name, type_names.join(", ")))
                     }
                 } else {
-                    return Err(anyhow!("do not know how to handle args"));
+                    Err(anyhow!("do not know how to handle args"))
                 }
             } else {
                 Ok(path.name.clone())

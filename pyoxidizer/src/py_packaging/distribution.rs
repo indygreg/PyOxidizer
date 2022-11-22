@@ -38,7 +38,7 @@ use {
 };
 
 /// Denotes how a binary should link libpython.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum BinaryLibpythonLinkMode {
     /// Use default link mode semantics.
     Default,
@@ -68,7 +68,7 @@ impl std::fmt::Display for PythonDistributionLocation {
 }
 
 /// Describes an obtainable Python distribution.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PythonDistributionRecord {
     /// X.Y major.minor version of Python.
     pub python_major_minor_version: String,
@@ -84,7 +84,7 @@ pub struct PythonDistributionRecord {
 }
 
 /// Describes Apple SDK build/targeting.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AppleSdkInfo {
     /// Canonical name of Apple SDK used.
     pub canonical_name: String,
@@ -277,7 +277,7 @@ impl Drop for DistributionExtractLock {
 
 fn sha256_path(path: &Path) -> Vec<u8> {
     let mut hasher = Sha256::new();
-    let fh = File::open(&path).unwrap();
+    let fh = File::open(path).unwrap();
     let mut reader = std::io::BufReader::new(fh);
 
     let mut buffer = [0; 32768];
@@ -435,7 +435,7 @@ pub fn resolve_python_distribution_from_location(
 
 /// Describes the flavor of a distribution.
 #[allow(clippy::enum_variant_names)]
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum DistributionFlavor {
     /// Distributions coming from the `python-build-standalone` project.
     Standalone,

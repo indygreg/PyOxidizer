@@ -201,7 +201,7 @@ pub fn resolve_zip_archive() -> Result<Vec<u8>> {
             let bytecode_module = source.as_bytecode_module(BytecodeOptimizationLevel::Zero);
             let bytecode = bytecode_module.compile(&mut compiler, CompileMode::PycUncheckedHash)?;
 
-            std::fs::create_dir_all(&parent)?;
+            std::fs::create_dir_all(parent)?;
             std::fs::write(&py_path, &module_source)?;
             std::fs::write(&pyc_path, &bytecode)?;
         }

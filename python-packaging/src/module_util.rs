@@ -11,7 +11,7 @@
 use std::{collections::BTreeSet, path::Path, path::PathBuf};
 
 /// Represents file name suffixes for Python modules.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PythonModuleSuffixes {
     /// Suffixes for Python source modules.
     pub source: Vec<String>,

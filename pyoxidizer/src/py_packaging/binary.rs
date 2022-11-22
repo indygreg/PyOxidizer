@@ -29,7 +29,7 @@ use {
 };
 
 /// How a binary should link against libpython.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LibpythonLinkMode {
     /// Libpython will be statically linked into the binary.
     Static,
@@ -42,7 +42,7 @@ pub enum LibpythonLinkMode {
 /// This effectively controls how resources file are written to disk
 /// and what `pyembed::PackedResourcesSource` will get serialized in the
 /// configuration.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PackedResourcesLoadMode {
     /// Packed resources will not be loaded.
     None,
@@ -105,7 +105,7 @@ impl TryFrom<&str> for PackedResourcesLoadMode {
 }
 
 /// Describes how Windows Runtime DLLs (e.g. vcruntime140.dll) should be handled during builds.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum WindowsRuntimeDllsMode {
     /// Never attempt to install Windows Runtime DLLs.
     ///

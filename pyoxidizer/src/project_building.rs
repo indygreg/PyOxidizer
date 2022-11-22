@@ -269,7 +269,7 @@ pub fn build_executable_with_rust_project<'a>(
     locked: bool,
     include_self_license: bool,
 ) -> Result<BuiltExecutable<'a>> {
-    create_dir_all(&artifacts_path).context("creating directory for PyOxidizer build artifacts")?;
+    create_dir_all(artifacts_path).context("creating directory for PyOxidizer build artifacts")?;
 
     // Derive and write the artifacts needed to build a binary embedding Python.
     let mut embedded_data = exe
@@ -283,7 +283,7 @@ pub fn build_executable_with_rust_project<'a>(
         env,
         exe.target_triple(),
         artifacts_path,
-        embedded_data.pyo3_config_path(&artifacts_path),
+        embedded_data.pyo3_config_path(artifacts_path),
         exe.libpython_link_mode(),
         exe.apple_sdk_info(),
     )
@@ -328,7 +328,7 @@ pub fn build_executable_with_rust_project<'a>(
 
     // TODO force cargo to colorize output under certain circumstances?
     let command = cmd(&build_env.rust_environment.cargo_exe, &args)
-        .dir(&project_path)
+        .dir(project_path)
         .full_env(&build_env.environment_vars)
         .stderr_to_stdout()
         .unchecked()

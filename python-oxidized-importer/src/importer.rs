@@ -1050,7 +1050,7 @@ impl OxidizedFinder {
             let resource = resource_raw.cast_as::<PyCell<OxidizedResource>>()?;
 
             resources_state
-                .add_resource(pyobject_to_resource(&*resource.borrow()))
+                .add_resource(pyobject_to_resource(&resource.borrow()))
                 .map_err(|_| PyValueError::new_err("unable to add resource to finder"))?;
         }
 
@@ -1110,7 +1110,7 @@ impl OxidizedFinder {
             let unix_prefix = path_hook_base.call_method("__add__", ("/",), None)?;
             let windows_prefix = path_hook_base.call_method("__add__", ("\\",), None)?;
 
-            let prefix = PyTuple::new(py, &[unix_prefix, windows_prefix]);
+            let prefix = PyTuple::new(py, [unix_prefix, windows_prefix]);
 
             if !path
                 .call_method("startswith", (prefix,), None)?

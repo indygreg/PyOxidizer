@@ -22,7 +22,7 @@ use {
 };
 
 /// Denotes methods to filter extension modules.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ExtensionModuleFilter {
     /// Only use the minimum set of extension modules needed to initialize an interpreter.
     Minimal,
@@ -59,7 +59,7 @@ impl AsRef<str> for ExtensionModuleFilter {
 }
 
 /// Describes how resources should be handled.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ResourceHandlingMode {
     /// Files should be classified as typed resources.
     Classify,
@@ -93,7 +93,7 @@ impl AsRef<str> for ResourceHandlingMode {
 }
 
 /// Defines how Python resources should be packaged.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PythonPackagingPolicy {
     /// Which extension modules should be included.
     extension_module_filter: ExtensionModuleFilter,

@@ -330,7 +330,7 @@ pub fn setup_py_install<'a, S: BuildHasher>(
         args.push(arg);
     }
 
-    args.extend(&["install", "--prefix", &target_dir_s, "--no-compile"]);
+    args.extend(["install", "--prefix", &target_dir_s, "--no-compile"]);
 
     let command = cmd(dist.python_exe_path(), &args)
         .dir(package_path)

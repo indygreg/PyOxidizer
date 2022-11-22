@@ -45,7 +45,7 @@ pub static VC_REDIST_ARM64: Lazy<RemoteContent> = Lazy::new(|| {
 });
 
 /// Available VC++ Redistributable platforms we can add to the bundle.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum VcRedistributablePlatform {
     X86,
     X64,

@@ -258,7 +258,7 @@ fn parse_python_json_from_distribution(dist_dir: &Path) -> Result<PythonJsonMain
 
 fn parse_python_major_minor_version(version: &str) -> String {
     let mut at_least_minor_version = String::from(version);
-    if !version.contains(".") {
+    if !version.contains('.') {
         at_least_minor_version.push_str(".0");
     }
     at_least_minor_version
@@ -378,7 +378,7 @@ pub fn invoke_python(python_paths: &PythonPaths, args: &[&str]) {
 }
 
 /// Describes how libpython is linked in a standalone distribution.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum StandaloneDistributionLinkMode {
     Static,
     Dynamic,
@@ -1383,7 +1383,7 @@ impl PythonDistribution for StandaloneDistribution {
                             continue;
                         }
 
-                        let rel_path = path.strip_prefix(&root)?;
+                        let rel_path = path.strip_prefix(root)?;
 
                         res.push((rel_path.to_path_buf(), FileEntry::try_from(path)?));
                     }

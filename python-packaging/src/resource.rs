@@ -31,7 +31,7 @@ use serde::{Deserialize, Serialize};
 /// An optimization level for Python bytecode.
 ///
 /// Serialization type: `int`
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
 pub enum BytecodeOptimizationLevel {
     /// Optimization level 0.
@@ -413,7 +413,7 @@ impl PythonPackageResource {
 }
 
 /// Represents where a Python package distribution resource is materialized.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PythonPackageDistributionResourceFlavor {
     /// In a .dist-info directory.
     DistInfo,
