@@ -94,6 +94,7 @@ pub struct StandalonePythonExecutableBuilder {
 
     /// Whether the built binary is capable of loading dynamically linked
     /// extension modules from memory.
+    #[allow(dead_code)]
     supports_in_memory_dynamically_linked_extension_loading: bool,
 
     /// Policy to apply to added resources.

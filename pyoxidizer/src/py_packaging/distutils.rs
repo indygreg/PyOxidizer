@@ -119,7 +119,9 @@ struct DistutilsExtensionState {
     objects: Vec<String>,
     output_filename: String,
     libraries: Vec<String>,
+    #[allow(dead_code)]
     library_dirs: Vec<String>,
+    #[allow(dead_code)]
     runtime_library_dirs: Vec<String>,
 }
 
