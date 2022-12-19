@@ -33,6 +33,14 @@ Version History
 
 (Not yet released)
 
+Bug Fixes
+^^^^^^^^^
+
+* Fixed a bad regression in 0.23.0 that was causing Python symbols to not get
+  exported from built binaries, which was causing extension modules to not load
+  successfully. (Extension module imports would fail with ``undefined symbol``
+  errors, or similar.) (#663).
+
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
 

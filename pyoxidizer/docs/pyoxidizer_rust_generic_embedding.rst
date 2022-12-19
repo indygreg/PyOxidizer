@@ -90,6 +90,42 @@ Tcl/tk Support Files
 The ``tcl`` directory will contain tcl/tk support files to support the
 ``tkinter`` Python module.
 
+Exporting Python Symbols
+========================
+
+The binary embedding libpython **must** export libpython's public symbols in
+order to support loading external extension modules / shared libraries (which
+need to be able to resolve libpython's public symbols).
+
+If libpython is loaded as a library, its symbols should be exported
+automatically. However, if libpython is embedded in an executable (non-library)
+binary, the default linker behavior is likely to not export symbols.
+
+To ensure a binary embedding libpython is exporting the proper symbols, you
+may need to define custom linker arguments.
+
+On Linux, you typically pass ``-export-dynamic`` to the linker, often via
+``-Wl,-export-dynamic``.
+
+On macOS, you typically pass ``-rdynamic``.
+
+From a Cargo build script, you can add these extra arguments by printing a
+``cargo:rustc-link-arg={}`` line. e.g.
+
+.. code-block:: rust
+
+    let target_os = std::env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not defined");
+
+    match target_os.as_str() {
+        "linux" => {
+            println!("cargo:rustc-link-arg=-Wl,-export-dynamic");
+        }
+        "macos" => {
+            println!("cargo:rustc-link-arg=-rdynamic");
+        }
+        _ => {}
+    }
+
 Example Workflows
 =================
 
