@@ -3593,6 +3593,7 @@ dependencies = [
  "hex",
  "indoc",
  "itertools",
+ "libtest-mimic",
  "linked-hash-map",
  "log",
  "once_cell",

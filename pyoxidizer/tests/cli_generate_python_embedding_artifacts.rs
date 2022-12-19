@@ -6,6 +6,7 @@ use {
     anyhow::Result,
     assert_cmd::Command,
     assert_fs::{prelude::*, TempDir},
+    libtest_mimic::{Arguments, Trial},
     predicates::prelude::*,
 };
 
@@ -70,5 +71,7 @@ fn run() -> Result<()> {
 }
 
 fn main() {
-    run().expect("all tests should pass");
+    let args = Arguments::from_args();
+    let test = Trial::test("main", move || run().map_err(Into::into));
+    libtest_mimic::run(&args, vec![test]).exit();
 }
