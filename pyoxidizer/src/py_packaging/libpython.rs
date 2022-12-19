@@ -135,7 +135,8 @@ fn assemble_archive_gnu(objects: &[PathBuf], temp_dir: &Path) -> Result<Vec<u8>>
     let mut builder = ar::GnuBuilder::new(buffer, identifiers);
 
     for path in objects {
-        let header = ar_header(path)?;
+        let header = ar_header(path)
+            .with_context(|| format!("resolving ar header for {}", path.display()))?;
         let fh = std::fs::File::open(path)?;
 
         builder.append(&header, fh)?;
@@ -152,7 +153,8 @@ fn assemble_archive_bsd(objects: &[PathBuf], temp_dir: &Path) -> Result<Vec<u8>>
     let mut builder = ar::Builder::new(buffer);
 
     for path in objects {
-        let header = ar_header(path)?;
+        let header = ar_header(path)
+            .with_context(|| format!("resolving ar header for {}", path.display()))?;
         let fh = std::fs::File::open(path)?;
 
         builder.append(&header, fh)?;
