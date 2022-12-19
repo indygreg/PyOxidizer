@@ -22,6 +22,7 @@ use {
         ffi::OsStr,
         fs,
         fs::create_dir_all,
+        hash::Hasher,
         io::{BufRead, BufReader, Cursor},
         path::{Path, PathBuf},
     },
@@ -209,7 +210,19 @@ pub fn link_libpython(
     );
     let config_c_source = make_config_c(&context.init_functions.iter().collect::<Vec<_>>());
     let config_c_path = config_c_dir.join("config.c");
-    let config_object_path = config_c_dir.join("config.o");
+
+    // The output file name is dependent on whether the input file name is absolute.
+    let config_object_path = if config_c_path.has_root() {
+        let dirname = config_c_path
+            .parent()
+            .ok_or_else(|| anyhow!("could not determine parent directory"))?;
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        hasher.write(dirname.to_string_lossy().as_bytes());
+
+        config_c_dir.join(format!("{:016x}-{}", hasher.finish(), "config.o"))
+    } else {
+        config_c_dir.join("config.o")
+    };
 
     fs::write(&config_c_path, config_c_source.as_bytes())?;
 
