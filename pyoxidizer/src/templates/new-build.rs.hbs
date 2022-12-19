@@ -47,7 +47,10 @@ fn build_with_artifacts_in_dir(path: &Path) {
         );
     }
 
-    println!("cargo:rustc-env=DEFAULT_PYTHON_CONFIG_RS={}", config_path.display());
+    println!(
+        "cargo:rustc-env=DEFAULT_PYTHON_CONFIG_RS={}",
+        config_path.display()
+    );
 }
 
 /// Build by calling a `pyoxidizer` executable to generate build artifacts.
@@ -83,8 +86,12 @@ fn main() {
         let path = PathBuf::from(std::env::var("OUT_DIR").expect("OUT_DIR not defined"));
         let path = path.join(DEFAULT_PYTHON_CONFIG_FILENAME);
 
-        std::fs::write(&path, DEFAULT_PYTHON_CONFIG.as_bytes()).expect("failed to write default python config");
-        println!("cargo:rustc-env=DEFAULT_PYTHON_CONFIG_RS={}", path.display());
+        std::fs::write(&path, DEFAULT_PYTHON_CONFIG.as_bytes())
+            .expect("failed to write default python config");
+        println!(
+            "cargo:rustc-env=DEFAULT_PYTHON_CONFIG_RS={}",
+            path.display()
+        );
     } else if std::env::var("CARGO_FEATURE_BUILD_MODE_PYOXIDIZER_EXE").is_ok() {
         let target = if let Ok(target) = std::env::var("PYOXIDIZER_BUILD_TARGET") {
             Some(target)
@@ -116,18 +123,27 @@ fn main() {
     let target_family =
         std::env::var("CARGO_CFG_TARGET_FAMILY").expect("CARGO_CFG_TARGET_FAMILY not defined");
 
-    let global_allocator_jemalloc = std::env::var("CARGO_FEATURE_GLOBAL_ALLOCATOR_JEMALLOC").is_ok();
-    let global_allocator_mimalloc = std::env::var("CARGO_FEATURE_GLOBAL_ALLOCATOR_MIMALLOC").is_ok();
-    let global_allocator_snmalloc = std::env::var("CARGO_FEATURE_GLOBAL_ALLOCATOR_SNMALLOC").is_ok();
+    let global_allocator_jemalloc =
+        std::env::var("CARGO_FEATURE_GLOBAL_ALLOCATOR_JEMALLOC").is_ok();
+    let global_allocator_mimalloc =
+        std::env::var("CARGO_FEATURE_GLOBAL_ALLOCATOR_MIMALLOC").is_ok();
+    let global_allocator_snmalloc =
+        std::env::var("CARGO_FEATURE_GLOBAL_ALLOCATOR_SNMALLOC").is_ok();
 
     let global_allocator_count = vec![
         global_allocator_jemalloc,
         global_allocator_mimalloc,
         global_allocator_snmalloc,
-    ].into_iter().filter(|x| *x).count();
+    ]
+    .into_iter()
+    .filter(|x| *x)
+    .count();
 
     if global_allocator_count > 1 {
-        panic!("at most 1 global-allocator-* feature must be defined; got {}", global_allocator_count);
+        panic!(
+            "at most 1 global-allocator-* feature must be defined; got {}",
+            global_allocator_count
+        );
     }
 
     // Embed the XML manifest enabling long paths into the binary.
