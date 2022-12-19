@@ -44,7 +44,7 @@ Bug Fixes
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
 
-* Managed Rust toolchain upgraded from 1.61.0 to 1.65.0.
+* Managed Rust toolchain upgraded from 1.61.0 to 1.66.0.
 
 .. _version_0_23_0:
 
