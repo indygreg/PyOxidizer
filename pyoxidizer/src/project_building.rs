@@ -20,7 +20,7 @@ use {
     log::warn,
     starlark_dialect_build_targets::ResolvedTarget,
     std::{
-        collections::HashMap,
+        collections::{BTreeMap, HashMap},
         fs::create_dir_all,
         io::{BufRead, BufReader},
         path::{Path, PathBuf},
@@ -83,11 +83,8 @@ pub struct BuildEnvironment {
     /// Describes the Rust toolchain we're using.
     pub rust_environment: RustEnvironment,
 
-    /// Environment variables to use in build processes.
-    ///
-    /// This contains a copy of environment variables that were present at
-    /// object creation time, it isn't just a supplemental list.
-    pub environment_vars: HashMap<String, String>,
+    /// Custom environment variables to use in build processes.
+    pub extra_environment_vars: BTreeMap<String, String>,
 }
 
 impl BuildEnvironment {
@@ -105,7 +102,7 @@ impl BuildEnvironment {
             .ensure_rust_toolchain(Some(target_triple))
             .context("ensuring Rust toolchain available")?;
 
-        let mut envs = std::env::vars().collect::<HashMap<_, _>>();
+        let mut envs = BTreeMap::default();
 
         // Tells any invoked pyoxidizer process where to write build artifacts.
         envs.insert(
@@ -212,8 +209,19 @@ impl BuildEnvironment {
 
         Ok(Self {
             rust_environment,
-            environment_vars: envs,
+            extra_environment_vars: envs,
         })
+    }
+
+    /// Resolve the full set of environment variables to use in build processes.
+    pub fn environment_variables(&self) -> HashMap<String, String> {
+        let mut envs = std::env::vars().collect::<HashMap<_, _>>();
+
+        for (k, v) in &self.extra_environment_vars {
+            envs.insert(k.clone(), v.clone());
+        }
+
+        envs
     }
 }
 
@@ -326,10 +334,23 @@ pub fn build_executable_with_rust_project<'a>(
         args.push(&features);
     }
 
+    let mut log_args = vec![];
+
+    for (k, v) in &build_env.extra_environment_vars {
+        log_args.push(format!("{}={}", k, v));
+    }
+    log_args.push(build_env.rust_environment.cargo_exe.display().to_string());
+    log_args.extend(args.iter().map(|x| x.to_string()));
+
+    warn!(
+        "build command: {}",
+        shlex::join(log_args.iter().map(|x| x.as_str()))
+    );
+
     // TODO force cargo to colorize output under certain circumstances?
     let command = cmd(&build_env.rust_environment.cargo_exe, &args)
         .dir(&project_path)
-        .full_env(&build_env.environment_vars)
+        .full_env(build_env.environment_variables())
         .stderr_to_stdout()
         .unchecked()
         .reader()

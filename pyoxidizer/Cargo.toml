@@ -56,6 +56,7 @@ semver = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.10"
+shlex = "1.1.0"
 simple-file-manifest = "0.11"
 starlark = "0.3.1"
 tar = "0.4"
