@@ -24,6 +24,13 @@ use {
 static RE_FILENAME_ESCAPE: Lazy<regex::Regex> =
     Lazy::new(|| regex::Regex::new(r"[^\w\d.]+").unwrap());
 
+fn base64_engine() -> impl base64::engine::Engine {
+    base64::engine::fast_portable::FastPortable::from(
+        &base64::alphabet::URL_SAFE,
+        base64::engine::fast_portable::FastPortableConfig::new().with_encode_padding(false),
+    )
+}
+
 /// Define and build a Python wheel from raw components.
 ///
 /// Python wheels are glorified zip files with some special files
@@ -373,7 +380,7 @@ impl WheelBuilder {
                 Ok(format!(
                     "{},sha256={},{}",
                     path.display(),
-                    base64::encode_config(digest.finalize().as_slice(), base64::URL_SAFE_NO_PAD),
+                    base64::encode_engine(digest.finalize().as_slice(), &base64_engine()),
                     content.len()
                 ))
             })
