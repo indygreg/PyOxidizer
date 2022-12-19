@@ -13,7 +13,7 @@ build = "build.rs"
 
 [dependencies]
 anyhow = "1.0"
-apple-bundles = "0.14"
+apple-bundles = "0.16.0"
 atty = "0.2"
 codemap = "0.1"
 codemap-diagnostic = "0.1"
@@ -62,7 +62,7 @@ version = "0.16.0-pre"
 path = "../tugger-wix"
 
 [dev-dependencies]
-apple-codesign = "0.20"
+apple-codesign = "0.21.0"
 chrono = "0.4"
 tempfile = "3.2"
 x509-certificate = "0.15"

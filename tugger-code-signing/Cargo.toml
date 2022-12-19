@@ -12,8 +12,8 @@ readme = "README.md"
 
 [dependencies]
 anyhow = "1.0"
-apple-bundles = "0.14"
-apple-codesign = "0.20"
+apple-bundles = "0.16.0"
+apple-codesign = "0.21.0"
 bcder = "0.7"
 cryptographic-message-syntax = "0.18"
 goblin = "0.5"
