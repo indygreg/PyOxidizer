@@ -3539,7 +3539,6 @@ dependencies = [
  "duct",
  "env_logger",
  "fs2",
- "fs_extra",
  "git2",
  "glob",
  "guppy",
