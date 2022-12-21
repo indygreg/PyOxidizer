@@ -12,6 +12,6 @@ readme = "README.md"
 
 [dependencies]
 anyhow = "1.0.68"
-goblin = "0.5.4"
+goblin = "0.6.0"
 scroll = "0.11.0"
 thiserror = "1.0.38"

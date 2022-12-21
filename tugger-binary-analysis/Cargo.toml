@@ -13,6 +13,6 @@ readme = "README.md"
 [dependencies]
 anyhow = "1.0.68"
 byteorder = "1.4.3"
-goblin = "0.5.4"
+goblin = "0.6.0"
 once_cell = "1.7.2"
 version-compare = "0.1.1"
