@@ -94,7 +94,7 @@ pub static GIT_SOURCE: Lazy<PyOxidizerSource> = Lazy::new(|| {
 // Remember to update the CI configuration in .github/workflows/
 // and the `Installing Rust` documentation when this changes.
 pub static MINIMUM_RUST_VERSION: Lazy<semver::Version> =
-    Lazy::new(|| semver::Version::new(1, 61, 0));
+    Lazy::new(|| semver::Version::new(1, 62, 1));
 
 /// Version of Rust toolchain to use for our managed Rust install.
 pub const RUST_TOOLCHAIN_VERSION: &str = "1.66.0";

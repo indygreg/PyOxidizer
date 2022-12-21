@@ -19,7 +19,7 @@ jobs:
           - 'nightly'
           # Remember to update MINIMUM_RUST_VERSION in pyoxidizer/src/environment.rs
           # and the `Installing Rust` documentation when this changes.
-          - '1.61.0'
+          - '1.65.0'
         target:
           - os: 'ubuntu-20.04'
             triple: 'x86_64-unknown-linux-gnu'
