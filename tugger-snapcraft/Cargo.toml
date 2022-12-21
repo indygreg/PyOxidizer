@@ -11,13 +11,13 @@ repository = "https://github.com/indygreg/PyOxidizer.git"
 readme = "README.md"
 
 [dependencies]
-anyhow = "1.0"
-duct = "0.13"
-log = "0.4"
-remove_dir_all = "0.7"
-serde_yaml = "0.9"
-serde = { version = "1.0", features = ["derive"] }
-simple-file-manifest = "0.11"
+anyhow = "1.0.68"
+duct = "0.13.6"
+log = "0.4.17"
+remove_dir_all = "0.7.0"
+serde_yaml = "0.9.16"
+serde = { version = "1.0.151", features = ["derive"] }
+simple-file-manifest = "0.11.0"
 
 [dependencies.tugger-common]
 version = "0.10.0-pre"

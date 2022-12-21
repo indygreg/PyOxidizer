@@ -11,5 +11,5 @@ repository = "https://github.com/indygreg/PyOxidizer.git"
 keywords = ["python"]
 
 [dependencies]
-anyhow = "1.0"
-byteorder = "1"
+anyhow = "1.0.68"
+byteorder = "1.4.3"

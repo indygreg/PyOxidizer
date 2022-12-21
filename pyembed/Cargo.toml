@@ -15,20 +15,20 @@ readme = "README.md"
 
 [dependencies]
 # Update documentation in lib.rs when new dependencies are added.
-anyhow = "1.0"
-dunce = "1.0"
-jemalloc-sys = { version = "0.5", optional = true }
-libc = "0.2"
-once_cell = "1.7"
+anyhow = "1.0.68"
+dunce = "1.0.3"
+jemalloc-sys = { version = "0.5.2", optional = true }
+libc = "0.2.138"
+once_cell = "1.16.0"
 serde = { version = "1.0", features = ["derive"], optional = true }
 
 [dependencies.snmalloc-sys]
-version = "0.2"
+version = "0.2.28"
 features = ["build_cc"]
 optional = true
 
 [dependencies.libmimalloc-sys]
-version = "0.1"
+version = "0.1.28"
 features = [
     "extended",
     "local_dynamic_tls",
@@ -55,8 +55,8 @@ default-features = false
 pyo3-build-config = { version = "0.17.1", features = ["resolve-config"] }
 
 [dev-dependencies]
-pathdiff = "0.2"
-rusty-fork = "0.3"
+pathdiff = "0.2.1"
+rusty-fork = "0.3.0"
 
 [dev-dependencies.python-packed-resources]
 version = "0.12.0-pre"

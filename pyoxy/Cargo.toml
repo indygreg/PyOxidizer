@@ -12,10 +12,10 @@ edition = "2021"
 build = "build.rs"
 
 [dependencies]
-anyhow = "1.0"
-clap = "4.0"
-serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.9"
+anyhow = "1.0.68"
+clap = "4.0.29"
+serde = { version = "1.0.151", features = ["derive"] }
+serde_yaml = "0.9.16"
 
 [dependencies.pyembed]
 version = "0.24.0-pre"
@@ -24,11 +24,11 @@ default-features = false
 features = ["serialization", "zipimport"]
 
 [dev-dependencies]
-assert_cmd = "2.0"
-glob = "0.3"
-libtest-mimic = "0.6"
-predicates = "2.0"
-tempfile = "3.2"
+assert_cmd = "2.0.7"
+glob = "0.3.0"
+libtest-mimic = "0.6.0"
+predicates = "2.0.3"
+tempfile = "3.2.0"
 
 [[test]]
 name = "python"

@@ -11,7 +11,7 @@ repository = "https://github.com/indygreg/PyOxidizer.git"
 readme = "README.md"
 
 [dependencies]
-anyhow = "1.0"
-goblin = "0.5"
-scroll = "0.11"
-thiserror = "1.0"
+anyhow = "1.0.68"
+goblin = "0.5.4"
+scroll = "0.11.0"
+thiserror = "1.0.38"

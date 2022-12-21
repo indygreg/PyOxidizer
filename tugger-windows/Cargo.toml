@@ -11,15 +11,15 @@ repository = "https://github.com/indygreg/PyOxidizer.git"
 readme = "README.md"
 
 [dependencies]
-anyhow = "1.0"
-glob = "0.3"
-once_cell = "1.7"
+anyhow = "1.0.68"
+glob = "0.3.0"
+once_cell = "1.7.2"
 
 [target.'cfg(windows)'.dependencies]
-duct = "0.13"
-find-winsdk = "0.2"
-semver = "1.0"
-winapi = { version = "0.3", features = ["combaseapi", "knownfolders", "shlobj", "shtypes"] }
+duct = "0.13.6"
+find-winsdk = "0.2.0"
+semver = "1.0.16"
+winapi = { version = "0.3.9", features = ["combaseapi", "knownfolders", "shlobj", "shtypes"] }
 
 [dependencies.tugger-common]
 version = "0.10.0-pre"

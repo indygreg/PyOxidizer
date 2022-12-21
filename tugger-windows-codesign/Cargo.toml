@@ -11,13 +11,13 @@ repository = "https://github.com/indygreg/PyOxidizer.git"
 readme = "README.md"
 
 [dependencies]
-anyhow = "1.0"
-duct = "0.13"
-log = "0.4"
-p12 = "0.6"
-rcgen = "0.9"
-time = "0.3"
-yasna = "0.5"
+anyhow = "1.0.68"
+duct = "0.13.6"
+log = "0.4.17"
+p12 = "0.6.3"
+rcgen = "0.9.3"
+time = "0.3.17"
+yasna = "0.5.1"
 
 [dependencies.tugger-common]
 version = "0.10.0-pre"
@@ -28,5 +28,5 @@ version = "0.10.0-pre"
 path = "../tugger-windows"
 
 [dev-dependencies]
-der-parser = "8.1"
-x509-parser = "0.14"
+der-parser = "8.1.0"
+x509-parser = "0.14.0"
