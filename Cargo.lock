@@ -57,7 +57,7 @@ checksum = "69029f2bda37a6df66f674f1ab160c92c8584d8a667d0d58028648be9fa47414"
 dependencies = [
  "anyhow",
  "base64 0.20.0",
- "clap 4.0.29",
+ "clap 4.0.30",
  "dirs",
  "env_logger",
  "jsonwebtoken",
@@ -103,7 +103,7 @@ dependencies = [
  "bitflags",
  "bytes",
  "chrono",
- "clap 4.0.29",
+ "clap 4.0.30",
  "cryptographic-message-syntax",
  "der",
  "dialoguer",
@@ -1052,9 +1052,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.0.29"
+version = "4.0.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d63b9e9c07271b9957ad22c173bae2a4d9a81127680962039296abcd2f8251d"
+checksum = "656ad1e55e23d287773f7d8192c300dc715c3eeded93b3da651d11c42cfd74d2"
 dependencies = [
  "bitflags",
  "clap_derive",
@@ -2191,9 +2191,9 @@ checksum = "eabb4a44450da02c90444cf74558da904edde8fb4e9035a9a6a4e15445af0bd7"
 
 [[package]]
 name = "handlebars"
-version = "4.3.5"
+version = "4.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "433e4ab33f1213cdc25b5fa45c76881240cfe79284cf2b395e8b9e312a30a2fd"
+checksum = "035ef95d03713f2c347a72547b7cd38cbc9af7cd51e6099fb62d586d4a6dee3a"
 dependencies = [
  "log",
  "pest",
@@ -2458,9 +2458,9 @@ checksum = "11b0d96e660696543b251e58030cf9787df56da39dab19ad60eae7353040917e"
 
 [[package]]
 name = "is-terminal"
-version = "0.4.1"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "927609f78c2913a6f6ac3c27a4fe87f43e2a35367c0c4b0f8265e8f49a104330"
+checksum = "28dfb6c8100ccc63462345b67d1bbc3679177c75ee4bf59bf29c8b1d110b8189"
 dependencies = [
  "hermit-abi 0.2.6",
  "io-lifetimes",
@@ -2641,7 +2641,7 @@ version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d7b603516767d1ab23d0de09d023e62966c3322f7148297c35cf3d97aa8b37fa"
 dependencies = [
- "clap 4.0.29",
+ "clap 4.0.30",
  "termcolor",
  "threadpool",
 ]
@@ -2958,11 +2958,11 @@ dependencies = [
 
 [[package]]
 name = "num_cpus"
-version = "1.14.0"
+version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6058e64324c71e02bc2b150e4f3bc8286db6c83092132ffa3f6b1eab0f9def5"
+checksum = "0fac9e2da13b5eb447a6ce3d392f23a29d8694bff781bf03a16cd9ac8697593b"
 dependencies = [
- "hermit-abi 0.1.19",
+ "hermit-abi 0.2.6",
  "libc",
 ]
 
@@ -3532,7 +3532,7 @@ dependencies = [
  "cargo-lock",
  "cargo_toml",
  "cc",
- "clap 4.0.29",
+ "clap 4.0.30",
  "codemap",
  "codemap-diagnostic",
  "dirs",
@@ -3591,7 +3591,7 @@ version = "0.3.0-pre"
 dependencies = [
  "anyhow",
  "assert_cmd",
- "clap 4.0.29",
+ "clap 4.0.30",
  "glob",
  "libtest-mimic",
  "predicates",
@@ -3868,7 +3868,7 @@ dependencies = [
  "anyhow",
  "cargo-lock",
  "cargo_toml",
- "clap 4.0.29",
+ "clap 4.0.30",
  "duct",
  "git2",
  "once_cell",
@@ -4399,9 +4399,9 @@ checksum = "a507befe795404456341dfab10cef66ead4c041f62b8b11bbb92bffe5d0953e0"
 
 [[package]]
 name = "snafu"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a152ba99b054b22972ee794cf04e5ef572da1229e33b65f3c57abbff0525a454"
+checksum = "cb0656e7e3ffb70f6c39b3c2a86332bb74aa3c679da781642590f3c1118c5045"
 dependencies = [
  "doc-comment",
  "snafu-derive",
@@ -4409,9 +4409,9 @@ dependencies = [
 
 [[package]]
 name = "snafu-derive"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d5e79cdebbabaebb06a9bdbaedc7f159b410461f63611d4d0e3fb0fab8fed850"
+checksum = "475b3bbe5245c26f2d8a6f62d67c1f30eb9fffeccee721c45d162c3ebbdf81b2"
 dependencies = [
  "heck",
  "proc-macro2",
