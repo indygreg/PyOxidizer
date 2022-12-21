@@ -54,6 +54,7 @@ jobs:
       # Prevent sccache server from stopping due to inactivity.
       SCCACHE_IDLE_TIMEOUT: '0'
       RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: '0'
       # PYOXIDIZER_BUILD_FORCE_GIT_SOURCE is set to prevent pyoxidizer's build.rs from
       # writing the filesystem path to the Git checkout in the built binary. With the
       # filesystem path embedded in the binary, pyoxidizer will probe for that path

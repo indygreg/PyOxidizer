@@ -35,6 +35,7 @@ jobs:
       IN_CI: '1'
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      CARGO_INCREMENTAL: '0'
       CARGO_TERM_COLOR: always
       SCCACHE_BUCKET: 'pyoxidizer-sccache'
       SCCACHE_S3_USE_SSL: '1'

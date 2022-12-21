@@ -136,6 +136,7 @@ jobs:
       SCCACHE_S3_USE_SSL: '1'
       # Prevent sccache server from stopping due to inactivity.
       SCCACHE_IDLE_TIMEOUT: '0'
+      CARGO_INCREMENTAL: '0'
       RUSTC_WRAPPER: sccache
     steps:
       - uses: actions/checkout@v3
