@@ -46,6 +46,14 @@ Bug Fixes
   successfully. (Extension module imports would fail with ``undefined symbol``
   errors, or similar.) (#663).
 
+Changes
+^^^^^^^
+
+* Default CPython distributions upgraded. CPython 3.8.15 -> 3.8.16; 3.9.15 ->
+  3.9.16; 3.10.8 -> 3.10.9.
+  See https://github.com/indygreg/python-build-standalone/releases/tag/20221220
+  for additional changes.
+
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
 

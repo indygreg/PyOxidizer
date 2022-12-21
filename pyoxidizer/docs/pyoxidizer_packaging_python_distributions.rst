@@ -28,57 +28,57 @@ Here are the built-in Python distributions:
 +---------+---------+--------------------+--------------+------------+
 | Source  | Version | Flavor             | Build Target              |
 +=========+=========+====================+===========================+
-| CPython |  3.9.15 | standalone_dynamic | aarch64-unknown-linux-gnu |
+| CPython |  3.9.16 | standalone_dynamic | aarch64-unknown-linux-gnu |
 +---------+---------+--------------------+---------------------------+
-| CPython |  3.10.8 | standalone_dynamic | aarch64-unknown-linux-gnu |
+| CPython |  3.10.9 | standalone_dynamic | aarch64-unknown-linux-gnu |
 +---------+---------+--------------------+---------------------------+
-| CPython |  3.8.15 | standalone_dynamic | x86_64-unknown-linux-gnu  |
+| CPython |  3.8.16 | standalone_dynamic | x86_64-unknown-linux-gnu  |
 +---------+---------+--------------------+---------------------------+
-| CPython |  3.9.15 | standalone_dynamic | x86_64-unknown-linux-gnu  |
+| CPython |  3.9.16 | standalone_dynamic | x86_64-unknown-linux-gnu  |
 +---------+---------+--------------------+---------------------------+
-| CPython |  3.10.8 | standalone_dynamic | x86_64-unknown-linux-gnu  |
+| CPython |  3.10.9 | standalone_dynamic | x86_64-unknown-linux-gnu  |
 +---------+---------+--------------------+---------------------------+
-| CPython |  3.8.15 | standalone_static  | x86_64-unknown-linux-musl |
+| CPython |  3.8.16 | standalone_static  | x86_64-unknown-linux-musl |
 +---------+---------+--------------------+---------------------------+
-| CPython |  3.9.15 | standalone_static  | x86_64-unknown-linux-musl |
+| CPython |  3.9.16 | standalone_static  | x86_64-unknown-linux-musl |
 +---------+---------+--------------------+---------------------------+
-| CPython |  3.10.8 | standalone_static  | x86_64-unknown-linux-musl |
+| CPython |  3.10.9 | standalone_static  | x86_64-unknown-linux-musl |
 +---------+---------+--------------------+---------------------------+
-| CPython |  3.8.15 | standalone_dynamic | i686-pc-windows-msvc      |
+| CPython |  3.8.16 | standalone_dynamic | i686-pc-windows-msvc      |
 +---------+---------+--------------------+---------------------------+
-| CPython |  3.9.15 | standalone_dynamic | i686-pc-windows-msvc      |
+| CPython |  3.9.16 | standalone_dynamic | i686-pc-windows-msvc      |
 +---------+---------+--------------------+---------------------------+
-| CPython |  3.10.8 | standalone_dynamic | i686-pc-windows-msvc      |
+| CPython |  3.10.9 | standalone_dynamic | i686-pc-windows-msvc      |
 +---------+---------+--------------------+---------------------------+
-| CPython |  3.8.15 | standalone_static  | i686-pc-windows-msvc      |
+| CPython |  3.8.16 | standalone_static  | i686-pc-windows-msvc      |
 +---------+---------+--------------------+---------------------------+
-| CPython |  3.9.15 | standalone_static  | i686-pc-windows-msvc      |
+| CPython |  3.9.16 | standalone_static  | i686-pc-windows-msvc      |
 +---------+---------+--------------------+---------------------------+
-| CPython |  3.10.8 | standalone_static  | i686-pc-windows-msvc      |
+| CPython |  3.10.9 | standalone_static  | i686-pc-windows-msvc      |
 +---------+---------+--------------------+---------------------------+
-| CPython |  3.8.15 | standalone_dynamic | x86_64-pc-windows-msvc    |
+| CPython |  3.8.16 | standalone_dynamic | x86_64-pc-windows-msvc    |
 +---------+---------+--------------------+---------------------------+
-| CPython |  3.9.15 | standalone_dynamic | x86_64-pc-windows-msvc    |
+| CPython |  3.9.16 | standalone_dynamic | x86_64-pc-windows-msvc    |
 +---------+---------+--------------------+---------------------------+
-| CPython |  3.10.8 | standalone_dynamic | x86_64-pc-windows-msvc    |
+| CPython |  3.10.9 | standalone_dynamic | x86_64-pc-windows-msvc    |
 +---------+---------+--------------------+---------------------------+
-| CPython |  3.8.15 | standalone_static  | x86_64-pc-windows-msvc    |
+| CPython |  3.8.16 | standalone_static  | x86_64-pc-windows-msvc    |
 +---------+---------+--------------------+---------------------------+
-| CPython |  3.9.15 | standalone_static  | x86_64-pc-windows-msvc    |
+| CPython |  3.9.16 | standalone_static  | x86_64-pc-windows-msvc    |
 +---------+---------+--------------------+---------------------------+
-| CPython |  3.10.8 | standalone_static  | x86_64-pc-windows-msvc    |
+| CPython |  3.10.9 | standalone_static  | x86_64-pc-windows-msvc    |
 +---------+---------+--------------------+---------------------------+
-| CPython |  3.8.15 | standalone_dynamic | aarch64-apple-darwin      |
+| CPython |  3.8.16 | standalone_dynamic | aarch64-apple-darwin      |
 +---------+---------+--------------------+---------------------------+
-| CPython |  3.9.15 | standalone_dynamic | aarch64-apple-darwin      |
+| CPython |  3.9.16 | standalone_dynamic | aarch64-apple-darwin      |
 +---------+---------+--------------------+---------------------------+
-| CPython |  3.10.8 | standalone_dynamic | aarch64-apple-darwin      |
+| CPython |  3.10.9 | standalone_dynamic | aarch64-apple-darwin      |
 +---------+---------+--------------------+---------------------------+
-| CPython |  3.8.15 | standalone_dynamic | x86_64-apple-darwin       |
+| CPython |  3.8.16 | standalone_dynamic | x86_64-apple-darwin       |
 +---------+---------+--------------------+---------------------------+
-| CPython |  3.9.15 | standalone_dynamic | x86_64-apple-darwin       |
+| CPython |  3.9.16 | standalone_dynamic | x86_64-apple-darwin       |
 +---------+---------+--------------------+---------------------------+
-| CPython |  3.10.8 | standalone_dynamic | x86_64-apple-darwin       |
+| CPython |  3.10.9 | standalone_dynamic | x86_64-apple-darwin       |
 +---------+---------+--------------------+---------------------------+
 
 All of these distributions are provided by the
@@ -107,9 +107,9 @@ Here is what those target triple values translate to:
 Python Version Compatibility
 ============================
 
-PyOxidizer is capable of working with Python 3.8 and 3.9.
+PyOxidizer is capable of working with Python 3.8, 3.9, and 3.10.
 
-Python 3.9 is the default Python version because it has been around
+Python 3.10 is the default Python version because it has been around
 for a while and is relatively stable.
 
 PyOxidizer's tests are run primarily against the default Python
@@ -121,9 +121,9 @@ subtle bugs.
 Choosing a Python Distribution
 ==============================
 
-The Python 3.9 distributions are the default and are better tested
-than the Python 3.8 distributions. 3.8 was the default in previous
-releases and is known to work.
+The Python 3.10 distributions are the default and are better tested
+than the Python 3.8 and 3.9 distributions. 3.8 and 3.9 were the default in
+previous releases and are known to work.
 
 The ``standalone_dynamic`` distributions behave much more similarly
 to traditional Python build configurations than do their
