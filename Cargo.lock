@@ -50,10 +50,33 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2cb2f989d18dd141ab8ae82f64d1a8cdd37e0840f73a406896cf5e99502fab61"
 
 [[package]]
-name = "apple-bundles"
-version = "0.16.0"
+name = "app-store-connect"
+version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0578c46cc54d39a170192e70161b4fd6a84fddcfc49ff289f6ab42a0c8f03bf0"
+checksum = "69029f2bda37a6df66f674f1ab160c92c8584d8a667d0d58028648be9fa47414"
+dependencies = [
+ "anyhow",
+ "base64 0.20.0",
+ "clap 4.0.29",
+ "dirs",
+ "env_logger",
+ "jsonwebtoken",
+ "log",
+ "pem",
+ "rand 0.8.5",
+ "reqwest",
+ "rsa",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "x509-certificate",
+]
+
+[[package]]
+name = "apple-bundles"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "716b8a7bacf7325eb3e7a1a7f5ead4da91e1e16d9b56a25edea0e1e4ba21fd8e"
 dependencies = [
  "anyhow",
  "plist",
@@ -63,11 +86,12 @@ dependencies = [
 
 [[package]]
 name = "apple-codesign"
-version = "0.21.0"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5899c63955f50239ce90d0670540c47ddd60b4bb1b36f6d164146aaa3b60f55c"
+checksum = "a8ffefec1fc03e4cc46f49ead8f0dc04637e0142c1daa2f0c795f6b0a36234f5"
 dependencies = [
  "anyhow",
+ "app-store-connect",
  "apple-bundles",
  "apple-flat-package",
  "apple-xar",
@@ -90,9 +114,8 @@ dependencies = [
  "env_logger",
  "filetime",
  "glob",
- "goblin",
+ "goblin 0.6.0",
  "hex",
- "jsonwebtoken",
  "log",
  "md-5",
  "minicbor",
@@ -139,9 +162,9 @@ dependencies = [
 
 [[package]]
 name = "apple-flat-package"
-version = "0.12.0"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c42bc2659f4d8fd84de48658d71c6cd6bd4c64a7e3481f502ad704a061c64b3c"
+checksum = "5ddaabaf2f26a4c5371eef64d9c844796fde64d83d93ba2b745d33cb8b686e2e"
 dependencies = [
  "apple-xar",
  "cpio-archive",
@@ -154,9 +177,9 @@ dependencies = [
 
 [[package]]
 name = "apple-sdk"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa2947d9dd2e2198bc0dad3c89035bb98a3e2196954e1eb4ffa98a931725d59e"
+checksum = "a04f192a700686ee70008ff4e4eb76fe7d11814ab93b7ee9d48c36b9a9f0bd2a"
 dependencies = [
  "plist",
  "serde",
@@ -165,9 +188,9 @@ dependencies = [
 
 [[package]]
 name = "apple-xar"
-version = "0.12.0"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d7f584db93c955231f2aa665854593b291652770f9d6479caa2bfcc03770c71"
+checksum = "b51e52d6b526cefb1586b6eff6e60f03d2e23369c808d284ca64f2c56402e351"
 dependencies = [
  "base64 0.20.0",
  "bcder",
@@ -1189,9 +1212,9 @@ checksum = "5827cebf4670468b8772dd191856768aedcb1b0278a04f989f7766351917b9dc"
 
 [[package]]
 name = "cpio-archive"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2a7411ca8327a82c5c71956f7edfa0cfc486fa12e5b2f1b8c676f194899f759"
+checksum = "dfef44f9459c423c720aba9ec27e0dc88b9878c3749b726aa78e1f427e96c8fa"
 dependencies = [
  "chrono",
  "is_executable",
@@ -1341,9 +1364,9 @@ dependencies = [
 
 [[package]]
 name = "cryptographic-message-syntax"
-version = "0.18.0"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa9b046329f00c700008db38c64e3b7bed15bab96c3b41e1b700f2ae23ec2c8e"
+checksum = "1d2b86e4bad3ab0d837044f5e49fa4ec70d8e29e8bb2d822b8186cf1d71bce55"
 dependencies = [
  "bcder",
  "bytes",
@@ -2092,6 +2115,17 @@ name = "goblin"
 version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a7666983ed0dd8d21a6f6576ee00053ca0926fb281a5522577a4dbd0f1b54143"
+dependencies = [
+ "log",
+ "plain",
+ "scroll",
+]
+
+[[package]]
+name = "goblin"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "572564d6cba7d09775202c8e7eebc4d534d5ae36578ab402fb21e182a0ac9505"
 dependencies = [
  "log",
  "plain",
@@ -4967,7 +5001,7 @@ name = "tugger-apple"
 version = "0.8.0-pre"
 dependencies = [
  "anyhow",
- "goblin",
+ "goblin 0.5.4",
  "scroll",
  "thiserror",
 ]
@@ -4978,7 +5012,7 @@ version = "0.7.0-pre"
 dependencies = [
  "anyhow",
  "byteorder",
- "goblin",
+ "goblin 0.5.4",
  "once_cell",
  "version-compare",
 ]
@@ -4992,7 +5026,7 @@ dependencies = [
  "apple-codesign",
  "bcder",
  "cryptographic-message-syntax",
- "goblin",
+ "goblin 0.5.4",
  "log",
  "p12",
  "reqwest",
@@ -5603,9 +5637,9 @@ dependencies = [
 
 [[package]]
 name = "x509-certificate"
-version = "0.15.0"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97a22d96cc26820ae985ec042be273c52f1661bcfc26e13a55957faf3a433577"
+checksum = "90961fdd7cce5ded2f3bfa356a09fa95eba44582ab9d10ea619b93c02f42a4f0"
 dependencies = [
  "bcder",
  "bytes",

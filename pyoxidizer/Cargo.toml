@@ -27,7 +27,7 @@ git2 = { version = "0.15", default-features = false }
 
 [dependencies]
 anyhow = "1.0"
-apple-sdk = "0.3.0"
+apple-sdk = "0.4.0"
 ar = "0.9"
 cargo-lock = "8.0"
 cargo_toml = "0.13"

@@ -12,10 +12,10 @@ readme = "README.md"
 
 [dependencies]
 anyhow = "1.0"
-apple-bundles = "0.16.0"
-apple-codesign = "0.21.0"
+apple-bundles = "0.17.0"
+apple-codesign = "0.22.0"
 bcder = "0.7"
-cryptographic-message-syntax = "0.18"
+cryptographic-message-syntax = "0.19.0"
 goblin = "0.5"
 log = "0.4"
 p12 = "0.6"
@@ -23,7 +23,7 @@ reqwest = { version = "0.11", default-features = false, features = ["blocking", 
 simple-file-manifest = "0.11"
 tempfile = "3.2"
 thiserror = "1.0"
-x509-certificate = "0.15"
+x509-certificate = "0.16.0"
 yasna = "0.5"
 
 [dependencies.tugger-windows-codesign]
