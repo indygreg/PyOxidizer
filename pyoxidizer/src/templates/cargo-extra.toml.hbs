@@ -1,18 +1,18 @@
 [dependencies.jemallocator]
-version = "0.5"
+version = "0.5.0"
 optional = true
 
 [dependencies.mimalloc]
-version = "0.1"
+version = "0.1.28"
 optional = true
 features = ["local_dynamic_tls", "override", "secure"]
 
 [dependencies.snmalloc-rs]
-version = "0.2"
+version = "0.2.28"
 optional = true
 
 [build-dependencies]
-embed-resource = "1.6"
+embed-resource = "1.6.10"
 
 [features]
 default = ["build-mode-standalone"]
