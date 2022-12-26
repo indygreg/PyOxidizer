@@ -31,4 +31,4 @@ path = "../tugger-common"
 
 [dev-dependencies]
 dirs = "4.0.0"
-tempfile = "3.2.0"
+tempfile = "3.3.0"

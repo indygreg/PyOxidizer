@@ -18,7 +18,7 @@ readme = "README.md"
 anyhow = "1.0.68"
 dunce = "1.0.3"
 jemalloc-sys = { version = "0.5.2", optional = true }
-libc = "0.2.138"
+libc = "0.2.139"
 once_cell = "1.16.0"
 serde = { version = "1.0", features = ["derive"], optional = true }
 
@@ -42,7 +42,7 @@ path = "../python-oxidized-importer"
 default-features = false
 
 [dependencies.pyo3]
-version = "0.17.1"
+version = "0.17.3"
 default-features = false
 features = ["macros"]
 
@@ -52,7 +52,7 @@ path = "../python-packaging"
 default-features = false
 
 [build-dependencies]
-pyo3-build-config = { version = "0.17.1", features = ["resolve-config"] }
+pyo3-build-config = { version = "0.17.3", features = ["resolve-config"] }
 
 [dev-dependencies]
 pathdiff = "0.2.1"

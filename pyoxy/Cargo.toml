@@ -13,8 +13,8 @@ build = "build.rs"
 
 [dependencies]
 anyhow = "1.0.68"
-clap = "4.0.29"
-serde = { version = "1.0.151", features = ["derive"] }
+clap = "4.0.32"
+serde = { version = "1.0.152", features = ["derive"] }
 serde_yaml = "0.9.16"
 
 [dependencies.pyembed]
@@ -27,8 +27,8 @@ features = ["serialization", "zipimport"]
 assert_cmd = "2.0.7"
 glob = "0.3.0"
 libtest-mimic = "0.6.0"
-predicates = "2.0.3"
-tempfile = "3.2.0"
+predicates = "2.1.4"
+tempfile = "3.3.0"
 
 [[test]]
 name = "python"

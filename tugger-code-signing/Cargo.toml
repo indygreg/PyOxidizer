@@ -21,7 +21,7 @@ log = "0.4.17"
 p12 = "0.6.3"
 reqwest = { version = "0.11.13", default-features = false, features = ["blocking", "rustls-tls"] }
 simple-file-manifest = "0.11.0"
-tempfile = "3.2.0"
+tempfile = "3.3.0"
 thiserror = "1.0.38"
 x509-certificate = "0.16.0"
 yasna = "0.5.1"
