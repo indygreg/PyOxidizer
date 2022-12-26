@@ -24,7 +24,7 @@ jobs:
   pyoxidizer-linux-x86_64-bin-check:
     needs:
       - pyoxidizer-exes
-    runs-on: 'ubuntu-20.04'
+    runs-on: 'ubuntu-22.04'
     steps:
       - name: Install musl compiler
         run: |

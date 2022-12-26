@@ -34,7 +34,7 @@ jobs:
             build: 'cp310-manylinux_i686'
           - arch: 'x86_64'
             build: 'cp310-manylinux_x86_64'
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       CIBW_ENVIRONMENT: 'PATH="$PATH:$HOME/.cargo/bin"'
       CIBW_BEFORE_BUILD: 'ci/install-rust-linux.sh'
