@@ -11,7 +11,7 @@ repository = "https://github.com/indygreg/PyOxidizer.git"
 [dependencies]
 anyhow = "1.0.68"
 cargo-lock = "8.0.3"
-cargo_toml = "0.13.3"
+cargo_toml = "0.14.0"
 clap = "4.0.32"
 duct = "0.13.6"
 # We don't need network functionality.
