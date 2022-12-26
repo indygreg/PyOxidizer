@@ -18,7 +18,7 @@ use std::{borrow::Cow, collections::HashMap, path::Path};
 /// Data fields are `Cow<T>` and can either hold a borrowed reference or
 /// owned data. This allows the use of a single type to both hold
 /// data or reference it from some other location.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Resource<'a, X: 'a>
 where
     [X]: ToOwned<Owned = Vec<X>>,

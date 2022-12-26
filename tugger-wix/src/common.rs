@@ -177,7 +177,7 @@ pub fn write_file_manifest_to_wix<W: Write, P: AsRef<Path>>(
             writer.write(
                 XmlEvent::start_element("Directory")
                     .attr("Id", &child_id)
-                    .attr("Name", &*name),
+                    .attr("Name", &name),
             )?;
             writer.write(XmlEvent::end_element())?;
         }
@@ -486,7 +486,7 @@ mod tests {
 
         let install_prefix = Path::new("/install-prefix");
 
-        write_file_manifest_to_wix(&mut emitter, &m, &install_prefix, "root", "prefix")?;
+        write_file_manifest_to_wix(&mut emitter, &m, install_prefix, "root", "prefix")?;
         String::from_utf8(emitter.into_inner().into_inner()?)?;
 
         // TODO validate XML.

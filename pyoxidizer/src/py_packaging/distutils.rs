@@ -80,8 +80,8 @@ pub fn prepare_hacked_distutils(
         let dest_path = dest_distutils_path.join(rel_path);
 
         let dest_dir = dest_path.parent().unwrap();
-        std::fs::create_dir_all(&dest_dir)?;
-        std::fs::copy(&source_path, &dest_path)?;
+        std::fs::create_dir_all(dest_dir)?;
+        std::fs::copy(source_path, &dest_path)?;
     }
 
     for (path, data) in MODIFIED_DISTUTILS_FILES.iter() {

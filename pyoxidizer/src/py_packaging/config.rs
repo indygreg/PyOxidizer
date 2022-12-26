@@ -79,7 +79,7 @@ fn optional_vec_string_to_string(value: &Option<Vec<String>>) -> String {
 }
 
 /// Represents sources for loading packed resources data.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PyembedPackedResourcesSource {
     /// Load from memory via an `include_bytes!` directive.
     MemoryIncludeBytes(PathBuf),
@@ -114,7 +114,7 @@ impl ToString for PyembedPackedResourcesSource {
 /// use that type verbatim because of lifetime issues. It might be possible.
 /// But that type holds a reference to resources data and this type needs to
 /// be embedded in Starlark values, which have a `static lifetime.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PyembedPythonInterpreterConfig {
     pub config: PythonInterpreterConfig,
     pub allocator_backend: MemoryAllocatorBackend,

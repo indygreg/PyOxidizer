@@ -174,7 +174,7 @@ pub fn cache_clear(env: &Environment) -> Result<()> {
     let cache_dir = env.cache_dir();
 
     println!("removing {}", cache_dir.display());
-    remove_dir_all::remove_dir_all(&cache_dir)?;
+    remove_dir_all::remove_dir_all(cache_dir)?;
 
     Ok(())
 }

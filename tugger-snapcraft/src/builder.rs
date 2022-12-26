@@ -15,7 +15,7 @@ use {
 };
 
 /// Represents an invocation of the `snapcraft` command.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SnapcraftInvocation {
     /// Arguments to pass to `snapcraft`.
     pub args: Vec<String>,

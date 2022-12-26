@@ -482,7 +482,7 @@ fn release_package(
 
                     let parts = s
                         .strip_suffix('\n')
-                        .unwrap_or(&*message)
+                        .unwrap_or(message)
                         .split(' ')
                         .collect::<Vec<_>>();
 
@@ -980,7 +980,7 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
                     repo_root,
                     repo,
                     &dependency_update_packages,
-                    *package,
+                    package,
                     publish,
                 )
                 .with_context(|| format!("releasing {}", package))?;
@@ -1004,7 +1004,7 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
             update_package_version(
                 repo_root,
                 &dependency_update_packages,
-                *package,
+                package,
                 version_bump,
             )
             .with_context(|| format!("incrementing version for {}", package))?;

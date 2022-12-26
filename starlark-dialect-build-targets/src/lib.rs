@@ -31,7 +31,7 @@ use {
 };
 
 /// How a resolved target can be run.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RunMode {
     /// Target cannot be run.
     None,
@@ -54,8 +54,8 @@ impl ResolvedTarget {
         match &self.run_mode {
             RunMode::None => Ok(()),
             RunMode::Path { path } => {
-                let status = std::process::Command::new(&path)
-                    .current_dir(&path.parent().unwrap())
+                let status = std::process::Command::new(path)
+                    .current_dir(path.parent().unwrap())
                     .status()?;
 
                 if status.success() {

@@ -12,7 +12,7 @@
 ///
 /// The location is abstract because a concrete location (such as the
 /// relative path) is not specified.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum AbstractResourceLocation {
     /// Resource is loaded from memory.
     InMemory,
@@ -42,7 +42,7 @@ impl TryFrom<&str> for AbstractResourceLocation {
 }
 
 /// Describes the concrete location of a Python resource.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ConcreteResourceLocation {
     /// Resource is loaded from memory.
     InMemory,

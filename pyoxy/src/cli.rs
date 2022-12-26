@@ -89,7 +89,7 @@ fn run_normal(exe: &Path) -> Result<i32> {
                 .unwrap_or_default()
                 .collect::<Vec<_>>();
 
-            run_yaml_path(&yaml_path, &program_args)
+            run_yaml_path(yaml_path, &program_args)
         }
         _ => Err(anyhow!("invalid sub-command")),
     }

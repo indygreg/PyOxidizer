@@ -555,7 +555,7 @@ pub fn populate_parent_packages(
 }
 
 /// Defines how a Python resource should be added to a `PythonResourceCollector`.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PythonResourceAddCollectionContext {
     /// Whether the resource should be included in `PythonResourceCollection`.
     pub include: bool,

@@ -12,7 +12,7 @@
 pub const HEADER_V3: &[u8] = b"pyembed\x03";
 
 /// Defines interior padding mechanism between entries in blob sections.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BlobInteriorPadding {
     /// No padding.
     ///
@@ -35,7 +35,7 @@ impl From<&BlobInteriorPadding> for u8 {
 }
 
 /// Describes a blob section field type in the blob index.
-#[derive(Debug, PartialEq, PartialOrd)]
+#[derive(Debug, PartialEq, Eq, PartialOrd)]
 pub enum BlobSectionField {
     EndOfIndex = 0x00,
     StartOfEntry = 0x01,

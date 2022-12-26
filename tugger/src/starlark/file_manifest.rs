@@ -67,7 +67,7 @@ fn post_materialize_signing_checks(
 
         let candidate = path.as_path().into();
         let mut context = SigningContext::new(label, action, filename, &candidate);
-        context.set_path(&path);
+        context.set_path(path);
         context.set_signing_destination(SigningDestination::File(path.clone()));
 
         handle_signable_event(type_values, call_stack, context)?;

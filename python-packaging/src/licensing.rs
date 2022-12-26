@@ -182,7 +182,7 @@ impl ComponentFlavor {
 }
 
 /// Where source code for a component can be obtained from.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SourceLocation {
     /// Source code is not available.
     NotSet,
@@ -439,7 +439,7 @@ impl LicensedComponent {
 }
 
 /// A collection of licensed components.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct LicensedComponents {
     /// The collection of components, indexed by its flavor.
     components: BTreeMap<ComponentFlavor, LicensedComponent>,

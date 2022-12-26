@@ -944,9 +944,9 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         if self.link_mode == LibpythonLinkMode::Dynamic {
             if let Some(p) = &self.target_distribution.libpython_shared_library {
                 let manifest_path = Path::new(p.file_name().unwrap());
-                let content = std::fs::read(&p)?;
+                let content = std::fs::read(p)?;
 
-                extra_files.add_file_entry(&manifest_path, content)?;
+                extra_files.add_file_entry(manifest_path, content)?;
 
                 // Always look for and add the python3.dll variant if it exists. This DLL
                 // exports the stable subset of the Python ABI and it is required by some
@@ -956,7 +956,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 if python3_dll_path.exists() {
                     let content = std::fs::read(&python3_dll_path)?;
 
-                    extra_files.add_file_entry(&manifest_path, content)?;
+                    extra_files.add_file_entry(manifest_path, content)?;
                 }
             }
         }

@@ -19,7 +19,7 @@ use {
 };
 
 /// Describes extra behavior for a linker invocation.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum LinkingAnnotation {
     /// Link an Apple framework library of the given name.
     LinkFramework(String),
@@ -427,15 +427,15 @@ impl<'a> EmbeddedPythonContext<'a> {
 
     /// Write out files needed to build a binary against our configuration.
     pub fn write_files(&self, dest_dir: &Path) -> Result<()> {
-        self.write_packed_resources(&dest_dir)
+        self.write_packed_resources(dest_dir)
             .context("write_packed_resources()")?;
-        self.write_libpython(&dest_dir)
+        self.write_libpython(dest_dir)
             .context("write_libpython()")?;
-        self.write_interpreter_config_rs(&dest_dir)
+        self.write_interpreter_config_rs(dest_dir)
             .context("write_interpreter_config_rs()")?;
-        self.write_pyo3_config(&dest_dir)
+        self.write_pyo3_config(dest_dir)
             .context("write_pyo3_config()")?;
-        self.write_licensing(&dest_dir)
+        self.write_licensing(dest_dir)
             .context("write_licensing()")?;
 
         Ok(())

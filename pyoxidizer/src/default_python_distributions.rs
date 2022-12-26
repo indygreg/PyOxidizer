@@ -6,9 +6,7 @@
 
 //! Default Python distributions.
 
-use crate::py_packaging::distribution::{
-    PythonDistributionLocation, PythonDistributionRecord,
-};
+use crate::py_packaging::distribution::{PythonDistributionLocation, PythonDistributionRecord};
 use crate::python_distributions::PythonDistributionCollection;
 use once_cell::sync::Lazy;
 

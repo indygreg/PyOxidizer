@@ -192,7 +192,7 @@ fn materialize_archive(
 
 fn sha256_path(path: &Path) -> Result<Vec<u8>> {
     let mut hasher = sha2::Sha256::new();
-    let fh = std::fs::File::open(&path)?;
+    let fh = std::fs::File::open(path)?;
     let mut reader = std::io::BufReader::new(fh);
 
     let mut buffer = [0; 32768];

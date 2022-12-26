@@ -95,7 +95,7 @@ pub(crate) fn name_within_package_hierarchy(fullname: &str, package_target: Opti
 }
 
 /// Describes the type of an importable Python module.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum ModuleFlavor {
     Builtin,
     Frozen,
@@ -386,7 +386,7 @@ impl<'a> ImportablePythonModule<'a, u8> {
 }
 
 /// A source for packed resources data.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PackedResourcesSource<'a> {
     /// A reference to raw resources data in memory.
     Memory(&'a [u8]),
@@ -1122,7 +1122,7 @@ impl<'a> PythonResourcesState<'a, u8> {
             if let Some(resources) = &entry.relative_path_distribution_resources {
                 if let Some(path) = resources.get(name) {
                     let path = &self.origin.join(path);
-                    let data = std::fs::read(&path)?;
+                    let data = std::fs::read(path)?;
 
                     return Ok(Some(Cow::Owned(data)));
                 }

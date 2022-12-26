@@ -22,7 +22,7 @@ use serde::{Deserialize, Serialize};
 /// `PyPreConfig` and `PyConfig` C structs.
 ///
 /// Serialization type: `string`.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "serialization", serde(try_from = "String", into = "String"))]
 pub enum PythonInterpreterProfile {
@@ -104,7 +104,7 @@ impl TryFrom<String> for PythonInterpreterProfile {
 /// to control that behavior.
 ///
 /// Serialization type: `string`.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "serialization", serde(try_from = "String", into = "String"))]
 pub enum TerminfoResolution {
@@ -186,7 +186,7 @@ impl TryFrom<String> for TerminfoResolution {
 /// Not all allocators are available in all program builds.
 ///
 /// Serialization type: `string`
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "serialization", serde(try_from = "String", into = "String"))]
 pub enum MemoryAllocatorBackend {
@@ -290,7 +290,7 @@ impl TryFrom<String> for MemoryAllocatorBackend {
 /// See <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.coerce_c_locale>.
 ///
 /// Serialization type: `string`
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "serialization", serde(try_from = "String", into = "String"))]
 pub enum CoerceCLocale {
@@ -347,7 +347,7 @@ impl TryFrom<String> for CoerceCLocale {
 /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.bytes_warning>.
 ///
 /// Serialization type: `string`
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "serialization", serde(try_from = "String", into = "String"))]
 pub enum BytesWarning {
@@ -420,7 +420,7 @@ impl From<i32> for BytesWarning {
 /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.check_hash_pycs_mode>.
 ///
 /// Serialization type: `string`
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "serialization", serde(try_from = "String", into = "String"))]
 pub enum CheckHashPycsMode {
@@ -486,7 +486,7 @@ impl TryFrom<String> for CheckHashPycsMode {
 /// See <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.allocator>.
 ///
 /// Serialization type: `string`
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "serialization", serde(try_from = "String", into = "String"))]
 pub enum Allocator {
@@ -582,7 +582,7 @@ impl TryFrom<String> for Allocator {
 /// this setting has no effect.
 ///
 /// Serialization type: `string`
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "serialization", serde(try_from = "String", into = "String"))]
 pub enum MultiprocessingStartMethod {
@@ -674,7 +674,7 @@ impl TryFrom<String> for MultiprocessingStartMethod {
 /// Other than the profile (which is used to initialize instances of
 /// `PyPreConfig` and `PyConfig`), all fields are optional. Only fields
 /// with `Some(T)` will be updated from the defaults.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "serialization", serde(default))]
 pub struct PythonInterpreterConfig {

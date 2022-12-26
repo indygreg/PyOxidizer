@@ -171,7 +171,7 @@ pub fn is_file_signable(path: impl AsRef<Path>) -> Result<bool> {
         return Ok(false);
     }
 
-    let mut fh = std::fs::File::open(&path)?;
+    let mut fh = std::fs::File::open(path)?;
     let mut buffer: [u8; 16] = [0; 16];
     fh.read_exact(&mut buffer)?;
 

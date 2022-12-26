@@ -133,7 +133,7 @@ fn add_env_args(app: Command) -> Command {
         Arg::new("vars")
             .long("var")
             .action(ArgAction::Append)
-            .value_names(&["name", "value"])
+            .value_names(["name", "value"])
             .number_of_values(2)
             .help("Define a variable in Starlark environment")
             .long_help(VAR_HELP),
@@ -142,7 +142,7 @@ fn add_env_args(app: Command) -> Command {
         Arg::new("vars_env")
             .long("var-env")
             .action(ArgAction::Append)
-            .value_names(&["name", "env"])
+            .value_names(["name", "env"])
             .number_of_values(2)
             .help("Define an environment variable in Starlark environment")
             .long_help(ENV_VAR_HELP),

@@ -8,7 +8,7 @@ use {
 };
 
 /// Represents the value of the `type` field.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Type {
     Gadget,
@@ -25,7 +25,7 @@ impl TryFrom<&str> for Type {
 }
 
 /// Represents the value of an architecture in an `architectures` field.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Architecture {
     All,
@@ -46,7 +46,7 @@ impl TryFrom<&str> for Architecture {
 }
 
 /// Represents the value of a `confinement` field.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Confinement {
     Strict,
@@ -63,7 +63,7 @@ impl TryFrom<&str> for Confinement {
 }
 
 /// Represents the value of a `grade` field.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Grade {
     Devel,
@@ -79,7 +79,7 @@ impl TryFrom<&str> for Grade {
 }
 
 /// Represents the value of an `adapter` field.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Adapter {
     None,
@@ -95,7 +95,7 @@ impl TryFrom<&str> for Adapter {
 }
 
 /// Represents the value of a `daemon` field.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Daemon {
     Simple,
@@ -113,7 +113,7 @@ impl TryFrom<&str> for Daemon {
 }
 
 /// Represents the value of a `restart-condition` field.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum RestartCondition {
     OnFailure,
@@ -133,7 +133,7 @@ impl TryFrom<&str> for RestartCondition {
 }
 
 /// Represents the value of a `source-type` field.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum SourceType {
     Bzr,
@@ -160,7 +160,7 @@ impl TryFrom<&str> for SourceType {
 }
 
 /// Represents the values in a `build-attributes` field.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum BuildAttribute {
     Debug,
@@ -179,7 +179,7 @@ impl TryFrom<&str> for BuildAttribute {
 }
 
 /// Represents the value of an `architecture` field.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct Architectures {
     pub build_on: Vec<Architecture>,
@@ -188,7 +188,7 @@ pub struct Architectures {
 }
 
 /// Represents the `apps.<app-name>` entries in a `snapcraft.yaml`.
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct SnapApp<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -234,7 +234,7 @@ pub struct SnapApp<'a> {
 }
 
 /// Represents the `parts.<part-name>` entries in a `snapcraft.yaml`.
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct SnapPart<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -290,7 +290,7 @@ pub struct SnapPart<'a> {
 }
 
 /// Represents a `snapcraft.yaml` file content.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct Snapcraft<'a> {
     pub name: Cow<'a, str>,

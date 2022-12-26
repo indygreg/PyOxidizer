@@ -287,7 +287,7 @@ impl<'a> PythonResourceIterator<'a> {
         // It looks like we're in an unpacked egg. This is similar to the site-packages
         // scenario: we essentially have a new package root that corresponds to the
         // egg's extraction directory.
-        if (&components[0..components.len() - 1])
+        if components[0..components.len() - 1]
             .iter()
             .any(|p| p.ends_with(".egg"))
         {
@@ -1290,7 +1290,7 @@ mod tests {
             .tempdir()?;
         let tp = td.path();
 
-        create_dir_all(&tp)?;
+        create_dir_all(tp)?;
 
         let egg_path = tp.join("foo-1.0-py3.7.egg");
         write(&egg_path, "")?;
@@ -1318,7 +1318,7 @@ mod tests {
             .tempdir()?;
         let tp = td.path();
 
-        create_dir_all(&tp)?;
+        create_dir_all(tp)?;
 
         let egg_path = tp.join("site-packages").join("foo-1.0-py3.7.egg");
         let egg_info_path = egg_path.join("EGG-INFO");
@@ -1371,7 +1371,7 @@ mod tests {
             .tempdir()?;
         let tp = td.path();
 
-        create_dir_all(&tp)?;
+        create_dir_all(tp)?;
 
         let pth_path = tp.join("foo.pth");
         write(&pth_path, "")?;
