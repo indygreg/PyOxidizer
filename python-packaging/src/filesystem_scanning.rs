@@ -1154,7 +1154,7 @@ mod tests {
             .tempdir()?;
         let tp = td.path();
 
-        create_dir_all(&tp.join("markupsafe"))?;
+        create_dir_all(tp.join("markupsafe"))?;
 
         let pyd_path = tp.join("foo.pyd");
         let so_path = tp.join("bar.so");
@@ -1401,7 +1401,7 @@ mod tests {
         let tp = td.path();
 
         let resource_path = tp.join("resource.txt");
-        write(&resource_path, "content")?;
+        write(resource_path, "content")?;
 
         assert!(PythonResourceIterator::new(
             tp,
@@ -1424,12 +1424,12 @@ mod tests {
             .tempdir()?;
         let tp = td.path();
 
-        write(&tp.join("foo.py"), "")?;
+        write(tp.join("foo.py"), "")?;
         let resource_dir = tp.join("resources");
         create_dir_all(&resource_dir)?;
 
         let resource_path = resource_dir.join("resource.txt");
-        write(&resource_path, "content")?;
+        write(resource_path, "content")?;
 
         let resources =
             PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)?
@@ -1560,7 +1560,7 @@ mod tests {
         let dist_path = tp.join("foo-1.2.dist-info");
         create_dir_all(&dist_path)?;
         let resource = dist_path.join("file.txt");
-        write(&resource, "content")?;
+        write(resource, "content")?;
 
         let resources =
             PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)?
@@ -1581,9 +1581,9 @@ mod tests {
         let dist_path = tp.join("foo-1.2.dist-info");
         create_dir_all(&dist_path)?;
         let metadata = dist_path.join("METADATA");
-        write(&metadata, "bad content")?;
+        write(metadata, "bad content")?;
         let resource = dist_path.join("file.txt");
-        write(&resource, "content")?;
+        write(resource, "content")?;
 
         let resources =
             PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)?
@@ -1604,9 +1604,9 @@ mod tests {
         let dist_path = tp.join("black-1.2.3.dist-info");
         create_dir_all(&dist_path)?;
         let metadata = dist_path.join("METADATA");
-        write(&metadata, "Name: black\n")?;
+        write(metadata, "Name: black\n")?;
         let resource = dist_path.join("file.txt");
-        write(&resource, "content")?;
+        write(resource, "content")?;
 
         let resources =
             PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)?

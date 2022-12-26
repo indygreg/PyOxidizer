@@ -277,12 +277,12 @@ mod tests {
         let pfx_data = certificate_to_pfx(&cert, "some_password", "cert_name")?;
 
         let key_path = temp_path.join("signing.pfx");
-        std::fs::write(&key_path, &pfx_data)?;
+        std::fs::write(&key_path, pfx_data)?;
 
         // We sign the current test executable because why not.
         let sign_path = temp_path.join("test.exe");
         let current_exe = std::env::current_exe()?;
-        std::fs::copy(&current_exe, &sign_path)?;
+        std::fs::copy(current_exe, &sign_path)?;
 
         let mut c = FileBasedCodeSigningCertificate::new(&key_path);
         c.set_password("some_password");

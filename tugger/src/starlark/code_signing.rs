@@ -129,7 +129,7 @@ impl CodeSignerValue {
 // Starlark methods.
 impl CodeSignerValue {
     fn from_pfx_file(path: String, password: String) -> ValueResult {
-        let pfx_data = std::fs::read(&path).map_err(|e| {
+        let pfx_data = std::fs::read(path).map_err(|e| {
             ValueError::Runtime(RuntimeError {
                 code: "TUGGER_CODE_SIGNING",
                 message: format!("error reading file: {:?}", e),
@@ -151,7 +151,7 @@ impl CodeSignerValue {
     }
 
     fn from_windows_store_subject(subject: String, store: String) -> ValueResult {
-        let cert = SigningCertificate::windows_store_with_subject(&store, &subject)
+        let cert = SigningCertificate::windows_store_with_subject(&store, subject)
             .map_err(|e| from_code_signing_error(e, "code_signer_from_windows_store_subject"))?;
 
         Ok(Value::new::<CodeSignerValue>(cert.into()))
@@ -709,7 +709,7 @@ mod tests {
 
         let cert = create_self_signed_code_signing_certificate("test user")?;
         let pfx_data = certificate_to_pfx(&cert, PASSWORD, "name")?;
-        std::fs::write(pfx_file.path(), &pfx_data)?;
+        std::fs::write(pfx_file.path(), pfx_data)?;
 
         let mut env = StarlarkEnvironment::new()?;
 
@@ -795,7 +795,7 @@ mod tests {
         let pem_path_str = format!("{}", pem_path.display()).replace('\\', "/");
 
         let pem_data = cert.encode_pem();
-        std::fs::write(&pem_path, &pem_data)?;
+        std::fs::write(&pem_path, pem_data)?;
 
         env.eval("signer = code_signer_from_windows_store_auto()")?;
         env.eval(&format!(

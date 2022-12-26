@@ -301,7 +301,7 @@ mod tests {
     fn test_is_signable() -> Result<()> {
         let exe = std::env::current_exe()?;
 
-        let is_signable = is_file_signable(&exe)?;
+        let is_signable = is_file_signable(exe)?;
 
         if cfg!(target_family = "windows") {
             assert!(is_signable);

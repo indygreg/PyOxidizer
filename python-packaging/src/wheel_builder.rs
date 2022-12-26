@@ -528,7 +528,7 @@ impl WheelBuilder {
         self.write_wheel_data(&mut cursor)
             .context("creating wheel zip data")?;
 
-        std::fs::write(&path, &cursor.into_inner())
+        std::fs::write(&path, cursor.into_inner())
             .with_context(|| format!("writing wheel data to {}", path.display()))?;
 
         Ok(path)

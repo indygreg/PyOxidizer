@@ -27,7 +27,7 @@ fn run() -> Result<()> {
         let test_exe = td
             .path()
             .join(format!("{}{}", bin_name, std::env::consts::EXE_SUFFIX));
-        std::fs::copy(&source_exe, &test_exe).context("creating python executable")?;
+        std::fs::copy(source_exe, &test_exe).context("creating python executable")?;
 
         Command::new(&test_exe)
             .arg("-c")

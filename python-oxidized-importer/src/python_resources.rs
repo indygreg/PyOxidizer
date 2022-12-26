@@ -1186,15 +1186,7 @@ impl<'a> PythonResourcesState<'a, u8> {
         let filter_map_resource = |path: &'slf Cow<'slf, str>| -> Option<&'slf str> {
             match &prefix {
                 Some(prefix) => {
-                    if let Some(name) = path.strip_prefix(prefix) {
-                        if name.contains('/') {
-                            None
-                        } else {
-                            Some(name)
-                        }
-                    } else {
-                        None
-                    }
+                    path.strip_prefix(prefix).filter(|&name| !name.contains('/'))
                 }
                 None => {
                     // Empty string input matches root directory.

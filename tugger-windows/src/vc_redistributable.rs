@@ -180,15 +180,15 @@ mod tests {
     fn test_vcredist_download() -> Result<()> {
         download_to_path(
             &VC_REDIST_X86,
-            &DEFAULT_DOWNLOAD_DIR.join("vc_redist.x86.exe"),
+            DEFAULT_DOWNLOAD_DIR.join("vc_redist.x86.exe"),
         )?;
         download_to_path(
             &VC_REDIST_X64,
-            &DEFAULT_DOWNLOAD_DIR.join("vc_redist.x64.exe"),
+            DEFAULT_DOWNLOAD_DIR.join("vc_redist.x64.exe"),
         )?;
         download_to_path(
             &VC_REDIST_ARM64,
-            &DEFAULT_DOWNLOAD_DIR.join("vc_redist.arm64.exe"),
+            DEFAULT_DOWNLOAD_DIR.join("vc_redist.arm64.exe"),
         )?;
 
         Ok(())

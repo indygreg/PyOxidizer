@@ -70,7 +70,7 @@ fn test_memory_mapped_file_resources() -> Result<()> {
     }
 
     let resources_path = resources_dir.join("test_memory_mapped_file_resources");
-    std::fs::write(&resources_path, &data0)?;
+    std::fs::write(&resources_path, data0)?;
 
     // Absolute path should work.
     let mut config = OxidizedPythonInterpreterConfig::default();

@@ -182,7 +182,7 @@ fn materialize_archive(
     archive.install(install_dir).context("installing")?;
 
     let manifest_path = install_dir.join(format!("MANIFEST.{}.{}", triple, package));
-    let mut fh = std::fs::File::create(&manifest_path).context("opening manifest file")?;
+    let mut fh = std::fs::File::create(manifest_path).context("opening manifest file")?;
     archive
         .write_installs_manifest(&mut fh)
         .context("writing installs manifest")?;
@@ -220,7 +220,7 @@ fn package_is_fresh(install_dir: &Path, package: &str, triple: &str) -> Result<b
     let manifest = read_installs_manifest(&mut fh)?;
 
     for (path, wanted_digest) in manifest {
-        let install_path = install_dir.join(&path);
+        let install_path = install_dir.join(path);
 
         match sha256_path(&install_path) {
             Ok(got_digest) => {

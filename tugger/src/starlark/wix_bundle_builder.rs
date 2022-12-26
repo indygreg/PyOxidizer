@@ -204,7 +204,7 @@ impl<'a> WiXBundleBuilderValue<'a> {
         let (installer_path, filename) =
             self.materialize(type_values, call_stack, label, dest_dir.path())?;
 
-        let entry = FileEntry::new_from_path(&installer_path, false);
+        let entry = FileEntry::new_from_path(installer_path, false);
 
         let entry = error_context(label, || {
             entry
@@ -276,7 +276,7 @@ impl<'a> WiXBundleBuilderValue<'a> {
 
         let (content, filename) = self.materialize_temp_dir(type_values, call_stack, LABEL)?;
 
-        let dest_path = dest_dir.join(&filename);
+        let dest_path = dest_dir.join(filename);
 
         error_context(LABEL, || {
             content

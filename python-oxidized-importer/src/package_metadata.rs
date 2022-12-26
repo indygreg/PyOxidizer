@@ -353,9 +353,7 @@ pub(crate) fn find_pkg_resources_distributions<'p>(
 
     Ok(PyList::new(
         py,
-        &distributions
-            .into_iter()
-            .map(|(_, v)| v)
+        &distributions.into_values()
             .collect::<Vec<_>>(),
     ))
 }

@@ -471,7 +471,7 @@ impl WiXInstallerValue {
 
         let (entry, filename) = self.materialize_temp_dir(type_values, call_stack, LABEL)?;
 
-        let installer_path = dest_dir.join(&filename);
+        let installer_path = dest_dir.join(filename);
 
         error_context(LABEL, || {
             entry

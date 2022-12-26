@@ -106,7 +106,7 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
         match config.terminfo_resolution {
             TerminfoResolution::Dynamic => {
                 if let Some(v) = resolve_terminfo_dirs() {
-                    env::set_var("TERMINFO_DIRS", &v);
+                    env::set_var("TERMINFO_DIRS", v);
                 }
             }
             TerminfoResolution::Static(ref v) => {

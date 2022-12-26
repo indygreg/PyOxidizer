@@ -227,7 +227,7 @@ impl WiXInstallerBuilder {
         // Materialize FileManifest so we can reference files from WiX.
         let installed_files = self
             .install_files
-            .materialize_files(&self.stage_path())
+            .materialize_files(self.stage_path())
             .context("writing install files")?;
 
         // Automatically sign files that are signable.

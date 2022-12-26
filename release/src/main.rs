@@ -1075,7 +1075,7 @@ fn generate_new_project_cargo_lock(repo_root: &Path, pyembed_force_path: bool) -
 
     // This is a handlebars template but it has nothing special. So just read as
     // a regualar file.
-    manifest_data.push_str(&std::fs::read_to_string(&extra_toml_path)?);
+    manifest_data.push_str(&std::fs::read_to_string(extra_toml_path)?);
 
     std::fs::write(&cargo_toml_path, manifest_data.as_bytes())?;
 
@@ -1088,7 +1088,7 @@ fn generate_new_project_cargo_lock(repo_root: &Path, pyembed_force_path: bool) -
 
     // Filter out our placeholder package because the value will be different for
     // generated projects.
-    let mut lock_file = cargo_lock::Lockfile::load(&cargo_lock_path)?;
+    let mut lock_file = cargo_lock::Lockfile::load(cargo_lock_path)?;
 
     lock_file.packages = lock_file
         .packages
@@ -1138,7 +1138,7 @@ fn command_synchronize_generated_files(repo_root: &Path) -> Result<()> {
 fn main_impl() -> Result<()> {
     let cwd = std::env::current_dir()?;
 
-    let repo = Repository::discover(&cwd).context("finding Git repository")?;
+    let repo = Repository::discover(cwd).context("finding Git repository")?;
     let repo_root = repo
         .workdir()
         .ok_or_else(|| anyhow!("unable to resolve working directory"))?;

@@ -417,7 +417,7 @@ pub fn generate_sphinx_files(repo_root: &Path) -> Result<()> {
             .join(format!("{}_interpreter_config.rst", prefix));
 
         let rst = lines.join("\n");
-        std::fs::write(&output_path, rst.as_bytes())?;
+        std::fs::write(output_path, rst.as_bytes())?;
     }
 
     Ok(())

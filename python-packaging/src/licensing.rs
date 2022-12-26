@@ -1074,7 +1074,7 @@ pub fn derive_package_license_infos<'a>(
         // Else we don't know what to do with this file. Just ignore it.
     }
 
-    Ok(packages.into_iter().map(|(_, v)| v).collect::<Vec<_>>())
+    Ok(packages.into_values().collect::<Vec<_>>())
 }
 
 #[cfg(test)]

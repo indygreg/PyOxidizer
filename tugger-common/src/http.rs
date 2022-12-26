@@ -74,7 +74,7 @@ pub fn download_and_verify(entry: &RemoteContent) -> Result<Vec<u8>> {
         let file_path = url
             .to_file_path()
             .map_err(|_err: ()| anyhow!("bad url for {}: {}", entry.name, url))?;
-        let mut file = File::open(&file_path)?;
+        let mut file = File::open(file_path)?;
         file.read_to_end(&mut data)?;
     } else {
         let mut response = client.get(url).send()?;
@@ -132,7 +132,7 @@ pub fn download_to_path<P: AsRef<Path>>(entry: &RemoteContent, dest_path: P) -> 
             .to_string_lossy()
     ));
 
-    std::fs::write(&temp_path, &data).context("writing data to temporary file")?;
+    std::fs::write(&temp_path, data).context("writing data to temporary file")?;
     std::fs::rename(&temp_path, dest_path).with_context(|| {
         format!(
             "renaming {} to {}",
