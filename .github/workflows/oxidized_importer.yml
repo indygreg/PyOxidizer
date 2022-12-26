@@ -76,7 +76,7 @@ jobs:
           - build: 'cp38-macosx_x86_64'
           - build: 'cp39-macosx_x86_64'
           - build: 'cp310-macosx_x86_64'
-    runs-on: macos-11
+    runs-on: macos-12
     env:
       CIBW_BUILD: ${{ matrix.py.build }}
       CIBW_BUILD_VERBOSITY: '1'

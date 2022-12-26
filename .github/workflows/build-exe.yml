@@ -36,9 +36,9 @@ jobs:
             cross: true
           - os: 'ubuntu-22.04'
             triple: 'x86_64-unknown-linux-musl'
-          - os: 'macos-11'
+          - os: 'macos-12'
             triple: 'aarch64-apple-darwin'
-          - os: 'macos-11'
+          - os: 'macos-12'
             triple: 'x86_64-apple-darwin'
           - os: 'windows-2022'
             triple: 'i686-pc-windows-msvc'
@@ -136,7 +136,7 @@ jobs:
   macos-universal:
     needs:
       - build
-    runs-on: 'macos-11'
+    runs-on: 'macos-12'
     steps:
       - uses: actions/checkout@v3
         with:
