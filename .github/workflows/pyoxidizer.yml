@@ -79,7 +79,7 @@ jobs:
             target_triple: 'i686-pc-windows-msvc'
     needs:
       - pyoxidizer-exes
-    runs-on: 'windows-2019'
+    runs-on: 'windows-2022'
     steps:
       - name: Download Windows Executable
         uses: actions/download-artifact@v3
@@ -105,7 +105,7 @@ jobs:
   pyoxidizer-windows-installer:
     needs:
       - pyoxidizer-exes
-    runs-on: 'windows-2019'
+    runs-on: 'windows-2022'
     env:
       IN_CI: '1'
     steps:

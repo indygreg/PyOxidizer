@@ -27,7 +27,7 @@ jobs:
             triple: 'x86_64-apple-darwin'
           - os: 'macos-12'
             triple: 'x86_64-apple-darwin'
-          - os: 'windows-2019'
+          - os: 'windows-2022'
             triple: 'x86_64-pc-windows-msvc'
     continue-on-error: ${{ matrix.rust_toolchain == 'nightly' }}
     runs-on: ${{ matrix.target.os }}
