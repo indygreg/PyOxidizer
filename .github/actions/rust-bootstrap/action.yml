@@ -13,12 +13,10 @@ runs:
   steps:
     - uses: ./.github/actions/install-just
 
-    - uses: actions-rs/toolchain@v1
+    - uses: dtolnay/rust-toolchain@v1
       with:
         toolchain: ${{ inputs.rust_toolchain }}
-        target: ${{ inputs.rust_target }}
-        default: true
-        profile: minimal
+        targets: ${{ inputs.rust_target }}
         components: clippy
 
     - uses: taiki-e/install-action@nextest
