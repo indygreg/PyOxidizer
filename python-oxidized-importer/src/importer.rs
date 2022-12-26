@@ -457,7 +457,7 @@ impl Drop for ImporterState {
 
         if !ptr.is_null() {
             unsafe {
-                Box::from_raw(ptr as *mut PythonResourcesState<u8>);
+                drop(Box::from_raw(ptr as *mut PythonResourcesState<u8>));
             }
         }
     }
