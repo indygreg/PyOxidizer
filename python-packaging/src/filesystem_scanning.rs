@@ -344,7 +344,7 @@ impl<'a> PythonResourceIterator<'a> {
 
                 let module_components = full_module_name.split('.').collect::<Vec<_>>();
                 let final_name = module_components[module_components.len() - 1];
-                let init_fn = Some(format!("PyInit_{}", final_name));
+                let init_fn = Some(format!("PyInit_{final_name}"));
 
                 return Some(PathItem::PythonResource(Box::new(
                     PythonExtensionModule {
