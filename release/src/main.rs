@@ -12,7 +12,7 @@ use {
     std::{
         ffi::OsString,
         io::{BufRead, BufReader},
-        path::Path,
+        path::{Path, PathBuf},
     },
 };
 
@@ -858,7 +858,9 @@ enum VersionBump {
     Patch,
 }
 
-fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Result<()> {
+fn command_release(repo_root: &Path, args: &ArgMatches) -> Result<()> {
+    let repo = Repository::open(repo_root).context("opening Git repository")?;
+
     let publish = !args.get_flag("no_publish");
 
     let version_bump = if args.get_flag("patch") {
@@ -978,7 +980,7 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
 
                 release_package(
                     repo_root,
-                    repo,
+                    &repo,
                     &dependency_update_packages,
                     package,
                     publish,
@@ -1138,10 +1140,28 @@ fn command_synchronize_generated_files(repo_root: &Path) -> Result<()> {
 fn main_impl() -> Result<()> {
     let cwd = std::env::current_dir()?;
 
-    let repo = Repository::discover(cwd).context("finding Git repository")?;
-    let repo_root = repo
-        .workdir()
-        .ok_or_else(|| anyhow!("unable to resolve working directory"))?;
+    let repo_root = if let Ok(repo) = Repository::discover(&cwd) {
+        repo.workdir()
+            .ok_or_else(|| anyhow!("unable to resolve working directory"))?
+            .to_path_buf()
+    } else if let Ok(output) = std::process::Command::new("sl")
+        .arg("root")
+        .current_dir(&cwd)
+        .output()
+    {
+        if output.status.success() {
+            let root = String::from_utf8(output.stdout)
+                .expect("sl root should print UTF-8")
+                .trim()
+                .to_string();
+
+            PathBuf::from(root)
+        } else {
+            return Err(anyhow!("could not find VCS root"));
+        }
+    } else {
+        return Err(anyhow!("could not find VCS root"));
+    };
 
     let matches = Command::new("PyOxidizer Releaser")
         .version("0.1")
@@ -1184,11 +1204,11 @@ fn main_impl() -> Result<()> {
         .get_matches();
 
     match matches.subcommand() {
-        Some(("release", args)) => command_release(repo_root, args, &repo),
+        Some(("release", args)) => command_release(&repo_root, args),
         Some(("generate-new-project-cargo-lock", args)) => {
-            command_generate_new_project_cargo_lock(repo_root, args)
+            command_generate_new_project_cargo_lock(&repo_root, args)
         }
-        Some(("synchronize-generated-files", _)) => command_synchronize_generated_files(repo_root),
+        Some(("synchronize-generated-files", _)) => command_synchronize_generated_files(&repo_root),
         _ => Err(anyhow!("invalid sub-command")),
     }
 }
