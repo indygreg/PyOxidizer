@@ -28,7 +28,7 @@ RUN for s in debian_jessie debian_jessie-updates debian-security_jessie/updates;
     ) > /etc/apt/apt.conf.d/99builder
 
 RUN apt-get update
-RUN apt-get install \
+RUN apt-get install --force-yes \
   ca-certificates \
   curl \
   file \
