@@ -5,6 +5,8 @@ authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
 edition = "2021"
 license = "Python-2.0 OR MPL-2.0"
 description = "A Rust-powered Python importer"
+homepage = "https://github.com/indygreg/PyOxidizer"
+repository = "https://github.com/indygreg/PyOxidizer.git"
 readme = "README.md"
 
 [lib]
