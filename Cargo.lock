@@ -3423,7 +3423,7 @@ dependencies = [
 
 [[package]]
 name = "pyembed"
-version = "0.24.0-pre"
+version = "0.24.0"
 dependencies = [
  "anyhow",
  "dunce",
@@ -3601,7 +3601,7 @@ dependencies = [
 
 [[package]]
 name = "python-oxidized-importer"
-version = "0.9.0-pre"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "memmap2",
@@ -3617,7 +3617,7 @@ dependencies = [
 
 [[package]]
 name = "python-packaging"
-version = "0.16.0-pre"
+version = "0.16.0"
 dependencies = [
  "anyhow",
  "base64 0.20.0",
@@ -3640,7 +3640,7 @@ dependencies = [
 
 [[package]]
 name = "python-packed-resources"
-version = "0.12.0-pre"
+version = "0.12.0"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -4517,7 +4517,7 @@ dependencies = [
 
 [[package]]
 name = "starlark-dialect-build-targets"
-version = "0.8.0-pre"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "codemap",
@@ -4941,7 +4941,7 @@ dependencies = [
 
 [[package]]
 name = "tugger"
-version = "0.18.0-pre"
+version = "0.18.0"
 dependencies = [
  "anyhow",
  "apple-bundles",
@@ -4975,7 +4975,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-apple"
-version = "0.8.0-pre"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "goblin",
@@ -4985,7 +4985,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-binary-analysis"
-version = "0.7.0-pre"
+version = "0.7.0"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -4996,7 +4996,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-code-signing"
-version = "0.10.0-pre"
+version = "0.10.0"
 dependencies = [
  "anyhow",
  "apple-bundles",
@@ -5017,7 +5017,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-common"
-version = "0.10.0-pre"
+version = "0.10.0"
 dependencies = [
  "anyhow",
  "fs2",
@@ -5034,7 +5034,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-rust-toolchain"
-version = "0.13.0-pre"
+version = "0.13.0"
 dependencies = [
  "anyhow",
  "dirs",
@@ -5056,7 +5056,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-snapcraft"
-version = "0.15.0-pre"
+version = "0.15.0"
 dependencies = [
  "anyhow",
  "duct",
@@ -5070,7 +5070,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-windows"
-version = "0.10.0-pre"
+version = "0.10.0"
 dependencies = [
  "anyhow",
  "duct",
@@ -5084,7 +5084,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-windows-codesign"
-version = "0.10.0-pre"
+version = "0.10.0"
 dependencies = [
  "anyhow",
  "der-parser",
@@ -5101,7 +5101,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-wix"
-version = "0.16.0-pre"
+version = "0.16.0"
 dependencies = [
  "anyhow",
  "duct",
