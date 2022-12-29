@@ -13,6 +13,12 @@ repository = "https://github.com/indygreg/PyOxidizer.git"
 build = "build.rs"
 readme = "README.md"
 
+[[package.metadata.release.pre-release-replacements]]
+file = "../pyoxidizer/src/environment.rs"
+search = "const PYEMBED_CRATE_VERSION: &str = .*;"
+replace = "const PYEMBED_CRATE_VERSION: &str = \"{{version}}\";"
+exactly = 1
+
 [dependencies]
 # Update documentation in lib.rs when new dependencies are added.
 anyhow = "1.0.68"

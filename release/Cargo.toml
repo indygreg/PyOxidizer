@@ -8,6 +8,10 @@ license = "MPL-2.0"
 homepage = "https://github.com/indygreg/PyOxidizer"
 repository = "https://github.com/indygreg/PyOxidizer.git"
 
+[package.metadata.release]
+# Internal package is never released.
+release = false
+
 [dependencies]
 anyhow = "1.0.68"
 cargo-lock = "8.0.3"

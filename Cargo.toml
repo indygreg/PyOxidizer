@@ -21,3 +21,12 @@ members = [
     'tugger-wix',
 ]
 resolver = "2"
+
+[workspace.metadata.release]
+allow-branch = ["main"]
+push-remote = "origin"
+pre-release-commit-message = "workspace: perform releases"
+tag-message = "{{crate_name}}: version {{version}}"
+tag-name = "{{crate_name}}/{{version}}"
+tag = true
+dependent-version = "fix"

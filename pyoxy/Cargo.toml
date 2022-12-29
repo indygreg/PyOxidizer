@@ -11,6 +11,10 @@ keywords = ["python"]
 edition = "2021"
 build = "build.rs"
 
+[package.metadata.release]
+# PyOxy is only published as a binary, not to crates.io.
+release = false
+
 [dependencies]
 anyhow = "1.0.68"
 clap = "4.0.32"

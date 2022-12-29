@@ -8,6 +8,10 @@ description = "Benchmarks for the pyembed crate"
 homepage = "https://github.com/indygreg/PyOxidizer"
 repository = "https://github.com/indygreg/PyOxidizer.git"
 
+[package.metadata.release]
+# Internal package is never released.
+release = false
+
 [dependencies]
 anyhow = "1.0.68"
 once_cell = "1.16.0"

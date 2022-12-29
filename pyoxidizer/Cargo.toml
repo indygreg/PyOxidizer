@@ -11,6 +11,21 @@ keywords = ["python"]
 edition = "2021"
 build = "build.rs"
 
+[package.metadata.release]
+pre-release-hook = ["/bin/bash", "-c", "cd $WORKSPACE_ROOT; cargo run --bin release -- synchronize-generated-files"]
+
+[[package.metadata.release.pre-release-replacements]]
+file = "../pyoxidizer.bzl"
+search = "PYOXIDIZER_VERSION = .*"
+replace = "PYOXIDIZER_VERSION = \"{{version}}\""
+exactly = 1
+
+[[package.metadata.release.pre-release-replacements]]
+file = "docs/pyoxidizer_history.rst"
+search = "\\(Not yet released\\)"
+replace = "Released {{date}}"
+exactly = 1
+
 # We rename the library so we can have crate documentation for both the
 # library and the binary.
 [lib]
