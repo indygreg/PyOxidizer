@@ -15,7 +15,7 @@ build = "build.rs"
 anyhow = "1.0.68"
 duct = "0.13.6"
 log = "0.4.17"
-once_cell = "1.16.0"
+once_cell = "1.17.0"
 simple-file-manifest = "0.11.0"
 url = "2.3.1"
 uuid = { version = "1.2.2", features = ["v4", "v5"] }
