@@ -9,6 +9,24 @@ homepage = "https://github.com/indygreg/PyOxidizer"
 repository = "https://github.com/indygreg/PyOxidizer.git"
 readme = "README.md"
 
+[[package.metadata.release.pre-release-replacements]]
+file = "docs/oxidized_importer_history.rst"
+search = "\\(Not yet released\\)"
+replace = "Released {{date}}"
+exactly = 1
+
+[[package.metadata.release.pre-release-replacmenets]]
+file = "docs/oxidized_importer_history.rst"
+search = "Next\n----"
+replace = "{{version}}\n------"
+exactly = 1
+
+[[package.metadata.release.pre-release-replacements]]
+file = "docs/oxidized_importer_history.rst"
+search = "\\.\\. next-release"
+replace = ".. next-release\n\nNext\n----\n\n(Not yet released)"
+exactly = 1
+
 [lib]
 name = "oxidized_importer"
 crate-type = ["cdylib", "lib"]

@@ -9,10 +9,17 @@ Project History
 Changelog
 =========
 
+.. next-release
+
+Next
+----
+
+(Not yet released)
+
 0.9.0
 -----
 
-(Not yet released)
+Released 2022-12-29.
 
 0.8.0
 -----

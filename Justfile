@@ -467,3 +467,8 @@ pyoxidizer-release-upload commit tag:
 # Perform release automation for PyOxidizer.
 pyoxidizer-release:
   just _release pyoxidizer 'PyOxidizer'
+
+# Perform Rust crate releases.
+release-rust:
+  cargo release release --exclude pyoxidizer --execute
+  cargo release release -p pyoxidizer --execute

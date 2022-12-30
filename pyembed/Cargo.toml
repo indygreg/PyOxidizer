@@ -13,6 +13,9 @@ repository = "https://github.com/indygreg/PyOxidizer.git"
 build = "build.rs"
 readme = "README.md"
 
+[package.metadata.release]
+pre-release-hook = ["/bin/bash", "-c", "cd $WORKSPACE_ROOT; cargo run --bin release -- synchronize-generated-files"]
+
 [[package.metadata.release.pre-release-replacements]]
 file = "../pyoxidizer/src/environment.rs"
 search = "const PYEMBED_CRATE_VERSION: &str = .*;"

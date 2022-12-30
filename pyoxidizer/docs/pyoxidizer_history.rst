@@ -26,6 +26,13 @@ Blog Posts
 Version History
 ===============
 
+.. next-release
+
+Next
+----
+
+(Not yet released)
+
 .. _version_0_24_0:
 
 0.24.0
