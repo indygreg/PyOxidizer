@@ -282,7 +282,9 @@ dependencies = [
 
 [[package]]
 name = "pyembed"
-version = "0.24.0-pre"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fa44f0064395bd62aeda5916de48f1373183cb9c6303a8df7e40b8f73a6edd0c"
 dependencies = [
  "anyhow",
  "dunce",
@@ -359,7 +361,9 @@ dependencies = [
 
 [[package]]
 name = "python-oxidized-importer"
-version = "0.9.0-pre"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b853cef903974d03cf48795e8f01e879b22da70bcac8cf0293c7d7deb4fbb833"
 dependencies = [
  "anyhow",
  "memmap2",
@@ -374,7 +378,9 @@ dependencies = [
 
 [[package]]
 name = "python-packaging"
-version = "0.16.0-pre"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "177802e8a6b8cc825dd37b8edfc37e617653d1d9b4c4a063f355f6c7a5c17351"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -391,7 +397,9 @@ dependencies = [
 
 [[package]]
 name = "python-packed-resources"
-version = "0.12.0-pre"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "caf0dc168f0aaf231920fa01d7d1cc1ac021ac63ab4bb7a8831282d4a7569064"
 dependencies = [
  "anyhow",
  "byteorder",

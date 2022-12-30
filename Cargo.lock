@@ -3521,7 +3521,7 @@ dependencies = [
 
 [[package]]
 name = "pyoxidizer"
-version = "0.24.0-pre"
+version = "0.24.0"
 dependencies = [
  "anyhow",
  "apple-sdk",
