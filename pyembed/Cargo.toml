@@ -37,7 +37,7 @@ features = ["build_cc"]
 optional = true
 
 [dependencies.libmimalloc-sys]
-version = "0.1.28"
+version = "0.1.30"
 features = [
     "extended",
     "local_dynamic_tls",

@@ -21,9 +21,9 @@ pgp = "0.9.0"
 sha2 = "0.10.6"
 simple-file-manifest = "0.11.0"
 tar = "0.4.38"
-toml = "0.5.10"
+toml = "0.5.11"
 xz2 = { version = "0.1.7", features = ["static"] }
-zstd = "0.12.1"
+zstd = "0.12.2"
 
 [dependencies.tugger-common]
 version = "0.10.0-pre"
