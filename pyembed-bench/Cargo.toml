@@ -20,7 +20,7 @@ tempfile = "3.3.0"
 zip = { version = "0.6.3", default-features = false, features = ["deflate"] }
 
 [dependencies.pyembed]
-version = "0.24.0-pre"
+version = "0.25.0-pre"
 path = "../pyembed"
 default-features = false
 features = ["zipimport"]
