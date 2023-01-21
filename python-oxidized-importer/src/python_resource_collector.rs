@@ -265,7 +265,7 @@ impl OxidizedResourceCollector {
         }
     }
 
-    #[args(python_exe = "None")]
+    #[pyo3(signature=(python_exe=None))]
     fn oxidize<'p>(&self, py: Python<'p>, python_exe: Option<&PyAny>) -> PyResult<&'p PyTuple> {
         let python_exe = match python_exe {
             Some(p) => p,

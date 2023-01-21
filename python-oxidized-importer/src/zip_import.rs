@@ -333,7 +333,7 @@ impl OxidizedZipFinder {
     }
 
     #[classmethod]
-    #[args(path = "None")]
+    #[pyo3(signature=(source, path=None))]
     #[allow(unused)]
     fn from_zip_data(
         cls: &PyType,
@@ -354,7 +354,7 @@ impl OxidizedZipFinder {
     }
 
     // Start of importlib.abc.MetaPathFinder interface.
-    #[args(target = "None")]
+    #[pyo3(signature=(fullname, path, target=None))]
     #[allow(unused)]
     fn find_spec<'p>(
         slf: &'p PyCell<Self>,
@@ -416,7 +416,7 @@ impl OxidizedZipFinder {
     }
 
     #[allow(unused)]
-    #[args(path = "None")]
+    #[pyo3(signature=(fullname, path=None))]
     fn find_module<'p>(
         slf: &'p PyCell<Self>,
         fullname: String,

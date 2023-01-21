@@ -50,7 +50,7 @@ impl OxidizedPathEntryFinder {
         Ok(())
     }
 
-    #[args(target = "None")]
+    #[pyo3(signature=(fullname, target=None))]
     fn find_spec(
         &self,
         py: Python,
@@ -77,7 +77,7 @@ impl OxidizedPathEntryFinder {
         self.finder.call_method0(py, "invalidate_caches")
     }
 
-    #[args(prefix = "\"\"")]
+    #[pyo3(signature=(prefix=""))]
     fn iter_modules<'p>(&self, py: Python<'p>, prefix: &str) -> PyResult<&'p PyList> {
         let finder = self.finder.borrow(py);
 

@@ -204,7 +204,8 @@ pub(crate) fn register_pkg_resources_with_module(
 }
 
 /// pkg_resources distribution finder for sys.path items.
-#[pyfunction(only = false)]
+#[pyfunction]
+#[pyo3(signature=(importer, path_item, only=false))]
 pub(crate) fn pkg_resources_find_distributions<'p>(
     py: Python<'p>,
     importer: &PyAny,

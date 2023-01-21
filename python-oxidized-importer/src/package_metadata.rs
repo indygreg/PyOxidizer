@@ -81,7 +81,7 @@ impl OxidizedDistribution {
 
     #[allow(unused)]
     #[classmethod]
-    #[args(py_args = "*", py_kwargs = "**")]
+    #[pyo3(signature=(*py_args, **py_kwargs))]
     fn discover<'p>(
         cls: &PyType,
         py: Python<'p>,

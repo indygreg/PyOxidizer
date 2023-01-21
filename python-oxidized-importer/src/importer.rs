@@ -514,7 +514,7 @@ impl OxidizedFinder {
 
     // Start of importlib.abc.MetaPathFinder interface.
 
-    #[args(target = "None")]
+    #[pyo3(signature=(fullname, path, target=None))]
     fn find_spec<'p>(
         slf: &'p PyCell<Self>,
         fullname: String,
@@ -857,7 +857,7 @@ impl OxidizedFinder {
     /// Distribution and implement the abstract methods. Then from a custom
     /// finder, return instances of this derived Distribution in the
     /// find_distributions() method.
-    #[args(context = "None")]
+    #[pyo3(signature=(context=None))]
     fn find_distributions<'p>(
         slf: &'p PyCell<Self>,
         context: Option<&PyAny>,
@@ -888,7 +888,7 @@ impl OxidizedFinder {
     // pkgutil methods.
 
     /// def iter_modules(prefix="")
-    #[args(prefix = "None")]
+    #[pyo3(signature=(prefix=None))]
     fn iter_modules<'p>(slf: &'p PyCell<Self>, prefix: Option<&str>) -> PyResult<&'p PyList> {
         let finder = slf.borrow();
         let state = &finder.state;
@@ -904,7 +904,7 @@ impl OxidizedFinder {
 
     /// OxidizedFinder.__new__(relative_path_origin=None))
     #[new]
-    #[args(relative_path_origin = "None")]
+    #[pyo3(signature=(relative_path_origin=None))]
     fn new(py: Python, relative_path_origin: Option<&PyAny>) -> PyResult<Self> {
         // We need to obtain an ImporterState instance. This requires handles on a
         // few items...
@@ -1057,7 +1057,7 @@ impl OxidizedFinder {
         Ok(())
     }
 
-    #[args(ignore_builtin = true, ignore_frozen = true)]
+    #[pyo3(signature=(ignore_builtin=true, ignore_frozen=true))]
     fn serialize_indexed_resources<'p>(
         &self,
         py: Python<'p>,
@@ -1266,7 +1266,7 @@ impl PyOxidizerTraversable {
     /// When opening as text, accepts encoding parameters such as those
     /// accepted by io.TextIOWrapper.
     #[allow(unused)]
-    #[args(py_args = "*", py_kwargs = "**")]
+    #[pyo3(signature=(*py_args, **py_kwargs))]
     fn open(&self, py_args: &PyTuple, py_kwargs: Option<&PyDict>) -> PyResult<&PyAny> {
         unimplemented!()
     }
