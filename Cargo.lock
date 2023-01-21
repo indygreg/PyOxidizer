@@ -3626,7 +3626,7 @@ name = "python-packaging"
 version = "0.16.0"
 dependencies = [
  "anyhow",
- "base64 0.20.0",
+ "base64 0.21.0",
  "byteorder",
  "encoding_rs",
  "itertools",

@@ -10,6 +10,7 @@
 
 use {
     anyhow::{anyhow, Context, Result},
+    base64::Engine,
     once_cell::sync::Lazy,
     sha2::Digest,
     simple_file_manifest::{FileEntry, FileManifest},
@@ -25,10 +26,7 @@ static RE_FILENAME_ESCAPE: Lazy<regex::Regex> =
     Lazy::new(|| regex::Regex::new(r"[^\w\d.]+").unwrap());
 
 fn base64_engine() -> impl base64::engine::Engine {
-    base64::engine::fast_portable::FastPortable::from(
-        &base64::alphabet::URL_SAFE,
-        base64::engine::fast_portable::FastPortableConfig::new().with_encode_padding(false),
-    )
+    base64::engine::general_purpose::URL_SAFE_NO_PAD
 }
 
 /// Define and build a Python wheel from raw components.
@@ -380,7 +378,7 @@ impl WheelBuilder {
                 Ok(format!(
                     "{},sha256={},{}",
                     path.display(),
-                    base64::encode_engine(digest.finalize().as_slice(), &base64_engine()),
+                    base64_engine().encode(digest.finalize().as_slice()),
                     content.len()
                 ))
             })
