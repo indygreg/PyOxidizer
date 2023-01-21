@@ -16,6 +16,8 @@ Next
 
 (Not yet released)
 
+* PyO3 upgraded from 0.17 to 0.18.
+
 0.9.0
 -----
 

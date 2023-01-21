@@ -33,6 +33,8 @@ Next
 
 (Not yet released)
 
+* PyO3 crate upgraded from 0.17 to 0.18.
+
 .. _version_0_24_0:
 
 0.24.0
