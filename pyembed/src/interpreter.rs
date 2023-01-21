@@ -704,7 +704,7 @@ fn write_modules_to_path(py: Python, path: &Path) -> Result<(), &'static str> {
         .map_err(|_| "could not obtain sys.modules")?;
 
     let modules = modules
-        .cast_as::<PyDict>()
+        .downcast::<PyDict>()
         .map_err(|_| "sys.modules is not a dict")?;
 
     let mut names = BTreeSet::new();

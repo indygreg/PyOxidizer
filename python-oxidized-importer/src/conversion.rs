@@ -96,7 +96,7 @@ pub fn pyobject_optional_resources_map_to_owned_bytes(
     if value.is_none() {
         Ok(None)
     } else {
-        let source = value.cast_as::<PyDict>()?;
+        let source = value.downcast::<PyDict>()?;
         let mut res = HashMap::with_capacity(source.len());
 
         for (k, v) in source.iter() {
@@ -114,7 +114,7 @@ pub fn pyobject_optional_resources_map_to_pathbuf(
     if value.is_none() {
         Ok(None)
     } else {
-        let source = value.cast_as::<PyDict>()?;
+        let source = value.downcast::<PyDict>()?;
         let mut res = HashMap::with_capacity(source.len());
 
         for (k, v) in source.iter() {

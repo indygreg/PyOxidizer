@@ -19,7 +19,7 @@ use {
 // Emulates importlib.metadata.Distribution._discover_resolvers().
 fn discover_resolvers(py: Python) -> PyResult<&PyList> {
     let sys_module = py.import("sys")?;
-    let meta_path = sys_module.getattr("meta_path")?.cast_as::<PyList>()?;
+    let meta_path = sys_module.getattr("meta_path")?.downcast::<PyList>()?;
 
     let mut resolvers = vec![];
 
@@ -353,7 +353,6 @@ pub(crate) fn find_pkg_resources_distributions<'p>(
 
     Ok(PyList::new(
         py,
-        &distributions.into_values()
-            .collect::<Vec<_>>(),
+        &distributions.into_values().collect::<Vec<_>>(),
     ))
 }
