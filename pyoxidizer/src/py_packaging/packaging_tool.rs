@@ -446,7 +446,7 @@ mod tests {
                 &*target_dist,
                 &policy,
                 false,
-                &["zstandard==0.16.0".to_string()],
+                &["zstandard==0.19.0".to_string()],
             )?;
 
             assert!(!resources.is_empty());
