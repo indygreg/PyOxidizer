@@ -16,7 +16,7 @@ release = false
 anyhow = "1.0.68"
 cargo-lock = "8.0.3"
 cargo_toml = "0.14.0"
-clap = "4.0.32"
+clap = "4.1.1"
 duct = "0.13.6"
 # We don't need network functionality.
 git2 = { version = "0.16.1", default-features = false }

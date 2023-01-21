@@ -19,7 +19,7 @@ fn get_command() -> Result<Command> {
 
 fn no_args_fails() -> Result<()> {
     get_command()?.assert().failure().stderr(
-        predicates::str::contains("error: The following required arguments were not provided:")
+        predicates::str::contains("error: the following required arguments were not provided")
             .normalize(),
     );
 

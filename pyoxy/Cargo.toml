@@ -17,7 +17,7 @@ release = false
 
 [dependencies]
 anyhow = "1.0.68"
-clap = "4.0.32"
+clap = "4.1.1"
 serde = { version = "1.0.152", features = ["derive"] }
 serde_yaml = "0.9.17"
 
