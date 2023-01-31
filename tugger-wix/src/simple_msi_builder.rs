@@ -518,7 +518,7 @@ impl WiXSimpleMsiBuilder {
         if let Some(eula_path) = &self.eula_rtf {
             writer.write(
                 XmlEvent::start_element("WixVariable")
-                    .attr("Id", "WixUILicenseRTF")
+                    .attr("Id", "WixUILicenseRtf")
                     .attr("Value", &eula_path.display().to_string()),
             )?;
             writer.write(XmlEvent::end_element().name("WixVariable"))?;
