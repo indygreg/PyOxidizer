@@ -527,7 +527,7 @@ impl WiXSimpleMsiBuilder {
         if let Some(banner_path) = &self.banner_bmp {
             writer.write(
                 XmlEvent::start_element("WixVariable")
-                    .attr("Id", "WixUIBannerBMP")
+                    .attr("Id", "WixUIBannerBmp")
                     .attr("Value", &banner_path.display().to_string()),
             )?;
             writer.write(XmlEvent::end_element().name("WixVariable"))?;
