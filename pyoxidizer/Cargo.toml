@@ -73,7 +73,7 @@ log = "0.4.17"
 once_cell = "1.17.0"
 path-dedot = "3.0.18"
 pyo3-build-config = "0.18.0"
-remove_dir_all = "0.7.0"
+remove_dir_all = "0.8.0"
 rustc_version = "0.4.0"
 semver = "1.0.16"
 serde = { version = "1.0.152", features = ["derive"] }
