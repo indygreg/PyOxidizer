@@ -14,7 +14,7 @@ readme = "README.md"
 anyhow = "1.0.68"
 duct = "0.13.6"
 log = "0.4.17"
-remove_dir_all = "0.7.0"
+remove_dir_all = "0.8.0"
 serde_yaml = "0.9.17"
 serde = { version = "1.0.152", features = ["derive"] }
 simple-file-manifest = "0.11.0"
