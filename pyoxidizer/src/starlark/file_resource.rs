@@ -45,10 +45,6 @@ pub fn file_manifest_add_python_executable(
     cwd: PathBuf,
 ) -> Result<()> {
     const LABEL: &str = "FileManifest.add_python_executable()";
-    println!("running  file_manifest_add_python_executable ");
-
-    println!("manifest run_path is {}", manifest.run_path.get_or_insert(PathBuf::new()).display());
-    println!("manifest paths is {}", manifest.paths().unwrap());
 
     let build = build_python_executable_local(env, &exe.name(), exe, target, opt_level, release,cwd)
         .context("building Python executable")?;

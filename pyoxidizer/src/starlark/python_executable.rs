@@ -82,13 +82,8 @@ pub fn build_internal(
     target: &str,
     context: &PyOxidizerEnvironmentContext,
 ) -> Result<(ResolvedTarget, PathBuf)> {
-    // Build an executable by writing out a temporary Rust project
-    // and building it.
-    println!("running  build_internal ");
-
-    println!("cwd is {}",context.cwd.display());
-    println!("config_path is {}",context.config_path.display());
-
+    // Build an executable if can't find local toml file  
+    // will writing out a temporary Rust project and building it.
     let build = build_python_executable_local(
         context.env(),
         &exe.name(),

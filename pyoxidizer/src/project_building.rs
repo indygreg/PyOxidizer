@@ -16,7 +16,6 @@ use {
     },
     anyhow::{anyhow, Context, Result},
     apple_sdk::AppleSdk,
-    
     duct::cmd,
     log::warn,
     starlark_dialect_build_targets::ResolvedTarget,
@@ -27,7 +26,6 @@ use {
         path::{Path, PathBuf},
     },
 };
-use serde::{Deserialize, Serialize};
 
 /// Find a pyoxidizer.toml configuration file by walking directory ancestry.
 pub fn find_pyoxidizer_config_file(start_dir: &Path) -> Option<PathBuf> {
@@ -424,10 +422,6 @@ pub fn build_python_executable<'a>(
     opt_level: &str,
     release: bool,
 ) -> Result<BuiltExecutable<'a>> {
-    let json = serde_json::to_string( &env.pyoxidizer_source.as_pyembed_location())?;
-    println!("env in as_pyembed_location {}",json);
-    let p = &env.cargo_target_directory;
-    println!("env in cargo_target_directory {}",p.clone().get_or_insert(PathBuf::new()).display());
     let cargo_exe = env
         .ensure_rust_toolchain(Some(target_triple))
         .context("resolving Rust toolchain")?
@@ -508,20 +502,14 @@ pub fn build_python_executable_local<'a>(
     release: bool,
     cwd: PathBuf,
 ) -> Result<BuiltExecutable<'a>> {
-    let json = serde_json::to_string( &env.pyoxidizer_source.as_pyembed_location())?;
-    println!("build_python_executable_local env in as_pyembed_location {}",json);
-    let p = &env.cargo_target_directory;
-    println!("build_python_executable_local env in cargo_target_directory {}",p.clone().get_or_insert(PathBuf::new()).display());
     let cargo_exe = env
         .ensure_rust_toolchain(Some(target_triple))
         .context("resolving Rust toolchain")?
         .cargo_exe;
 
     let toml = cwd.join("Cargo.toml");
-    println!("toml.exists() is {}",toml.exists());
-    println!("toml.display() is {}",toml.display());
+    
     if toml.exists() {
-            // Directory needs to have name of project.
         let project_path = cwd.clone();
         let build_path = cwd.join("build");
         let artifacts_path = cwd.join("artifacts");
@@ -560,8 +548,6 @@ pub fn build_python_executable_local<'a>(
         )
     }
     
-
-
 }
 
 /// Build artifacts needed by the pyembed crate.
