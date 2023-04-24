@@ -18,7 +18,7 @@ use {
     },
     crate::{
         licensing::licenses_from_cargo_manifest,
-        project_building::build_python_executable,
+        project_building::build_python_executable_local,
         py_packaging::binary::PythonBinaryBuilder,
         py_packaging::binary::{PackedResourcesLoadMode, WindowsRuntimeDllsMode},
     },
@@ -84,13 +84,19 @@ pub fn build_internal(
 ) -> Result<(ResolvedTarget, PathBuf)> {
     // Build an executable by writing out a temporary Rust project
     // and building it.
-    let build = build_python_executable(
+    println!("running  build_internal ");
+
+    println!("cwd is {}",context.cwd.display());
+    println!("config_path is {}",context.config_path.display());
+
+    let build = build_python_executable_local(
         context.env(),
         &exe.name(),
         &**exe,
         &context.build_target_triple,
         &context.build_opt_level,
         context.build_release,
+        context.cwd.clone(),
     )
     .context("building Python executable")?;
 
@@ -827,7 +833,7 @@ impl PythonExecutableValue {
     /// PythonExecutable.to_file_manifest(prefix)
     pub fn to_file_manifest(&self, type_values: &TypeValues, prefix: String) -> ValueResult {
         const LABEL: &str = "PythonExecutable.to_file_manifest()";
-
+        
         let pyoxidizer_context_value = get_context(type_values)?;
         let pyoxidizer_context = pyoxidizer_context_value
             .downcast_ref::<PyOxidizerEnvironmentContext>()
@@ -850,6 +856,7 @@ impl PythonExecutableValue {
                 &pyoxidizer_context.build_target_triple,
                 pyoxidizer_context.build_release,
                 &pyoxidizer_context.build_opt_level,
+                pyoxidizer_context.cwd.clone(),
             )
             .context("adding PythonExecutable to FileManifest")
         })?;

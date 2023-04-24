@@ -259,7 +259,7 @@ pub struct Environment {
     ///
     /// Should only be set if we're running a binary from a `cargo` command,
     /// as the environment variables this keys off of are set by `cargo`.
-    cargo_target_directory: Option<PathBuf>,
+    pub cargo_target_directory: Option<PathBuf>,
 
     /// Directory to use for caching things.
     cache_dir: PathBuf,

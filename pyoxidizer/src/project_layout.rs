@@ -337,6 +337,8 @@ pub fn write_application_manifest(project_dir: &Path, program_name: &str) -> Res
 }
 
 /// How to define the ``pyembed`` crate dependency.
+/// 
+#[derive( Debug, Clone, PartialEq,Serialize)]
 pub enum PyembedLocation {
     /// Use a specific version, installed from the crate registry.
     ///

@@ -11,7 +11,7 @@ use {
         python_package_resource::PythonPackageResourceValue,
     },
     crate::{
-        project_building::build_python_executable,
+        project_building::build_python_executable_local,
         py_packaging::{binary::PythonBinaryBuilder, resource::AddToFileManifest},
     },
     anyhow::{anyhow, Context, Result},
@@ -29,7 +29,7 @@ use {
             starlark_signature_extraction, starlark_signatures,
         },
     },
-    std::{ops::DerefMut, path::Path},
+    std::{ops::DerefMut, path::{Path,PathBuf}},
     tugger::starlark::file_manifest::FileManifestValue,
 };
 
@@ -42,10 +42,15 @@ pub fn file_manifest_add_python_executable(
     target: &str,
     release: bool,
     opt_level: &str,
+    cwd: PathBuf,
 ) -> Result<()> {
     const LABEL: &str = "FileManifest.add_python_executable()";
+    println!("running  file_manifest_add_python_executable ");
 
-    let build = build_python_executable(env, &exe.name(), exe, target, opt_level, release)
+    println!("manifest run_path is {}", manifest.run_path.get_or_insert(PathBuf::new()).display());
+    println!("manifest paths is {}", manifest.paths().unwrap());
+
+    let build = build_python_executable_local(env, &exe.name(), exe, target, opt_level, release,cwd)
         .context("building Python executable")?;
 
     let content = FileEntry::new_from_data(build.exe_data.clone(), true);
