@@ -7,6 +7,7 @@ use {
     duct::cmd,
     log::warn,
     once_cell::sync::Lazy,
+    regex::Regex,
     simple_file_manifest::FileManifest,
     std::{
         io::{BufRead, BufReader, Write},
@@ -30,16 +31,15 @@ static WIX_TOOLSET: Lazy<RemoteContent> = Lazy::new(|| RemoteContent {
     sha256: "2c1888d5d1dba377fc7fa14444cf556963747ff9a0a289a3599cf09da03b9e2e".to_string(),
 });
 
+pub fn path_id(path: &Path) -> String {
+    // Identifiers may contain ASCII characters A-Z, a-z, digits, underscores (_), or periods (.)
+    let re = Regex::new(r"[^A-Za-z0-9_\.]").unwrap();
+    re.replace_all(&path.to_string_lossy().replace('\\', ".").replace('/', "."), "_").to_string()
+}
+
 /// Compute the `Id` of a directory.
 pub fn directory_to_id(prefix: &str, path: &Path) -> String {
-    format!(
-        "{}.dir.{}",
-        prefix,
-        path.to_string_lossy()
-            .replace('\\', "/")
-            .replace('/', ".")
-            .replace('-', "_")
-    )
+    format!("{}.dir.{}", prefix, path_id(path))
 }
 
 const GUID_NAMESPACE: &str = "https://github.com/indygreg/PyOxidizer/tugger/wix";
@@ -88,15 +88,7 @@ pub fn file_id(prefix: &str, path: &Path) -> String {
 }
 
 pub fn component_group_id(prefix: &str, path: &Path) -> String {
-    format!(
-        "{}.group.{}",
-        prefix,
-        path.display()
-            .to_string()
-            .replace('\\', "/")
-            .replace('/', ".")
-            .replace('-', "_")
-    )
+    format!("{}.group.{}", prefix, path_id(path))
 }
 
 /// Convert a `FileManifest` to WiX XML defining those files.
