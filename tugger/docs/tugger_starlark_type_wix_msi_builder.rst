@@ -112,6 +112,13 @@
 
         Path to a file providing the icon for the installed application.
 
+    .. py:attribute:: add_to_path
+
+        (``bool``)
+
+        When set (on be default), provide an option in the msi installer wizard to 
+        add the application install folder to the system PATH environment.
+
     .. py:attribute:: upgrade_code
 
         (``str``)
