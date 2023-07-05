@@ -94,6 +94,15 @@
 
         If not set, the default is ``<product_name>-<product_version>.msi``.
 
+    .. py:attribute:: add_to_start_menu
+
+        (``str``)
+
+        The filename (relative to install directory) to add as a shortcut in the Start Menu,
+        eg. ``msi.add_to_start_menu = "<exe.name>.exe"``
+
+        If not set no shortcut will be installed.
+
     .. py:attribute:: package_description
 
         (``str``)

@@ -109,6 +109,9 @@ impl TypedValue for WiXMsiBuilderValue {
             "upgrade_code" => {
                 inner.builder = inner.builder.clone().upgrade_code(value.to_string());
             }
+            "add_to_start_menu" => {
+                inner.builder = inner.builder.clone().add_to_start_menu(value.to_string());
+            }
             attr => {
                 return Err(ValueError::OperationNotSupported {
                     op: UnsupportedOperation::SetAttr(attr.to_string()),
