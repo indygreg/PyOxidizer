@@ -45,7 +45,8 @@ pub struct WiXSimpleMsiBuilder {
     /// Files to materialize in `Program Files`.
     program_files_manifest: FileManifest,
 
-    add_to_start_menu: Option<String>,
+    add_to_start_menu: Option<bool>,
+    exe_name: Option<String>,
     upgrade_code: Option<String>,
     package_keywords: Option<String>,
     package_description: Option<String>,
@@ -92,6 +93,15 @@ impl WiXSimpleMsiBuilder {
         Ok(())
     }
 
+    /// Set the `exe_name` attribute value.
+    ///
+    /// This should be set to the name of the exe file to add to the start menu shortcut.
+    pub fn set_exe_name(&mut self, value: String) -> Result<()> {
+        self.exe_name = Some(value);
+
+        Ok(())
+    }
+
     /// Attempt to add the Visual C++ Redistributable DLLs to the program files manifest.
     ///
     /// This will use `vswhere.exe` to attempt to locate a Visual Studio installation
@@ -119,10 +129,8 @@ impl WiXSimpleMsiBuilder {
     }
 
     /// Set the `<Add to Start Menu` attribute value.
-    ///
-    /// This should be set to the name of the exe file to add to the start menu shortcut.
     #[must_use]
-    pub fn add_to_start_menu(mut self, value: String) -> Self {
+    pub fn add_to_start_menu(mut self, value: bool) -> Self {
         self.add_to_start_menu = Some(value);
         self
     }
@@ -420,7 +428,7 @@ impl WiXSimpleMsiBuilder {
 
         writer.write(XmlEvent::end_element().name("Directory"))?;
         writer.write(XmlEvent::end_element().name("Directory"))?;
-        if self.add_to_start_menu.is_some() {
+        if self.add_to_start_menu.unwrap_or(false) {
             
             writer.write(XmlEvent::start_element("Directory").attr("Id", "ProgramMenuFolder"))?;
             writer.write(XmlEvent::end_element().name("Directory"))?;
@@ -428,7 +436,8 @@ impl WiXSimpleMsiBuilder {
 
         writer.write(XmlEvent::end_element().name("Directory"))?;
 
-        if let Some(shortcut_target) = &self.add_to_start_menu {            
+        if self.add_to_start_menu.unwrap_or(false) {
+            let shortcut_target = &self.exe_name.as_ref().unwrap_or_else(|| panic!("exe_name not set"));
             writer.write(XmlEvent::start_element("DirectoryRef").attr("Id", "ProgramMenuFolder"))?;
             writer.write(
                 XmlEvent::start_element("Component")
@@ -436,7 +445,7 @@ impl WiXSimpleMsiBuilder {
                     .attr("Guid", &self.shortcut_guid())
             )?;
            
-            let full_target = &format!("[APPLICATIONFOLDER]{}", shortcut_target);
+            let full_target = &format!("[APPLICATIONFOLDER]{}.exe", shortcut_target);
 
             let shortcut = XmlEvent::start_element("Shortcut")
                 .attr("Id", "ApplicationStartMenuShortcut")
@@ -497,6 +506,23 @@ impl WiXSimpleMsiBuilder {
                 .attr("Absent", "disallow"),
         )?;
 
+        if self.add_to_start_menu.unwrap_or(false) {
+            writer.write(
+                XmlEvent::start_element("Feature")
+                    .attr("Id", "ApplicationShortcutFeature")
+                    .attr("Title", "Add Start Menu Shortcut")
+                    .attr(
+                        "Description",
+                        "Adds the application to the Start Menu",
+                    )
+                    .attr("Level", "1")
+                    .attr("Absent", "allow"),
+            )?;
+            writer.write(XmlEvent::start_element("ComponentRef").attr("Id", "ApplicationShortcut"))?;
+            writer.write(XmlEvent::end_element().name("ComponentRef"))?;
+            writer.write(XmlEvent::end_element().name("Feature"))?;
+        }
+
         // Add group for all files derived from self.program_files_manifest.
         writer.write(
             XmlEvent::start_element("ComponentGroupRef")
@@ -524,22 +550,6 @@ impl WiXSimpleMsiBuilder {
         writer.write(XmlEvent::end_element().name("ComponentRef"))?;
         writer.write(XmlEvent::end_element().name("Feature"))?;
 
-        if self.add_to_start_menu.is_some() {
-            writer.write(
-                XmlEvent::start_element("Feature")
-                    .attr("Id", "ApplicationShortcutFeature")
-                    .attr("Title", "Add Start Menu Shortcut")
-                    .attr(
-                        "Description",
-                        "Adds the application to the Start Menu",
-                    )
-                    .attr("Level", "1")
-                    .attr("Absent", "allow"),
-            )?;
-            writer.write(XmlEvent::start_element("ComponentRef").attr("Id", "ApplicationShortcut"))?;
-            writer.write(XmlEvent::end_element().name("ComponentRef"))?;
-            writer.write(XmlEvent::end_element().name("Feature"))?;
-        }
         writer.write(XmlEvent::end_element().name("Feature"))?;
 
         writer.write(

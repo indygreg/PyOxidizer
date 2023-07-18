@@ -110,7 +110,10 @@ impl TypedValue for WiXMsiBuilderValue {
                 inner.builder = inner.builder.clone().upgrade_code(value.to_string());
             }
             "add_to_start_menu" => {
-                inner.builder = inner.builder.clone().add_to_start_menu(value.to_string());
+                inner.builder = inner.builder.clone().add_to_start_menu(value.to_bool());
+            }
+            "set_exe_name" => {
+                let _ = inner.builder.set_exe_name(value.to_string());
             }
             attr => {
                 return Err(ValueError::OperationNotSupported {
@@ -326,6 +329,16 @@ impl WiXMsiBuilderValue {
         } else {
             inner.builder.default_msi_filename()
         })
+    }
+
+    pub fn set_exe_name(&mut self, exe_name: String) -> ValueResult {
+        const LABEL: &str = "WiXMSIBuilder.set_exe_name()";
+
+        let mut inner = self.inner(LABEL)?;
+
+        let _ = inner.builder.set_exe_name(exe_name);
+
+        Ok(Value::new(NoneType::None))
     }
 
     pub fn to_file_content(

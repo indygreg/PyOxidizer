@@ -188,6 +188,7 @@ impl TypedValue for PythonExecutableValue {
                 Ok(Value::from(exe.windows_runtime_dlls_mode().to_string()))
             }
             "windows_subsystem" => Ok(Value::from(exe.windows_subsystem())),
+            "name" => Ok(Value::from(exe.name())),
             _ => Err(ValueError::OperationNotSupported {
                 op: UnsupportedOperation::GetAttr(attribute.to_string()),
                 left: Self::TYPE.to_string(),
@@ -204,6 +205,7 @@ impl TypedValue for PythonExecutableValue {
                 | "tcl_files_path"
                 | "windows_runtime_dlls_mode"
                 | "windows_subsystem"
+                | "name"
         ))
     }
 
@@ -257,6 +259,11 @@ impl TypedValue for PythonExecutableValue {
                             label: format!("{}.{}", Self::TYPE, attribute),
                         })
                     })?;
+
+                Ok(())
+            }
+            "name" => {
+                let _ = exe.set_name(value.to_string().as_str());
 
                 Ok(())
             }
@@ -962,6 +969,8 @@ impl PythonExecutableValue {
 
         builder.add_program_files_manifest(type_values, call_stack, manifest.deref().clone())?;
 
+        let _ = builder.set_exe_name(self.get_attr("name").unwrap().to_str())?;
+        
         Ok(builder_value.clone())
     }
 
@@ -1380,6 +1389,27 @@ mod tests {
 
         env.eval("exe.licenses_filename = None")?;
         let v = env.eval("exe.licenses_filename")?;
+        assert_eq!(v.get_type(), "NoneType");
+
+        Ok(())
+    }
+
+    #[test]
+    fn name() -> Result<()> {
+        let mut env = test_evaluation_context_builder()?.into_context()?;
+        add_exe(&mut env)?;
+
+        let v = env.eval("exe.name")?;
+        assert_eq!(v.get_type(), "string");
+        assert_eq!(v.to_string(), "COPYING.txt");
+
+        env.eval("exe.name = 'myapp'")?;
+        let v = env.eval("exe.name")?;
+        assert_eq!(v.get_type(), "string");
+        assert_eq!(v.to_string(), "myapp");
+
+        env.eval("exe.name = None")?;
+        let v = env.eval("exe.name")?;
         assert_eq!(v.get_type(), "NoneType");
 
         Ok(())
