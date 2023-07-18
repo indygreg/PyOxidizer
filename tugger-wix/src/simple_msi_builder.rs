@@ -52,6 +52,7 @@ pub struct WiXSimpleMsiBuilder {
     product_icon: Option<PathBuf>,
     help_url: Option<String>,
     eula_rtf: Option<PathBuf>,
+    add_to_path: Option<bool>,
     /// Banner BMP image.
     ///
     /// Dimensions are 493 x 58.
@@ -165,6 +166,13 @@ impl WiXSimpleMsiBuilder {
     #[must_use]
     pub fn eula_rtf_path<P: AsRef<Path>>(mut self, path: P) -> Self {
         self.eula_rtf = Some(path.as_ref().to_path_buf());
+        self
+    }
+
+    /// Display option to add install folder to the PATH Environment.
+    #[must_use]
+    pub fn add_to_path(mut self, value: bool) -> Self {
+        self.add_to_path = Some(value);
         self
     }
 
@@ -367,25 +375,27 @@ impl WiXSimpleMsiBuilder {
                 .attr("Name", &self.product_name),
         )?;
 
-        writer.write(
-            XmlEvent::start_element("Component")
-                .attr("Id", "Path")
-                .attr("Guid", &self.path_component_guid())
-                .attr("Win64", "$(var.Win64)")
-                .attr("KeyPath", "yes"),
-        )?;
-        writer.write(
-            XmlEvent::start_element("Environment")
-                .attr("Id", "PATH")
-                .attr("Name", "PATH")
-                .attr("Value", "[APPLICATIONFOLDER]")
-                .attr("Permanent", "no")
-                .attr("Part", "last")
-                .attr("Action", "set")
-                .attr("System", "yes"),
-        )?;
-        writer.write(XmlEvent::end_element().name("Environment"))?;
-        writer.write(XmlEvent::end_element().name("Component"))?;
+        if self.add_to_path.unwrap_or(true) {
+            writer.write(
+                XmlEvent::start_element("Component")
+                    .attr("Id", "Path")
+                    .attr("Guid", &self.path_component_guid())
+                    .attr("Win64", "$(var.Win64)")
+                    .attr("KeyPath", "yes"),
+            )?;
+            writer.write(
+                XmlEvent::start_element("Environment")
+                    .attr("Id", "PATH")
+                    .attr("Name", "PATH")
+                    .attr("Value", "[APPLICATIONFOLDER]")
+                    .attr("Permanent", "no")
+                    .attr("Part", "last")
+                    .attr("Action", "set")
+                    .attr("System", "yes"),
+            )?;
+            writer.write(XmlEvent::end_element().name("Environment"))?;
+            writer.write(XmlEvent::end_element().name("Component"))?;
+        }
 
         if let Some(license_source) = &self.license_source {
             writer.write(
@@ -435,22 +445,25 @@ impl WiXSimpleMsiBuilder {
             writer.write(XmlEvent::start_element("ComponentRef").attr("Id", "License"))?;
             writer.write(XmlEvent::end_element().name("ComponentRef"))?;
         }
+        if self.add_to_path.unwrap_or(true) {
+            
+            writer.write(
+                XmlEvent::start_element("Feature")
+                    .attr("Id", "Environment")
+                    .attr("Title", "PATH Environment Variable")
+                    .attr(
+                        "Description",
+                        "Add the install location to the PATH system environment variable",
+                    )
+                    .attr("Level", "1")
+                    .attr("Absent", "allow"),
+            )?;
 
-        writer.write(
-            XmlEvent::start_element("Feature")
-                .attr("Id", "Environment")
-                .attr("Title", "PATH Environment Variable")
-                .attr(
-                    "Description",
-                    "Add the install location to the PATH system environment variable",
-                )
-                .attr("Level", "1")
-                .attr("Absent", "allow"),
-        )?;
-        writer.write(XmlEvent::start_element("ComponentRef").attr("Id", "Path"))?;
-        writer.write(XmlEvent::end_element().name("ComponentRef"))?;
-        writer.write(XmlEvent::end_element().name("Feature"))?;
+            writer.write(XmlEvent::start_element("ComponentRef").attr("Id", "Path"))?;
+            writer.write(XmlEvent::end_element().name("ComponentRef"))?;
+            writer.write(XmlEvent::end_element().name("Feature"))?;
 
+        }
         writer.write(XmlEvent::end_element().name("Feature"))?;
 
         writer.write(
