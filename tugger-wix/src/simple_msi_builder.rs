@@ -45,6 +45,8 @@ pub struct WiXSimpleMsiBuilder {
     /// Files to materialize in `Program Files`.
     program_files_manifest: FileManifest,
 
+    add_to_start_menu: Option<bool>,
+    exe_name: Option<String>,
     upgrade_code: Option<String>,
     package_keywords: Option<String>,
     package_description: Option<String>,
@@ -91,6 +93,15 @@ impl WiXSimpleMsiBuilder {
         Ok(())
     }
 
+    /// Set the `exe_name` attribute value.
+    ///
+    /// This should be set to the name of the exe file to add to the start menu shortcut.
+    pub fn set_exe_name(&mut self, value: String) -> Result<()> {
+        self.exe_name = Some(value);
+
+        Ok(())
+    }
+
     /// Attempt to add the Visual C++ Redistributable DLLs to the program files manifest.
     ///
     /// This will use `vswhere.exe` to attempt to locate a Visual Studio installation
@@ -115,6 +126,13 @@ impl WiXSimpleMsiBuilder {
         }
 
         Ok(())
+    }
+
+    /// Set the `<Add to Start Menu` attribute value.
+    #[must_use]
+    pub fn add_to_start_menu(mut self, value: bool) -> Self {
+        self.add_to_start_menu = Some(value);
+        self
     }
 
     /// Set the `<Product UpgradeCode` attribute value.
@@ -410,7 +428,71 @@ impl WiXSimpleMsiBuilder {
 
         writer.write(XmlEvent::end_element().name("Directory"))?;
         writer.write(XmlEvent::end_element().name("Directory"))?;
+        if self.add_to_start_menu.unwrap_or(false) {
+            
+            writer.write(XmlEvent::start_element("Directory").attr("Id", "ProgramMenuFolder"))?;
+            writer.write(XmlEvent::end_element().name("Directory"))?;
+        }
+
         writer.write(XmlEvent::end_element().name("Directory"))?;
+
+        if self.add_to_start_menu.unwrap_or(false) {
+            let shortcut_target = &self.exe_name.as_ref().unwrap_or_else(|| panic!("exe_name not set"));
+            writer.write(XmlEvent::start_element("DirectoryRef").attr("Id", "ProgramMenuFolder"))?;
+            writer.write(
+                XmlEvent::start_element("Component")
+                    .attr("Id", "ApplicationShortcut")
+                    .attr("Guid", &self.shortcut_guid())
+            )?;
+           
+            let full_target = &format!("[APPLICATIONFOLDER]{}.exe", shortcut_target);
+
+            let shortcut = XmlEvent::start_element("Shortcut")
+                .attr("Id", "ApplicationStartMenuShortcut")
+                .attr("Name", &self.product_name)
+                .attr("WorkingDirectory", "APPLICATIONFOLDER")
+                .attr("Target", full_target)
+                ;
+
+            let shortcut = if let Some(description) = &self.package_description {
+                shortcut.attr("Description", description)
+            } else {
+                shortcut
+            };
+            
+            let shortcut = if self.product_icon.is_some() {
+                shortcut.attr("Icon", "ProductICO")
+            } else {
+                shortcut
+            };
+
+            writer.write(shortcut)?;
+            writer.write(XmlEvent::end_element().name("Shortcut"))?;
+            writer.write(
+                XmlEvent::start_element("RemoveFolder")
+                    .attr("Id", "ApplicationProgramsFolder")
+                    .attr("On", "uninstall")
+            )?;
+            writer.write(XmlEvent::end_element().name("RemoveFolder"))?;
+            writer.write(
+                XmlEvent::start_element("RegistryValue")
+                    .attr("Root", "HKCU")
+                    .attr("Key", &format!(
+                        "Software\\{}\\{}",
+                        &self.product_manufacturer,
+                        &self.product_name
+                    ))
+                    .attr("Name", "installed")
+                    .attr("Type", "integer")
+                    .attr("Value", "1")
+                    .attr("KeyPath", "yes")
+            )?;
+            writer.write(XmlEvent::end_element().name("RegistryValue"))?;
+
+
+            writer.write(XmlEvent::end_element().name("Component"))?;
+            writer.write(XmlEvent::end_element().name("DirectoryRef"))?;
+        }
 
         writer.write(
             XmlEvent::start_element("Feature")
@@ -423,6 +505,23 @@ impl WiXSimpleMsiBuilder {
                 .attr("Display", "expand")
                 .attr("Absent", "disallow"),
         )?;
+
+        if self.add_to_start_menu.unwrap_or(false) {
+            writer.write(
+                XmlEvent::start_element("Feature")
+                    .attr("Id", "ApplicationShortcutFeature")
+                    .attr("Title", "Add Start Menu Shortcut")
+                    .attr(
+                        "Description",
+                        "Adds the application to the Start Menu",
+                    )
+                    .attr("Level", "1")
+                    .attr("Absent", "allow"),
+            )?;
+            writer.write(XmlEvent::start_element("ComponentRef").attr("Id", "ApplicationShortcut"))?;
+            writer.write(XmlEvent::end_element().name("ComponentRef"))?;
+            writer.write(XmlEvent::end_element().name("Feature"))?;
+        }
 
         // Add group for all files derived from self.program_files_manifest.
         writer.write(
@@ -566,6 +665,16 @@ impl WiXSimpleMsiBuilder {
         Uuid::new_v5(
             &Uuid::NAMESPACE_DNS,
             format!("tugger.path_component.{}", self.product_name).as_bytes(),
+        )
+        .as_hyphenated()
+        .encode_upper(&mut Uuid::encode_buffer())
+        .to_string()
+    }
+
+    fn shortcut_guid(&self) -> String {
+        Uuid::new_v5(
+            &Uuid::NAMESPACE_DNS,
+            format!("tugger.application_shortcut.{}", self.product_name).as_bytes(),
         )
         .as_hyphenated()
         .encode_upper(&mut Uuid::encode_buffer())
