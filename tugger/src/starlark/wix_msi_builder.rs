@@ -103,6 +103,9 @@ impl TypedValue for WiXMsiBuilderValue {
             "package_keywords" => {
                 inner.builder = inner.builder.clone().package_keywords(value.to_string());
             }
+            "per_user_install" => {
+                inner.builder = inner.builder.clone().per_user_install(value.to_bool());
+            }
             "product_icon_path" => {
                 inner.builder = inner.builder.clone().product_icon_path(value.to_string());
             }
