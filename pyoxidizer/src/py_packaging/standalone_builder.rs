@@ -469,6 +469,10 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         self.target_distribution.python_exe_path()
     }
 
+    fn runtime_path(&self) -> &Option<String> {
+        &self.runtime_path
+    }
+
     fn apple_sdk_info(&self) -> Option<&AppleSdkInfo> {
         self.target_distribution.apple_sdk_info()
     }

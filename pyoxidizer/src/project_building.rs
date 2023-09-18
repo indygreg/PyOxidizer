@@ -427,46 +427,72 @@ pub fn build_python_executable<'a>(
         .context("resolving Rust toolchain")?
         .cargo_exe;
 
-    let temp_dir = env.temporary_directory("pyoxidizer")?;
+    let build = match exe.runtime_path() {
+        Some(path) => {
+            let project_path =
+                canonicalize_path(&Path::new(path)).context("getting runtime path")?;
+            let build_path = project_path.join("build");
+            let artifacts_path = build_path.join("artifacts");
+            build_executable_with_rust_project(
+                env,
+                &project_path,
+                bin_name,
+                exe,
+                &build_path,
+                &artifacts_path,
+                target_triple,
+                opt_level,
+                release,
+                false,
+                true,
+            )
+            .context("building executable with persistent Rust project")?
+        }
+        None => {
+            let temp_dir = env.temporary_directory("pyoxidizer")?;
 
-    // Directory needs to have name of project.
-    let project_path = temp_dir.path().join(bin_name);
-    let build_path = temp_dir.path().join("build");
-    let artifacts_path = temp_dir.path().join("artifacts");
+            // Directory needs to have name of project.
+            let project_path = temp_dir.path().join(bin_name);
+            let build_path = temp_dir.path().join("build");
+            let artifacts_path = temp_dir.path().join("artifacts");
 
-    initialize_project(
-        &env.pyoxidizer_source,
-        &project_path,
-        &cargo_exe,
-        None,
-        &[],
-        exe.windows_subsystem(),
-    )
-    .context("initializing project")?;
+            initialize_project(
+                &env.pyoxidizer_source,
+                &project_path,
+                &cargo_exe,
+                None,
+                &[],
+                exe.windows_subsystem(),
+            )
+            .context("initializing project")?;
 
-    let mut build = build_executable_with_rust_project(
-        env,
-        &project_path,
-        bin_name,
-        exe,
-        &build_path,
-        &artifacts_path,
-        target_triple,
-        opt_level,
-        release,
-        // Always build with locked because we crated a Cargo.lock with the
-        // Rust project we just created.
-        true,
-        // Don't include license for self because the Rust project is temporary and its
-        // licensing isn't material.
-        false,
-    )
-    .context("building executable with Rust project")?;
+            let mut build = build_executable_with_rust_project(
+                env,
+                &project_path,
+                bin_name,
+                exe,
+                &build_path,
+                &artifacts_path,
+                target_triple,
+                opt_level,
+                release,
+                // Always build with locked because we crated a Cargo.lock with the
+                // Rust project we just created.
+                true,
+                // Don't include license for self because the Rust project is temporary and its
+                // licensing isn't material.
+                false,
+            )
+            .context("building executable with generated Rust project")?;
 
-    // Blank out the path since it is in the temporary directory.
-    build.exe_path = None;
+            // Blank out the path since it is in the temporary directory.
+            build.exe_path = None;
 
-    temp_dir.close().context("closing temporary directory")?;
+            temp_dir.close().context("closing temporary directory")?;
+
+            build
+        }
+    };
 
     Ok(build)
 }
