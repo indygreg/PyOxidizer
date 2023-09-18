@@ -617,6 +617,7 @@ pub fn generate_python_embedding_artifacts(
         BinaryLibpythonLinkMode::Default,
         &policy,
         &interpreter_config,
+        None,
         Some(host_dist.clone_trait()),
     )?;
 

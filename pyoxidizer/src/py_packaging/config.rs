@@ -615,6 +615,7 @@ mod tests {
             &policy,
             &config,
             None,
+            None,
         )?;
 
         crate::project_building::build_python_executable(

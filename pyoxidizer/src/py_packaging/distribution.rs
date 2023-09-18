@@ -185,6 +185,7 @@ pub trait PythonDistribution {
         libpython_link_mode: BinaryLibpythonLinkMode,
         policy: &PythonPackagingPolicy,
         config: &PyembedPythonInterpreterConfig,
+        runtime_path: Option<String>,
         host_distribution: Option<Arc<dyn PythonDistribution>>,
     ) -> Result<Box<dyn PythonBinaryBuilder>>;
 
