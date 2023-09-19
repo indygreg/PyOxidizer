@@ -67,13 +67,14 @@ to ``exit()``. Succinctly, we instantiate and run an embedded Python
 interpreter. That's our executable.
 
 The ``pyoxidizer.bzl`` is our auto-generated
-:ref:`PyOxidizer configuration file <config_files>`.
+:ref:`PyOxidizer configuration file <config_files>` with an additional `runtime` option set to the current directory.
+This specifies that we want this project to be used as the pyembed runner instead of a temporary one.
 
 Crate Features
 ==============
 
 The auto-generated Rust project defines a number of features to control
-behavior. These are documented in the sections below.
+behavior when building via cargo. These are documented in the sections below.
 
 ``build-mode-standalone``
 -------------------------
@@ -127,7 +128,7 @@ name via the ``PYOXIDIZER_BUILD_TARGET`` environment variable. e.g.::
 
 This mode tells the build script to reuse artifacts that were already built.
 (Perhaps you called ``pyoxidizer build`` or ``pyoxidizer run-build-script``
-outside the context of a normal ``cargo build``.)
+outside the context of a normal ``cargo build``.) This is what is used when pyoxidizer invokes cargo as part of ``pyoxidizer build``.
 
 In this mode, the build script will look for artifacts in the directory
 specified by ``PYOXIDIZER_ARTIFACT_DIR`` if set, falling back to ``OUT_DIR``.
