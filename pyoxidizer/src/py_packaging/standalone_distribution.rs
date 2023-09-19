@@ -1247,6 +1247,7 @@ impl PythonDistribution for StandaloneDistribution {
         libpython_link_mode: BinaryLibpythonLinkMode,
         policy: &PythonPackagingPolicy,
         config: &PyembedPythonInterpreterConfig,
+        runtime_path: Option<String>,
         host_distribution: Option<Arc<dyn PythonDistribution>>,
     ) -> Result<Box<dyn PythonBinaryBuilder>> {
         // TODO can we avoid these clones?
@@ -1263,6 +1264,7 @@ impl PythonDistribution for StandaloneDistribution {
             libpython_link_mode,
             policy.clone(),
             config.clone(),
+            runtime_path,
         )?;
 
         Ok(builder as Box<dyn PythonBinaryBuilder>)
