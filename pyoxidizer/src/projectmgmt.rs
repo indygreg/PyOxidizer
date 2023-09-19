@@ -315,7 +315,7 @@ pub fn init_config_file(
 
     let name = project_dir.iter().last().unwrap().to_str().unwrap();
 
-    write_new_pyoxidizer_config_file(source, project_dir, name, code, pip_install)?;
+    write_new_pyoxidizer_config_file(source, project_dir, name, code, pip_install, false)?;
 
     println!();
     println!("A new PyOxidizer configuration file has been created.");
@@ -347,6 +347,7 @@ pub fn init_rust_project(env: &Environment, project_path: &Path) -> Result<()> {
         None,
         &[],
         "console",
+        true,
     )?;
     println!();
     println!(

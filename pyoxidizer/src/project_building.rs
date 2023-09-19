@@ -463,6 +463,7 @@ pub fn build_python_executable<'a>(
                 None,
                 &[],
                 exe.windows_subsystem(),
+                false,
             )
             .context("initializing project")?;
 
