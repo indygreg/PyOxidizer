@@ -121,15 +121,16 @@ fn main() {
     }
 
     let target_os = std::env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not defined");
+    let target_env = std::env::var("CARGO_CFG_TARGET_ENV").expect("CARGO_CFG_TARGET_ENV not defined");
 
     // Export symbols from built binaries. This is needed to ensure libpython's
     // symbols are exported. Without those symbols being exported, loaded extension
     // modules won't find the libpython symbols and won't be able to run.
-    match target_os.as_str() {
-        "linux" => {
+    match (target_os.as_str(), target_env.as_str()) {
+        ("linux", "gnu") => {
             println!("cargo:rustc-link-arg=-Wl,-export-dynamic");
         }
-        "macos" => {
+        ("macos", _) => {
             println!("cargo:rustc-link-arg=-rdynamic");
         }
         _ => {}
