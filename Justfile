@@ -472,6 +472,7 @@ pyoxidizer-update-python-distributions: _python_scripts_venv
   scripts/venv/bin/python3 \
     scripts/fetch-python-distributions.py \
     --api-token $GH_API_TOKEN > pyoxidizer/src/default_python_distributions.rs
+  rustfmt pyoxidizer/src/default_python_distributions.rs
 
 # Perform Rust crate releases.
 release-rust:
