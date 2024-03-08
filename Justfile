@@ -468,10 +468,20 @@ pyoxidizer-release-upload commit tag:
 pyoxidizer-release:
   just _release pyoxidizer 'PyOxidizer'
 
-pyoxidizer-update-python-distributions:
-  python3 scripts/fetch-python-distributions.py --api-token $GH_API_TOKEN > pyoxidizer/src/default_python_distributions.rs
+pyoxidizer-update-python-distributions: _python_scripts_venv
+  scripts/venv/bin/python3 \
+    scripts/fetch-python-distributions.py \
+    --api-token $GH_API_TOKEN > pyoxidizer/src/default_python_distributions.rs
 
 # Perform Rust crate releases.
 release-rust:
   cargo release release --exclude pyoxidizer --execute
   cargo release release -p pyoxidizer --execute
+
+# Create virtual environment and install dependencies for Python scripts in it.
+_python_scripts_venv:
+  #!/usr/bin/env bash
+  if [ ! -d scripts/venv ]; then
+    python3 -m venv scripts/venv
+    scripts/venv/bin/pip install -r scripts/requirements.txt
+  fi
