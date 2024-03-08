@@ -8,6 +8,7 @@
 import argparse
 import hashlib
 import urllib.request
+import re
 
 from github import Github
 
@@ -24,6 +25,7 @@ PythonDistributionRecord {{
 }},
 """.strip()
 
+RE_CAL_VER = re.compile(r"\d{8}")
 
 def download_and_hash(url):
     with urllib.request.urlopen(url) as r:
@@ -45,11 +47,17 @@ def format_record(record):
     return ENTRY.format(**record)
 
 
+def get_latest_tag(repo):
+    """Get the most recent CalVer tag, corresponding to latest."""
+    cal_ver_tags = [tag.name for tag in repo.get_tags() if RE_CAL_VER.match(tag.name)]
+    return max(cal_ver_tags)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--api-token", help="GitHub API token", required=True)
     parser.add_argument(
-        "--tag", help="python-build-standalone release tag", required=True
+        "--tag", help="python-build-standalone release tag, default is latest", default=None
     )
 
     args = parser.parse_args()
@@ -58,7 +66,9 @@ def main():
 
     repo = g.get_repo("indygreg/python-build-standalone")
 
-    release = repo.get_release(args.tag)
+    tag = args.tag if args.tag else get_latest_tag(repo)
+
+    release = repo.get_release(tag)
 
     records = {}
 
