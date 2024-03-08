@@ -468,6 +468,9 @@ pyoxidizer-release-upload commit tag:
 pyoxidizer-release:
   just _release pyoxidizer 'PyOxidizer'
 
+pyoxidizer-update-python-distributions:
+  python3 scripts/fetch-python-distributions.py --api-token $GH_API_TOKEN > pyoxidizer/src/default_python_distributions.rs
+
 # Perform Rust crate releases.
 release-rust:
   cargo release release --exclude pyoxidizer --execute
