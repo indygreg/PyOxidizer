@@ -1,0 +1,2 @@
+PyGithub==2.2.0
+urllib3==2.2.1
