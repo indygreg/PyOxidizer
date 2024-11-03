@@ -30,7 +30,7 @@ features = ["serialization", "zipimport"]
 [dev-dependencies]
 assert_cmd = "2.0.16"
 glob = "0.3.1"
-libtest-mimic = "0.6.1"
+libtest-mimic = "0.8.1"
 predicates = "3.1.2"
 tempfile = "3.13.0"
 
