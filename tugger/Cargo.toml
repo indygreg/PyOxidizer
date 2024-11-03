@@ -62,7 +62,7 @@ version = "0.16.0-pre"
 path = "../tugger-wix"
 
 [dev-dependencies]
-apple-codesign = "0.22.0"
+apple-codesign = "0.28.0"
 chrono = "0.4.38"
 tempfile = "3.13.0"
 x509-certificate = "0.24.0"
