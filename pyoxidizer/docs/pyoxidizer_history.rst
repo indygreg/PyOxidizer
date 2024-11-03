@@ -33,6 +33,14 @@ Next
 
 (Not yet released)
 
+Backwards Compatibility Notes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* The minimum Rust version has been changed from 1.65 to 1.81.
+
+Changes
+^^^^^^^
+
 * PyO3 crate upgraded from 0.17 to 0.18.
 
 .. _version_0_24_0:
