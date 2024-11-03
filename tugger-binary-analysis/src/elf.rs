@@ -10,18 +10,6 @@ use {
 
 #[repr(C)]
 #[derive(Debug, Clone)]
-struct Elf64_Verdef {
-    vd_version: u16,
-    vd_flags: u16,
-    vd_ndx: u16,
-    vd_cnt: u16,
-    vd_hash: u32,
-    vd_aux: u32,
-    vd_next: u32,
-}
-
-#[repr(C)]
-#[derive(Debug, Clone)]
 struct Elf64_Verneed {
     vn_version: u16,
     vn_cnt: u16,
