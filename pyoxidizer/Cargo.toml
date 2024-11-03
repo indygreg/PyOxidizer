@@ -89,7 +89,7 @@ uuid = { version = "1.11.0", features = ["v4", "v5"] }
 version-compare = "0.2.0"
 walkdir = "2.5.0"
 which = "7.0.0"
-zstd = "0.12.4"
+zstd = "0.13.2"
 
 [dependencies.python-packaging]
 version = "0.16.0-pre"
