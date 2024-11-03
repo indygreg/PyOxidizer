@@ -138,7 +138,7 @@ assert_fs = "1.1.2"
 indoc = "1.0.9"
 libtest-mimic = "0.8.1"
 predicates = "3.1.2"
-trycmd = "0.14.21"
+trycmd = "0.15.8"
 xml-rs = "0.8.22"
 
 [[test]]
