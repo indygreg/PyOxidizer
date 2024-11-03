@@ -479,7 +479,7 @@ impl WheelBuilder {
         let mut zf = zip::ZipWriter::new(writer);
 
         for file in files.into_iter() {
-            let options = zip::write::FileOptions::default()
+            let options = zip::write::SimpleFileOptions::default()
                 .unix_permissions(if file.entry().is_executable() {
                     0o0755
                 } else {

@@ -245,7 +245,7 @@ impl ZipAppBuilder {
         let mut zf = zip::ZipWriter::new(writer);
 
         for file in self.manifest.iter_files() {
-            let options = zip::write::FileOptions::default()
+            let options = zip::write::SimpleFileOptions::default()
                 .compression_method(self.compression_method)
                 .unix_permissions(if file.entry().is_executable() {
                     0o0755
