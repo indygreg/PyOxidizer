@@ -12,7 +12,7 @@ keywords = ["python"]
 
 [dependencies]
 anyhow = "1.0.92"
-base64 = { version = "0.21.7", optional = true }
+base64 = { version = "0.22.1", optional = true }
 byteorder = "1.5.0"
 encoding_rs = "0.8.35"
 itertools = "0.10.5"

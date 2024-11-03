@@ -3729,7 +3729,7 @@ name = "python-packaging"
 version = "0.16.0"
 dependencies = [
  "anyhow",
- "base64 0.21.7",
+ "base64 0.22.1",
  "byteorder",
  "encoding_rs",
  "itertools 0.10.5",
