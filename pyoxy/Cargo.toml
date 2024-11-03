@@ -16,10 +16,10 @@ build = "build.rs"
 release = false
 
 [dependencies]
-anyhow = "1.0.68"
+anyhow = "1.0.92"
 clap = "4.5.20"
-serde = { version = "1.0.152", features = ["derive"] }
-serde_yaml = "0.9.17"
+serde = { version = "1.0.214", features = ["derive"] }
+serde_yaml = "0.9.34"
 
 [dependencies.pyembed]
 version = "0.25.0-pre"
@@ -28,11 +28,11 @@ default-features = false
 features = ["serialization", "zipimport"]
 
 [dev-dependencies]
-assert_cmd = "2.0.8"
+assert_cmd = "2.0.16"
 glob = "0.3.1"
-libtest-mimic = "0.6.0"
+libtest-mimic = "0.6.1"
 predicates = "2.1.5"
-tempfile = "3.3.0"
+tempfile = "3.13.0"
 
 [[test]]
 name = "python"

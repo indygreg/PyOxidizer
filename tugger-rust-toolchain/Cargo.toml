@@ -11,19 +11,19 @@ repository = "https://github.com/indygreg/PyOxidizer.git"
 readme = "README.md"
 
 [dependencies]
-anyhow = "1.0.68"
-flate2 = "1.0.25"
+anyhow = "1.0.92"
+flate2 = "1.0.34"
 fs2 = "0.4.3"
 hex = "0.4.3"
-log = "0.4.17"
-once_cell = "1.17.0"
+log = "0.4.22"
+once_cell = "1.20.2"
 pgp = "0.9.0"
-sha2 = "0.10.6"
+sha2 = "0.10.8"
 simple-file-manifest = "0.11.0"
-tar = "0.4.38"
+tar = "0.4.43"
 toml = "0.5.11"
 xz2 = { version = "0.1.7", features = ["static"] }
-zstd = "0.12.2"
+zstd = "0.12.4"
 
 [dependencies.tugger-common]
 version = "0.10.0-pre"
@@ -31,4 +31,4 @@ path = "../tugger-common"
 
 [dev-dependencies]
 dirs = "4.0.0"
-tempfile = "3.3.0"
+tempfile = "3.13.0"

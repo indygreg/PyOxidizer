@@ -11,20 +11,20 @@ repository = "https://github.com/indygreg/PyOxidizer.git"
 readme = "README.md"
 
 [dependencies]
-anyhow = "1.0.68"
+anyhow = "1.0.92"
 apple-bundles = "0.17.0"
 apple-codesign = "0.22.0"
-bcder = "0.7.1"
+bcder = "0.7.4"
 cryptographic-message-syntax = "0.19.0"
-goblin = "0.6.0"
-log = "0.4.17"
+goblin = "0.6.1"
+log = "0.4.22"
 p12 = "0.6.3"
-reqwest = { version = "0.11.14", default-features = false, features = ["blocking", "rustls-tls"] }
+reqwest = { version = "0.11.27", default-features = false, features = ["blocking", "rustls-tls"] }
 simple-file-manifest = "0.11.0"
-tempfile = "3.3.0"
-thiserror = "1.0.38"
+tempfile = "3.13.0"
+thiserror = "1.0.67"
 x509-certificate = "0.16.0"
-yasna = "0.5.1"
+yasna = "0.5.2"
 
 [dependencies.tugger-windows-codesign]
 version = "0.10.0-pre"
