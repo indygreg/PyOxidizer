@@ -65,7 +65,7 @@ path = "../tugger-wix"
 apple-codesign = "0.22.0"
 chrono = "0.4.38"
 tempfile = "3.13.0"
-x509-certificate = "0.16.0"
+x509-certificate = "0.24.0"
 
 [dev-dependencies.tugger-windows-codesign]
 version = "0.10.0-pre"

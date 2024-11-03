@@ -23,7 +23,7 @@ reqwest = { version = "0.12.9", default-features = false, features = ["blocking"
 simple-file-manifest = "0.11.0"
 tempfile = "3.13.0"
 thiserror = "1.0.67"
-x509-certificate = "0.16.0"
+x509-certificate = "0.24.0"
 yasna = "0.5.2"
 
 [dependencies.tugger-windows-codesign]
