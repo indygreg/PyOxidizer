@@ -554,9 +554,7 @@ pub fn data_signable(data: &[u8]) -> Result<Signability, SigningError> {
         // But we can only sign Windows binaries on Windows since we call out to
         // signtool.exe.
         return if cfg!(target_family = "windows") {
-            Ok(Signability::Signable(Signable::WindowsData(
-                data.as_ref().to_vec(),
-            )))
+            Ok(Signability::Signable(Signable::WindowsData(data.to_vec())))
         } else {
             Ok(Signability::PlatformUnsupported(
                 "Windows signing requires running on Windows",
