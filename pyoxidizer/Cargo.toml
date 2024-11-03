@@ -86,7 +86,7 @@ tar = "0.4.43"
 tempfile = "3.13.0"
 url = "2.5.2"
 uuid = { version = "1.11.0", features = ["v4", "v5"] }
-version-compare = "0.1.1"
+version-compare = "0.2.0"
 walkdir = "2.5.0"
 which = "4.4.2"
 zstd = "0.12.4"
