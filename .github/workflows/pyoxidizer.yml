@@ -31,7 +31,7 @@ jobs:
           sudo apt install -y --no-install-recommends musl-tools
 
       - name: Download Executable
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: exe-pyoxidizer-x86_64-unknown-linux-musl
 

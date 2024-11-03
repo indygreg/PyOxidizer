@@ -161,7 +161,7 @@ jobs:
           just actions-macos-universal ${{ inputs.bin }}
 
       - name: Upload Universal Executable
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: exe-${{ inputs.bin }}-macos-universal
           path: uploads/${{ inputs.bin }}
