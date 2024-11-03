@@ -56,7 +56,7 @@ ar = "0.9.0"
 cargo-lock = "8.0.3"
 cargo_toml = "0.14.0"
 cc = "1.0.78"
-clap = { version = "4.1.1", features = ["string"] }
+clap = { version = "4.5.20", features = ["string"] }
 codemap = "0.1.3"
 codemap-diagnostic = "0.1.1"
 dirs = "4.0.0"

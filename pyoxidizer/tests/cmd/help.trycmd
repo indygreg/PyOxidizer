@@ -35,36 +35,21 @@ Build and distribute Python applications
 Usage: pyoxidizer[EXE] [OPTIONS] [COMMAND]
 
 Commands:
-  analyze
-          Analyze a built binary
-  build
-          Build a PyOxidizer enabled project
-  cache-clear
-          Clear PyOxidizer's user-specific cache
-  find-resources
-          Find resources in a file or directory
-  generate-python-embedding-artifacts
-          Generate files useful for embedding Python in a [Rust] binary
-  init-config-file
-          Create a new PyOxidizer configuration file.
-  init-rust-project
-          Create a new Rust project embedding a Python interpreter
-  list-targets
-          List targets available to resolve in a configuration file
-  python-distribution-extract
-          Extract a Python distribution archive to a directory
-  python-distribution-info
-          Show information about a Python distribution archive
-  python-distribution-licenses
-          Show licenses for a given Python distribution
-  run-build-script
-          Run functionality that a build script would perform
-  run
-          Run a target in a PyOxidizer configuration file
-  rust-project-licensing
-          Show licensing information for a Rust project
-  help
-          Print this message or the help of the given subcommand(s)
+  analyze                              Analyze a built binary
+  build                                Build a PyOxidizer enabled project
+  cache-clear                          Clear PyOxidizer's user-specific cache
+  find-resources                       Find resources in a file or directory
+  generate-python-embedding-artifacts  Generate files useful for embedding Python in a [Rust] binary
+  init-config-file                     Create a new PyOxidizer configuration file.
+  init-rust-project                    Create a new Rust project embedding a Python interpreter
+  list-targets                         List targets available to resolve in a configuration file
+  python-distribution-extract          Extract a Python distribution archive to a directory
+  python-distribution-info             Show information about a Python distribution archive
+  python-distribution-licenses         Show licenses for a given Python distribution
+  run-build-script                     Run functionality that a build script would perform
+  run                                  Run a target in a PyOxidizer configuration file
+  rust-project-licensing               Show licensing information for a Rust project
+  help                                 Print this message or the help of the given subcommand(s)
 
 Options:
       --system-rust
