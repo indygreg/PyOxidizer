@@ -37,4 +37,4 @@ path = "../tugger-windows"
 tempfile = "3.13.0"
 
 [target.'cfg(windows)'.dev-dependencies]
-msi = "0.5.1"
+msi = "0.8.0"
