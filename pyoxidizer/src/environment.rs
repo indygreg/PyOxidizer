@@ -376,7 +376,7 @@ impl Environment {
             if p.exists() {
                 Ok(Some(p))
             } else {
-                Err(which::Error::BadAbsolutePath)
+                Err(which::Error::CannotFindBinaryPath)
             }
         } else {
             self.find_executable("rustc")

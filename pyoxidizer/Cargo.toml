@@ -88,7 +88,7 @@ url = "2.5.2"
 uuid = { version = "1.11.0", features = ["v4", "v5"] }
 version-compare = "0.2.0"
 walkdir = "2.5.0"
-which = "4.4.2"
+which = "7.0.0"
 zstd = "0.12.4"
 
 [dependencies.python-packaging]
