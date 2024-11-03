@@ -145,9 +145,9 @@ fn starlark_prompt_password(
             return prompt_or_default(term, default);
         }
 
-        let mut password = Password::new();
+        let password = Password::new();
 
-        if confirm {
+        let password = if confirm {
             password
                 .with_prompt(prompt)
                 .with_confirmation("please confirm", "passwords do not match; please try again")
