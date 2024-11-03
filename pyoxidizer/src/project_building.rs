@@ -762,6 +762,48 @@ mod tests {
     }
 
     #[test]
+    fn test_empty_project_python_311() -> Result<()> {
+        let env = get_env()?;
+        let options = StandalonePythonExecutableBuilderOptions {
+            distribution_version: Some("3.11".to_string()),
+            ..Default::default()
+        };
+        let pre_built = options.new_builder()?;
+
+        build_python_executable(
+            &env,
+            "myapp",
+            pre_built.as_ref(),
+            default_target_triple(),
+            "0",
+            false,
+        )?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_empty_project_python_312() -> Result<()> {
+        let env = get_env()?;
+        let options = StandalonePythonExecutableBuilderOptions {
+            distribution_version: Some("3.12".to_string()),
+            ..Default::default()
+        };
+        let pre_built = options.new_builder()?;
+
+        build_python_executable(
+            &env,
+            "myapp",
+            pre_built.as_ref(),
+            default_target_triple(),
+            "0",
+            false,
+        )?;
+
+        Ok(())
+    }
+
+    #[test]
     fn test_empty_project_system_rust() -> Result<()> {
         let mut env = get_env()?;
         env.unmanage_rust()?;
@@ -831,6 +873,52 @@ mod tests {
         let env = get_env()?;
         let options = StandalonePythonExecutableBuilderOptions {
             distribution_version: Some("3.10".to_string()),
+            distribution_flavor: DistributionFlavor::StandaloneStatic,
+            ..Default::default()
+        };
+        let pre_built = options.new_builder()?;
+
+        build_python_executable(
+            &env,
+            "myapp",
+            pre_built.as_ref(),
+            default_target_triple(),
+            "0",
+            false,
+        )?;
+
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(target_env = "msvc")]
+    fn test_empty_project_standalone_static_311() -> Result<()> {
+        let env = get_env()?;
+        let options = StandalonePythonExecutableBuilderOptions {
+            distribution_version: Some("3.11".to_string()),
+            distribution_flavor: DistributionFlavor::StandaloneStatic,
+            ..Default::default()
+        };
+        let pre_built = options.new_builder()?;
+
+        build_python_executable(
+            &env,
+            "myapp",
+            pre_built.as_ref(),
+            default_target_triple(),
+            "0",
+            false,
+        )?;
+
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(target_env = "msvc")]
+    fn test_empty_project_standalone_static_312() -> Result<()> {
+        let env = get_env()?;
+        let options = StandalonePythonExecutableBuilderOptions {
+            distribution_version: Some("3.12".to_string()),
             distribution_flavor: DistributionFlavor::StandaloneStatic,
             ..Default::default()
         };
