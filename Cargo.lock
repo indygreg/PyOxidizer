@@ -135,7 +135,7 @@ dependencies = [
  "anyhow",
  "base64 0.20.0",
  "clap 4.5.20",
- "dirs",
+ "dirs 4.0.0",
  "env_logger",
  "jsonwebtoken",
  "log",
@@ -186,7 +186,7 @@ dependencies = [
  "dialoguer",
  "difference",
  "digest 0.10.7",
- "dirs",
+ "dirs 4.0.0",
  "elliptic-curve",
  "env_logger",
  "filetime",
@@ -1635,7 +1635,16 @@ version = "4.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ca3aa72a6f96ea37bbc5aa912f6788242832f75369bdfdadcb0e38423f100059"
 dependencies = [
- "dirs-sys",
+ "dirs-sys 0.3.7",
+]
+
+[[package]]
+name = "dirs"
+version = "5.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "44c45a9d03d6676652bcb5e724c7e988de1acad23a711b5217ab9cbecbec2225"
+dependencies = [
+ "dirs-sys 0.4.1",
 ]
 
 [[package]]
@@ -1657,6 +1666,18 @@ dependencies = [
  "libc",
  "redox_users",
  "winapi",
+]
+
+[[package]]
+name = "dirs-sys"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "520f05a5cbd335fae5a99ff7a6ab8627577660ee5cfd6a94a6a929b52ff0321c"
+dependencies = [
+ "libc",
+ "option-ext",
+ "redox_users",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -3056,6 +3077,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ff011a302c396a5197692431fc1948019154afc178baf7d8e37367442a4601cf"
 
 [[package]]
+name = "option-ext"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
+
+[[package]]
 name = "os_pipe"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3577,7 +3604,7 @@ dependencies = [
  "clap 4.5.20",
  "codemap",
  "codemap-diagnostic",
- "dirs",
+ "dirs 5.0.1",
  "duct",
  "env_logger",
  "fs2",
@@ -5200,7 +5227,7 @@ name = "tugger-rust-toolchain"
 version = "0.13.0"
 dependencies = [
  "anyhow",
- "dirs",
+ "dirs 5.0.1",
  "flate2",
  "fs2",
  "hex",
