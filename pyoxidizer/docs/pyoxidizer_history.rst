@@ -42,6 +42,8 @@ Changes
 ^^^^^^^
 
 * Default Rust toolchain to use upgraded from 1.66 -> 1.82.
+* Generated Rust projects now write a `.cargo/config.toml` instead of
+  `.cargo/config`, as `config.toml` is the preferred filename.
 * PyO3 crate upgraded from 0.17 to 0.18.
 
 .. _version_0_24_0:

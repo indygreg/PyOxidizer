@@ -134,7 +134,7 @@ fn populate_template_data(source: &PyOxidizerSource, data: &mut TemplateData) {
     }
 }
 
-/// Write a new .cargo/config file for a project path.
+/// Write a new .cargo/config.toml file for a project path.
 pub fn write_new_cargo_config(project_path: &Path) -> Result<()> {
     let cargo_path = project_path.join(".cargo");
 
@@ -145,7 +145,7 @@ pub fn write_new_cargo_config(project_path: &Path) -> Result<()> {
     let data: BTreeMap<String, String> = BTreeMap::new();
     let t = HANDLEBARS.render("new-cargo-config", &data)?;
 
-    let config_path = cargo_path.join("config");
+    let config_path = cargo_path.join("config.toml");
     println!("writing {}", config_path.display());
     std::fs::write(&config_path, t)?;
 
