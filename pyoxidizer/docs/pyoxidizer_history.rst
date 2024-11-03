@@ -41,6 +41,7 @@ Backwards Compatibility Notes
 Changes
 ^^^^^^^
 
+* Default Rust toolchain to use upgraded from 1.66 -> 1.82.
 * PyO3 crate upgraded from 0.17 to 0.18.
 
 .. _version_0_24_0:
