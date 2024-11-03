@@ -51,6 +51,10 @@ Changes
   reading Cargo manifests and lock files generated with newer versions of
   Rust. This may fix errors in `pyoxidizer rust-project-licensing` commands
   due to failure to handle newer Cargo features.
+* Upgrades many Rust crates to latest versions. The full set of upgrades
+  is too numerous to report. Some crates used at runtime (such as those for
+  alternative memory allocators) have been upgraded. This could affect
+  run-time properties of applications.
 
 .. _version_0_24_0:
 
