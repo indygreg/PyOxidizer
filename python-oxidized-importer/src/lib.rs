@@ -180,7 +180,7 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
         return Err(PyImportError::new_err("module requires Python 3.8+"));
     }
 
-    let mut state = get_module_state(m)?;
+    let state = get_module_state(m)?;
 
     state.initialized = false;
 

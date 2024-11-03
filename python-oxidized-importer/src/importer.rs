@@ -1285,7 +1285,7 @@ pub fn replace_meta_path_importers<'a, 'p>(
     resources_state: Box<PythonResourcesState<'a, u8>>,
     importer_state_callback: Option<impl FnOnce(&mut ImporterState)>,
 ) -> PyResult<&'p PyCell<OxidizedFinder>> {
-    let mut state = get_module_state(oxidized_importer)?;
+    let state = get_module_state(oxidized_importer)?;
 
     let sys_module = py.import("sys")?;
 
