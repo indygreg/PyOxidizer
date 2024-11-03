@@ -40,7 +40,7 @@ jobs:
       # Prevent sccache server from stopping due to inactivity.
       SCCACHE_IDLE_TIMEOUT: '0'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           # Needed by build.rs, which needs to walk the Git history to find the
           # root commit. Without this, a shallow clone (depth=1) is performed.
