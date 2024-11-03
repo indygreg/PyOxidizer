@@ -45,6 +45,8 @@ Changes
 * Generated Rust projects now write a `.cargo/config.toml` instead of
   `.cargo/config`, as `config.toml` is the preferred filename.
 * PyO3 crate upgraded from 0.17 to 0.18.
+* Rust project `Cargo.toml` and `Cargo.lock` file updated to use latest
+  versions of packages.
 
 .. _version_0_24_0:
 
