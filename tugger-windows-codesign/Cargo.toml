@@ -29,4 +29,4 @@ path = "../tugger-windows"
 
 [dev-dependencies]
 der-parser = "9.0.0"
-x509-parser = "0.14.0"
+x509-parser = "0.16.0"
