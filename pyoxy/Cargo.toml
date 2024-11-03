@@ -31,7 +31,7 @@ features = ["serialization", "zipimport"]
 assert_cmd = "2.0.16"
 glob = "0.3.1"
 libtest-mimic = "0.6.1"
-predicates = "2.1.5"
+predicates = "3.1.2"
 tempfile = "3.13.0"
 
 [[test]]

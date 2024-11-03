@@ -357,7 +357,7 @@ dependencies = [
  "bstr",
  "doc-comment",
  "libc",
- "predicates 3.1.2",
+ "predicates",
  "predicates-core",
  "predicates-tree",
  "wait-timeout",
@@ -372,7 +372,7 @@ dependencies = [
  "anstyle",
  "doc-comment",
  "globwalk",
- "predicates 3.1.2",
+ "predicates",
  "predicates-core",
  "predicates-tree",
  "tempfile",
@@ -3390,27 +3390,16 @@ checksum = "925383efa346730478fb4838dbe9137d2a47675ad789c546d150a6e1dd4ab31c"
 
 [[package]]
 name = "predicates"
-version = "2.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59230a63c37f3e18569bdb90e4a89cbf5bf8b06fea0b84e65ea10cc4df47addd"
-dependencies = [
- "difflib",
- "float-cmp",
- "itertools 0.10.5",
- "normalize-line-endings",
- "predicates-core",
- "regex",
-]
-
-[[package]]
-name = "predicates"
 version = "3.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7e9086cc7640c29a356d1a29fd134380bee9d8f79a17410aa76e7ad295f42c97"
 dependencies = [
  "anstyle",
  "difflib",
+ "float-cmp",
+ "normalize-line-endings",
  "predicates-core",
+ "regex",
 ]
 
 [[package]]
@@ -3586,7 +3575,7 @@ dependencies = [
  "log",
  "once_cell",
  "path-dedot",
- "predicates 2.1.5",
+ "predicates",
  "pyo3-build-config",
  "python-packaging",
  "python-packed-resources",
@@ -3628,7 +3617,7 @@ dependencies = [
  "clap 4.5.20",
  "glob",
  "libtest-mimic",
- "predicates 2.1.5",
+ "predicates",
  "pyembed",
  "serde",
  "serde_yaml",
