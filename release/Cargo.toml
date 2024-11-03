@@ -14,8 +14,8 @@ release = false
 
 [dependencies]
 anyhow = "1.0.92"
-cargo-lock = "8.0.3"
-cargo_toml = "0.14.1"
+cargo-lock = "10.0.1"
+cargo_toml = "0.20.5"
 clap = "4.5.20"
 duct = "0.13.7"
 # We don't need network functionality.

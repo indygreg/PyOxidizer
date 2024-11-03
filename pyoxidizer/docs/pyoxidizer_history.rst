@@ -47,6 +47,10 @@ Changes
 * PyO3 crate upgraded from 0.17 to 0.18.
 * Rust project `Cargo.toml` and `Cargo.lock` file updated to use latest
   versions of packages.
+* Upgraded `cargo-lock` and `cargo_toml` crates. This should fix problems
+  reading Cargo manifests and lock files generated with newer versions of
+  Rust. This may fix errors in `pyoxidizer rust-project-licensing` commands
+  due to failure to handle newer Cargo features.
 
 .. _version_0_24_0:
 

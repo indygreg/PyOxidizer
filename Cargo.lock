@@ -29,6 +29,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "ahash"
+version = "0.8.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e89da841a80418a9b391ebaea17f5c112ffaaa96f621d2c285b5174da76b9011"
+dependencies = [
+ "cfg-if",
+ "getrandom 0.2.15",
+ "once_cell",
+ "version_check 0.9.5",
+ "zerocopy",
+]
+
+[[package]]
 name = "aho-corasick"
 version = "1.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -953,13 +966,13 @@ dependencies = [
 
 [[package]]
 name = "cargo-lock"
-version = "8.0.3"
+version = "10.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "031718ddb8f78aa5def78a09e90defe30151d1f6c672f937af4dd916429ed996"
+checksum = "6469776d007022d505bbcc2be726f5f096174ae76d710ebc609eb3029a45b551"
 dependencies = [
  "semver",
  "serde",
- "toml 0.5.11",
+ "toml",
  "url",
 ]
 
@@ -974,9 +987,9 @@ dependencies = [
 
 [[package]]
 name = "cargo_metadata"
-version = "0.15.4"
+version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eee4243f1f26fc7a42710e7439c149e2b10b05472f88090acce52632f231a73a"
+checksum = "2d886547e41f740c616ae73108f6eb70afe6d940c7bc697cb30f13daec073037"
 dependencies = [
  "camino",
  "cargo-platform",
@@ -988,12 +1001,12 @@ dependencies = [
 
 [[package]]
 name = "cargo_toml"
-version = "0.14.1"
+version = "0.20.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2bfbc36312494041e2cdd5f06697b7e89d4b76f42773a0b5556ac290ff22acc2"
+checksum = "88da5a13c620b4ca0078845707ea9c3faf11edbc3ffd8497d11d686211cd1ac0"
 dependencies = [
  "serde",
- "toml 0.5.11",
+ "toml",
 ]
 
 [[package]]
@@ -1053,9 +1066,9 @@ dependencies = [
 
 [[package]]
 name = "cfg-expr"
-version = "0.15.8"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d067ad48b8650848b989a59a86c6c36a995d02d2bf778d45c3c5d57bc2718f02"
+checksum = "d0890061c4d3223e7267f3bad2ec40b997d64faac1c2815a4a9d95018e2b9e9c"
 dependencies = [
  "smallvec",
  "target-lexicon",
@@ -1331,7 +1344,7 @@ dependencies = [
  "ciborium",
  "clap 3.2.25",
  "criterion-plot",
- "itertools",
+ "itertools 0.10.5",
  "lazy_static",
  "num-traits",
  "oorandom",
@@ -1352,7 +1365,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6b50826342786a51a89e2da3a28f1c32b06e387201bc2d19791f622c673706b1"
 dependencies = [
  "cast",
- "itertools",
+ "itertools 0.10.5",
 ]
 
 [[package]]
@@ -2112,18 +2125,19 @@ dependencies = [
 
 [[package]]
 name = "guppy"
-version = "0.15.2"
+version = "0.17.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f822a2716041492e071691606474f5a7e4fa7c2acbfd7da7b29884fb448291c7"
+checksum = "bf47f1dcacf93614a4181e308b8341f5bf5d4f7ae2f67cc5a078df8e7023ea63"
 dependencies = [
+ "ahash",
  "camino",
  "cargo_metadata",
  "cfg-if",
  "debug-ignore",
  "fixedbitset",
  "guppy-workspace-hack",
- "indexmap 1.9.3",
- "itertools",
+ "indexmap 2.6.0",
+ "itertools 0.13.0",
  "nested",
  "once_cell",
  "pathdiff",
@@ -2509,6 +2523,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "itertools"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "itoa"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2591,7 +2614,7 @@ dependencies = [
  "diff",
  "ena",
  "is-terminal",
- "itertools",
+ "itertools 0.10.5",
  "lalrpop-util",
  "petgraph",
  "regex",
@@ -3373,7 +3396,7 @@ checksum = "59230a63c37f3e18569bdb90e4a89cbf5bf8b06fea0b84e65ea10cc4df47addd"
 dependencies = [
  "difflib",
  "float-cmp",
- "itertools",
+ "itertools 0.10.5",
  "normalize-line-endings",
  "predicates-core",
  "regex",
@@ -3550,7 +3573,7 @@ dependencies = [
  "handlebars",
  "hex",
  "indoc",
- "itertools",
+ "itertools 0.10.5",
  "libtest-mimic",
  "linked-hash-map",
  "log",
@@ -3629,7 +3652,7 @@ dependencies = [
  "base64 0.21.7",
  "byteorder",
  "encoding_rs",
- "itertools",
+ "itertools 0.10.5",
  "mailparse",
  "once_cell",
  "python-packed-resources",
@@ -3782,7 +3805,7 @@ version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4e1c39006ee96ffe7c83f656a5d20269366098a3feb35ad4a7c022e3784643cb"
 dependencies = [
- "itertools",
+ "itertools 0.10.5",
  "proc-macro2",
  "quote",
  "syn 1.0.109",
@@ -3900,7 +3923,7 @@ dependencies = [
  "semver",
  "serde_json",
  "tempfile",
- "toml 0.8.19",
+ "toml",
  "url",
 ]
 
@@ -4729,13 +4752,14 @@ checksum = "61c41af27dd6d1e27b1b16b489db798443478cef1f06a660c96db617ba5de3b1"
 
 [[package]]
 name = "target-spec"
-version = "1.4.0"
+version = "3.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0bf4306559bd50cb358e7af5692694d6f6fad95cf2c0bea2571dd419f5298e12"
+checksum = "4c5743abbf7bc7d5296ae61368b50cd218ac09432281cb5d48b97308d5c27909"
 dependencies = [
  "cfg-expr",
  "guppy-workspace-hack",
  "target-lexicon",
+ "unicode-ident",
 ]
 
 [[package]]
@@ -4935,15 +4959,6 @@ dependencies = [
  "futures-sink",
  "pin-project-lite",
  "tokio",
-]
-
-[[package]]
-name = "toml"
-version = "0.5.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4f7f0dd8d50a853a531c426359045b1998f04219d88799810762cd4ad314234"
-dependencies = [
- "serde",
 ]
 
 [[package]]
@@ -5171,7 +5186,7 @@ dependencies = [
  "simple-file-manifest",
  "tar",
  "tempfile",
- "toml 0.8.19",
+ "toml",
  "tugger-common",
  "xz2",
  "zstd",
