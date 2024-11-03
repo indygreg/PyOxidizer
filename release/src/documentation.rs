@@ -6,7 +6,7 @@
 
 use {
     anyhow::{anyhow, Result},
-    pulldown_cmark::{Event as MarkdownEvent, LinkType, Parser as MarkdownParser, Tag},
+    pulldown_cmark::{Event as MarkdownEvent, LinkType, Parser as MarkdownParser, Tag, TagEnd},
     rustdoc_types::{Crate, GenericArg, GenericArgs, ItemEnum, StructKind, Type},
     std::{
         fmt::Write,
@@ -67,7 +67,7 @@ fn docstring_to_rst(docs: &str) -> Result<Vec<String>> {
             MarkdownEvent::Start(Tag::Paragraph) => {
                 line = "".to_string();
             }
-            MarkdownEvent::End(Tag::Paragraph) => {
+            MarkdownEvent::End(TagEnd::Paragraph) => {
                 lines.push(line.clone());
                 lines.push("".to_string());
             }
@@ -86,14 +86,19 @@ fn docstring_to_rst(docs: &str) -> Result<Vec<String>> {
                 lines.push(line.clone());
                 line = "".to_string();
             }
-            MarkdownEvent::Start(Tag::Emphasis) | MarkdownEvent::End(Tag::Emphasis) => {
+            MarkdownEvent::Start(Tag::Emphasis) | MarkdownEvent::End(TagEnd::Emphasis) => {
                 line.push('*');
             }
 
-            MarkdownEvent::Start(Tag::Link(LinkType::Autolink, ..)) => {}
-            MarkdownEvent::End(Tag::Link(LinkType::Autolink, ..)) => {}
-            MarkdownEvent::Start(Tag::Link(LinkType::Shortcut, ..)) => {}
-            MarkdownEvent::End(Tag::Link(LinkType::Shortcut, ..)) => {}
+            MarkdownEvent::Start(Tag::Link {
+                link_type: LinkType::Autolink,
+                ..
+            }) => {}
+            MarkdownEvent::End(TagEnd::Link) => {}
+            MarkdownEvent::Start(Tag::Link {
+                link_type: LinkType::Shortcut,
+                ..
+            }) => {}
             _ => {
                 return Err(anyhow!("unhandled markdown event: {:?}", event));
             }
