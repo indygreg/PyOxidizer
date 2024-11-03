@@ -44,7 +44,7 @@ version = "0.12.0-pre"
 path = "../python-packed-resources"
 
 [dev-dependencies]
-criterion = "0.4.0"
+criterion = "0.5.1"
 
 [[bench]]
 name = "zip"
