@@ -12,7 +12,7 @@ readme = "README.md"
 
 [dependencies]
 anyhow = "1.0.92"
-apple-bundles = "0.17.0"
+apple-bundles = "0.20.0"
 apple-codesign = "0.22.0"
 bcder = "0.7.4"
 cryptographic-message-syntax = "0.19.0"
