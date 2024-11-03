@@ -7,7 +7,7 @@
 use {
     crate::tar::CompressionFormat,
     anyhow::{anyhow, Result},
-    std::collections::HashMap,
+    std::{collections::HashMap, str::FromStr},
     tugger_common::http::RemoteContent,
 };
 
@@ -20,7 +20,8 @@ pub struct Manifest {
 impl Manifest {
     /// Obtain an instance by parsing TOML bytes.
     pub fn from_toml_bytes(data: &[u8]) -> Result<Self> {
-        let table = toml::from_slice(data)?;
+        let data_string = String::from_utf8(data.to_vec())?;
+        let table = toml::value::Table::from_str(&data_string)?;
 
         Self::from_toml(table)
     }
