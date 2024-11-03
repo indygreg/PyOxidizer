@@ -191,7 +191,7 @@ dependencies = [
  "env_logger",
  "filetime",
  "glob",
- "goblin",
+ "goblin 0.6.1",
  "hex",
  "log",
  "md-5",
@@ -211,7 +211,7 @@ dependencies = [
  "reqwest",
  "ring 0.16.20",
  "rsa",
- "scroll",
+ "scroll 0.11.0",
  "security-framework",
  "semver",
  "serde",
@@ -246,7 +246,7 @@ dependencies = [
  "apple-xar",
  "cpio-archive",
  "flate2",
- "scroll",
+ "scroll 0.11.0",
  "serde",
  "serde-xml-rs",
  "thiserror",
@@ -280,7 +280,7 @@ dependencies = [
  "md-5",
  "rand 0.8.5",
  "reqwest",
- "scroll",
+ "scroll 0.11.0",
  "serde",
  "serde-xml-rs",
  "sha1",
@@ -2109,7 +2109,18 @@ checksum = "0d6b4de4a8eb6c46a8c77e1d3be942cb9a8bf073c22374578e5ba4b08ed0ff68"
 dependencies = [
  "log",
  "plain",
- "scroll",
+ "scroll 0.11.0",
+]
+
+[[package]]
+name = "goblin"
+version = "0.9.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "53ab3f32d1d77146981dea5d6b1e8fe31eedcb7013e5e00d6ccd1259a4b4d923"
+dependencies = [
+ "log",
+ "plain",
+ "scroll 0.12.0",
 ]
 
 [[package]]
@@ -4198,7 +4209,16 @@ version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04c565b551bafbef4157586fa379538366e4385d42082f255bfd96e4fe8519da"
 dependencies = [
- "scroll_derive",
+ "scroll_derive 0.11.1",
+]
+
+[[package]]
+name = "scroll"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6ab8598aa408498679922eff7fa985c25d58a90771bd6be794434c5277eab1a6"
+dependencies = [
+ "scroll_derive 0.12.0",
 ]
 
 [[package]]
@@ -4206,6 +4226,17 @@ name = "scroll_derive"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1db149f81d46d2deba7cd3c50772474707729550221e69588478ebf9ada425ae"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.87",
+]
+
+[[package]]
+name = "scroll_derive"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f81c2fde025af7e69b1d1420531c8a8811ca898919db177141a85313b1cb932"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5112,8 +5143,8 @@ name = "tugger-apple"
 version = "0.8.0"
 dependencies = [
  "anyhow",
- "goblin",
- "scroll",
+ "goblin 0.9.2",
+ "scroll 0.12.0",
  "thiserror",
 ]
 
@@ -5123,7 +5154,7 @@ version = "0.7.0"
 dependencies = [
  "anyhow",
  "byteorder",
- "goblin",
+ "goblin 0.9.2",
  "once_cell",
  "version-compare",
 ]
@@ -5137,7 +5168,7 @@ dependencies = [
  "apple-codesign",
  "bcder",
  "cryptographic-message-syntax",
- "goblin",
+ "goblin 0.9.2",
  "log",
  "p12",
  "reqwest",
