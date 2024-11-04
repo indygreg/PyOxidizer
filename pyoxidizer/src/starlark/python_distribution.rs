@@ -228,6 +228,7 @@ impl PythonDistributionValue {
     ///     name,
     ///     packaging_policy=None,
     ///     config=None,
+    ///     runtime=None,
     /// )
     #[allow(clippy::too_many_arguments, clippy::wrong_self_convention)]
     fn to_python_executable_starlark(
@@ -237,6 +238,7 @@ impl PythonDistributionValue {
         name: String,
         packaging_policy: &Value,
         config: &Value,
+        runtime: &Value,
     ) -> ValueResult {
         const LABEL: &str = "PythonDistribution.to_python_executable()";
 
@@ -246,6 +248,7 @@ impl PythonDistributionValue {
             packaging_policy,
         )?;
         optional_type_arg("config", "PythonInterpreterConfig", config)?;
+        optional_type_arg("runtime", "string", runtime)?;
 
         let dist = self.resolve_distribution(type_values, "resolve_distribution()")?;
 
@@ -282,6 +285,15 @@ impl PythonDistributionValue {
                 None => Err(ValueError::IncorrectParameterType),
             }
         }?;
+
+        let runtime_path = if runtime.get_type() == "NoneType" {
+            None
+        } else {
+            match runtime.downcast_ref::<String>() {
+                Some(p) => Ok(Some(p.clone())),
+                None => Err(ValueError::IncorrectParameterType),
+            }?
+        };
 
         let pyoxidizer_context_value = get_context(type_values)?;
         let pyoxidizer_context = pyoxidizer_context_value
@@ -327,6 +339,7 @@ impl PythonDistributionValue {
                 BinaryLibpythonLinkMode::Default,
                 policy.inner(LABEL)?.deref(),
                 config.inner(LABEL)?.deref(),
+                runtime_path,
                 host_distribution,
             )
             .map_err(|e| {
@@ -442,7 +455,8 @@ starlark_module! { python_distribution_module =>
         this,
         name: String,
         packaging_policy=NoneType::None,
-        config=NoneType::None
+        config=NoneType::None,
+        runtime=NoneType::None
     ) {
         let mut this = this.downcast_mut::<PythonDistributionValue>().unwrap().unwrap();
         this.to_python_executable_starlark(
@@ -451,6 +465,7 @@ starlark_module! { python_distribution_module =>
             name,
             &packaging_policy,
             &config,
+            &runtime,
         )
     }
 

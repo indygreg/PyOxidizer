@@ -84,7 +84,7 @@
         The policy automatically uses settings globally appropriate for the
         distribution.
 
-    .. py:method:: to_python_executable(name: str, packaging_policy: PythonPackagingPolicy, config: PythonInterpreterConfig) -> PythonExecutable
+    .. py:method:: to_python_executable(name: str, packaging_policy: PythonPackagingPolicy, config: PythonInterpreterConfig, runtime: str) -> PythonExecutable
 
         This method constructs a :py:class:`PythonExecutable` instance. It
         essentially says *build an executable embedding Python from this
@@ -106,6 +106,12 @@
            The default configuration of the embedded Python interpreter.
 
            Default is what :py:meth:`make_python_interpreter_config` returns.
+
+        ``runtime``
+           The path to a pyoxidizer Rust project that will invoke pyembed.
+           See :ref:`rust_projects` for more on the expected composition of Rust projects.
+
+           If not supplied, a temporary Rust project will be created.
 
         .. important::
 

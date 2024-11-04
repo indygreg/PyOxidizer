@@ -197,6 +197,9 @@ pub trait PythonBinaryBuilder {
     // TODO this should not need to exist if we properly supported cross-compiling.
     fn target_python_exe_path(&self) -> &Path;
 
+    /// The directory to install tcl/tk files into.
+    fn runtime_path(&self) -> &Option<String>;
+
     /// Apple SDK build/targeting information.
     fn apple_sdk_info(&self) -> Option<&AppleSdkInfo>;
 

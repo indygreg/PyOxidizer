@@ -130,6 +130,9 @@ pub struct StandalonePythonExecutableBuilder {
     /// Path to install tcl/tk files into.
     tcl_files_path: Option<String>,
 
+    /// Path to the Rust project that will invoke our embedded python interpreter.
+    runtime_path: Option<String>,
+
     /// Describes how Windows runtime DLLs should be handled during builds.
     windows_runtime_dlls_mode: WindowsRuntimeDllsMode,
 }
@@ -145,6 +148,7 @@ impl StandalonePythonExecutableBuilder {
         link_mode: BinaryLibpythonLinkMode,
         packaging_policy: PythonPackagingPolicy,
         config: PyembedPythonInterpreterConfig,
+        runtime_path: Option<String>,
     ) -> Result<Box<Self>> {
         let host_python_exe = host_distribution.python_exe_path().to_path_buf();
 
@@ -230,6 +234,7 @@ impl StandalonePythonExecutableBuilder {
             licenses_filename: Some("COPYING.txt".into()),
             windows_subsystem: "console".to_string(),
             tcl_files_path: None,
+            runtime_path,
             windows_runtime_dlls_mode: WindowsRuntimeDllsMode::WhenPresent,
         });
 
@@ -462,6 +467,10 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
     fn target_python_exe_path(&self) -> &Path {
         self.target_distribution.python_exe_path()
+    }
+
+    fn runtime_path(&self) -> &Option<String> {
+        &self.runtime_path
     }
 
     fn apple_sdk_info(&self) -> Option<&AppleSdkInfo> {
@@ -1211,6 +1220,7 @@ pub mod tests {
                 self.libpython_link_mode.clone(),
                 policy,
                 self.config.clone(),
+                None,
             )?;
 
             builder.add_distribution_resources(None)?;
@@ -3034,6 +3044,7 @@ pub mod tests {
                 BinaryLibpythonLinkMode::Default,
                 dist.create_packaging_policy()?,
                 dist.create_python_interpreter_config()?,
+                None,
             )?;
 
             let reqs = builder.vc_runtime_requirements();
@@ -3070,6 +3081,7 @@ pub mod tests {
                 BinaryLibpythonLinkMode::Default,
                 dist.create_packaging_policy()?,
                 dist.create_python_interpreter_config()?,
+                None,
             )?;
 
             // In Never mode, the set of extra files should always be empty.
@@ -3154,6 +3166,7 @@ pub mod tests {
             BinaryLibpythonLinkMode::Default,
             policy,
             dist.create_python_interpreter_config()?,
+            None,
         )?;
 
         builder.add_distribution_resources(None)?;

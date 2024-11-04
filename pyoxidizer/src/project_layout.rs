@@ -90,6 +90,7 @@ struct TemplateData {
     program_name: Option<String>,
     code: Option<String>,
     pip_install_simple: Vec<String>,
+    rust_init: bool,
 }
 
 impl TemplateData {
@@ -105,6 +106,7 @@ impl TemplateData {
             program_name: None,
             code: None,
             pip_install_simple: Vec::new(),
+            rust_init: false,
         }
     }
 }
@@ -285,12 +287,14 @@ pub fn write_new_pyoxidizer_config_file(
     name: &str,
     code: Option<&str>,
     pip_install: &[&str],
+    rust_init: bool,
 ) -> Result<()> {
     let path = project_dir.join("pyoxidizer.bzl");
 
     let mut data = TemplateData::new();
     populate_template_data(source, &mut data);
     data.program_name = Some(name.to_string());
+    data.rust_init = rust_init;
 
     if let Some(code) = code {
         // Replace " with \" to work around
@@ -421,6 +425,7 @@ pub fn initialize_project(
     code: Option<&str>,
     pip_install: &[&str],
     windows_subsystem: &str,
+    rust_init: bool,
 ) -> Result<()> {
     let status = std::process::Command::new(cargo_exe)
         .arg("init")
@@ -443,7 +448,7 @@ pub fn initialize_project(
     write_new_build_rs(&path.join("build.rs"), name).context("writing build.rs")?;
     write_new_main_rs(&path.join("src").join("main.rs"), windows_subsystem)
         .context("writing main.rs")?;
-    write_new_pyoxidizer_config_file(source, &path, name, code, pip_install)
+    write_new_pyoxidizer_config_file(source, &path, name, code, pip_install, rust_init)
         .context("writing PyOxidizer config file")?;
     write_application_manifest(&path, name).context("writing application manifest")?;
 

@@ -210,6 +210,13 @@ def make_exe():
 
         # If no argument passed, the default `PythonInterpreterConfig` is used.
         config=python_config,
+
+        # If no argument passed, an appropriate Rust project will be auto-generated.
+        {{#if rust_init}}
+        runtime="."
+        {{else}}
+        runtime=None
+        {{/if}}
     )
 
     # Install tcl/tk support files to a specified directory so the `tkinter` Python
