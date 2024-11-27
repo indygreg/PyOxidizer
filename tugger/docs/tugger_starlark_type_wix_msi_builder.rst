@@ -106,6 +106,13 @@
 
         Keywords for the application being installed.
 
+    .. py:attribute:: per_user_install
+
+        (``bool``)
+
+        When set (off be default) the application will be installed per-user 
+        rather than per-machine.
+
     .. py:attribute:: product_icon_path
 
         (``str``)

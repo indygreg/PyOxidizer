@@ -48,6 +48,7 @@ pub struct WiXSimpleMsiBuilder {
     upgrade_code: Option<String>,
     package_keywords: Option<String>,
     package_description: Option<String>,
+    per_user_install: Option<bool>,
     license_source: Option<PathBuf>,
     product_icon: Option<PathBuf>,
     help_url: Option<String>,
@@ -137,6 +138,13 @@ impl WiXSimpleMsiBuilder {
     #[must_use]
     pub fn package_description(mut self, value: String) -> Self {
         self.package_description = Some(value);
+        self
+    }
+
+    /// If enabled install per-user rather than per-machine.
+    #[must_use]
+    pub fn per_user_install(mut self, value: bool) -> Self {
+        self.per_user_install = Some(value);
         self
     }
 
@@ -307,9 +315,14 @@ impl WiXSimpleMsiBuilder {
             .attr("InstallerVersion", &self.package_installer_version)
             .attr("Languages", &self.package_languages)
             .attr("Compressed", "yes")
-            .attr("InstallScope", "perMachine")
             .attr("SummaryCodepage", "1252")
             .attr("Platform", "$(sys.BUILDARCH)");
+
+        let package = if self.per_user_install.unwrap_or(false) {
+            package
+        } else {
+            package.attr("InstallScope", "perMachine")
+        };
 
         let package = if let Some(keywords) = &self.package_keywords {
             package.attr("Keywords", keywords)
