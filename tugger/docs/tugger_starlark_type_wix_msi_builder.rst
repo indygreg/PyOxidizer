@@ -94,6 +94,22 @@
 
         If not set, the default is ``<product_name>-<product_version>.msi``.
 
+    .. py:attribute:: add_to_start_menu
+
+        (``bool``)
+
+        If enabled a shortcut wil be created in the Start Menu pointing to ``exe_name``
+        eg. ``msi.add_to_start_menu = True``
+
+        If not set no shortcut will be installed.
+
+    .. py:attribute:: exe_name
+
+        (``str``)
+
+        The filename of the installed application, used by add_to_start_menu.
+        This is automatically set when using ``exe.to_wix_msi_builder()``.
+
     .. py:attribute:: package_description
 
         (``str``)

@@ -168,6 +168,9 @@ pub trait PythonBinaryBuilder {
     /// The name of the binary.
     fn name(&self) -> String;
 
+    /// Set the name of the binary.
+    fn set_name(&mut self, value: &str) -> Result<()>;
+
     /// How the binary will link against libpython.
     fn libpython_link_mode(&self) -> LibpythonLinkMode;
 

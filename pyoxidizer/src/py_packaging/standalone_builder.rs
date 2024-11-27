@@ -422,6 +422,12 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         self.exe_name.clone()
     }
 
+    fn set_name(&mut self, value: &str) -> Result<()> {
+        self.exe_name = value.to_string();
+
+        Ok(())
+    }
+
     fn libpython_link_mode(&self) -> LibpythonLinkMode {
         self.link_mode
     }
