@@ -427,6 +427,27 @@ pub fn build_python_executable<'a>(
         .context("resolving Rust toolchain")?
         .cargo_exe;
 
+        build_python_executable_temp(
+            env,
+            bin_name,
+            exe, 
+            target_triple,
+            opt_level,
+            release,
+            cargo_exe,
+        )
+    
+}
+
+fn build_python_executable_temp<'a>(
+    env: &Environment,
+    bin_name: &str,
+    exe: &'a (dyn PythonBinaryBuilder + 'a),
+    target_triple: &str,
+    opt_level: &str,
+    release: bool,
+    cargo_exe: PathBuf,
+)->Result<BuiltExecutable<'a>>{
     let temp_dir = env.temporary_directory("pyoxidizer")?;
 
     // Directory needs to have name of project.
@@ -467,8 +488,66 @@ pub fn build_python_executable<'a>(
     build.exe_path = None;
 
     temp_dir.close().context("closing temporary directory")?;
+    Ok(build)    
+}
+/// Build a Python executable with local or init Rust project.
+///
+/// Returns the binary data constituting the built executable.
+pub fn build_python_executable_local<'a>(
+    env: &Environment,
+    bin_name: &str,
+    exe: &'a (dyn PythonBinaryBuilder + 'a),
+    target_triple: &str,
+    opt_level: &str,
+    release: bool,
+    cwd: PathBuf,
+) -> Result<BuiltExecutable<'a>> {
+    let cargo_exe = env
+        .ensure_rust_toolchain(Some(target_triple))
+        .context("resolving Rust toolchain")?
+        .cargo_exe;
 
-    Ok(build)
+    let toml = cwd.join("Cargo.toml");
+    
+    if toml.exists() {
+        let project_path = cwd.clone();
+        let build_path = cwd.join("build");
+        let artifacts_path = cwd.join("artifacts");
+        let mut build = build_executable_with_rust_project(
+            env,
+            &project_path,
+            bin_name,
+            exe,
+            &build_path,
+            &artifacts_path,
+            target_triple,
+            opt_level,
+            release,
+            // Always build with locked because we crated a Cargo.lock with the
+            // Rust project we just created.
+            true,
+            // Don't include license for self because the Rust project is temporary and its
+            // licensing isn't material.
+            false,
+        )
+        .context("building executable with Rust project")?;
+    
+        // Blank out the path since it is in the temporary directory.
+        build.exe_path = None;
+    
+        Ok(build) 
+    } else {
+        build_python_executable_temp(
+            env,
+            bin_name,
+            exe, 
+            target_triple,
+            opt_level,
+            release,
+            cargo_exe,
+        )
+    }
+    
 }
 
 /// Build artifacts needed by the pyembed crate.
