@@ -106,6 +106,9 @@ impl TypedValue for WiXMsiBuilderValue {
             "product_icon_path" => {
                 inner.builder = inner.builder.clone().product_icon_path(value.to_string());
             }
+            "add_to_path" => {
+                inner.builder = inner.builder.clone().add_to_path(value.to_bool());
+            }
             "upgrade_code" => {
                 inner.builder = inner.builder.clone().upgrade_code(value.to_string());
             }
