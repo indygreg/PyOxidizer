@@ -178,7 +178,7 @@ Known Issues with Distributions
 
 There are various known issues with various distributions. The
 python-build-standalone project documentation at
-https://python-build-standalone.readthedocs.io/en/latest/ attempts to capture
+https://gregoryszorc.com/docs/python-build-standalone/main/ attempts to capture
 many of them.
 
 PyOxidizer contains workaround for many of the limitations. For example,
