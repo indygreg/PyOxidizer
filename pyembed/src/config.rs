@@ -471,27 +471,32 @@ impl<'a> OxidizedPythonInterpreterConfig<'a> {
             Some(std::env::args_os().collect::<Vec<_>>())
         };
 
-        let exe = if let Some(exe) = self.exe {
-            exe
+        let exe: PathBuf = if let Some(exe) = self.exe {
+            dunce::canonicalize(exe).map_err(|_| {
+                NewInterpreterError::Simple("could not obtain current executable path")
+            })?
+        } else if let Ok(current_exe) = std::env::current_exe() {
+            dunce::canonicalize(current_exe).map_err(|_| {
+                NewInterpreterError::Simple("could not obtain current executable path")
+            })?
+        } else if let Some(argv) = &argv {
+            argv.get(0)
+                .ok_or_else(|| NewInterpreterError::Simple("argv is empty"))?
+                .into()
         } else {
-            std::env::current_exe()
-                .map_err(|_| NewInterpreterError::Simple("could not obtain current executable"))?
+            PathBuf::new()
         };
-
-        // We always canonicalize the current executable because we use path
-        // comparisons in the path hooks importer to assess whether a given sys.path
-        // entry is this executable.
-        let exe = dunce::canonicalize(exe)
-            .map_err(|_| NewInterpreterError::Simple("could not obtain current executable path"))?;
 
         let origin = if let Some(origin) = self.origin {
             origin
-        } else {
+        } else if exe != PathBuf::new() {
             exe.parent()
                 .ok_or(NewInterpreterError::Simple(
                     "unable to obtain current executable parent directory",
                 ))?
                 .to_path_buf()
+        } else {
+            exe.to_owned()
         };
 
         let origin_string = origin.display().to_string();
